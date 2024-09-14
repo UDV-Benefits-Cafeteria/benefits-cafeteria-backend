@@ -17,10 +17,10 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
 
     @property
-    def DATABASE_URL_asyncpg(self) -> str:
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASS}@{self.DB_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}" # noqa
+    def DATABASE_URL(self) -> str:
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASS}@{self.DB_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"  # noqa
 
-    model_config = SettingsConfigDict(env_file=Path(__file__).parents[1] / '.env')
+    model_config = SettingsConfigDict(env_file=Path(__file__).parents[1] / ".env")
 
 
 settings = Settings()
