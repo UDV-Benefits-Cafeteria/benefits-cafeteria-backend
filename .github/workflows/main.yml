@@ -22,7 +22,7 @@ jobs:
         uses: snok/install-poetry@v1
 
       - name: Install libs
-        run: poetry install --with development
+        run: poetry install --with dev
 
       - name: flake8
         run: poetry run flake8
