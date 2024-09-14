@@ -1,0 +1,35 @@
+default_stages: [commit, push]
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+    -   id: check-yaml
+    -   id: check-added-large-files
+    -   id: end-of-file-fixer
+
+-   repo: local
+    hooks:
+        - id: flake8
+          name: flake8
+          additional_dependencies: ['flake8']
+          entry: .venv/bin/flake8
+          language: python
+          types: [python]
+          always_run: true
+        - id: black
+          name: black
+          entry: black
+          language: system
+          types: [python]
+        - id: isort
+          name: isort (python)
+          entry: isort
+          language: python
+          always_run: true
+        - id: pytest
+          name: pytest
+          entry: pytest
+          language: python
+          always_run: true
+          pass_filenames: false
+          verbose: true
