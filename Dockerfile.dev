@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+WORKDIR /src
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+COPY ./poetry.lock /src/poetry.lock
+COPY ./pyproject.toml /src/pyproject.toml
+
+RUN apt update
+RUN apt install libmemcached-tools memcached -y
+
+RUN pip install poetry
+RUN poetry install --with dev
+
+COPY . /src/
+COPY entrypoint.sh /src/entrypoint.sh
+
+RUN chmod a+x entrypoint.sh
+ENTRYPOINT ["bash", "entrypoint.sh"]
