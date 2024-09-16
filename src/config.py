@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -11,7 +12,7 @@ class Settings(BaseSettings):
 
     DEBUG: bool = False
 
-    DB_HOST: str
+    POSTGRES_HOST: str
     POSTGRES_USER: str
     POSTGRES_PORT: int
     POSTGRES_PASSWORD: str
@@ -20,6 +21,10 @@ class Settings(BaseSettings):
     SECRET_KEY: SecretStr = (
         "unsecured2*t@t3b#6g$^w@zsdz57^x-g^o05@e5aztfn=)r#ijaly1-cy0"
     )
+
+    ALLOW_ORIGINS: List[str] = ["*"]
+
+    API_V1_PREFIX: str = "/api/v1"
 
     @property
     def DATABASE_URL(self) -> PostgresDsn:
