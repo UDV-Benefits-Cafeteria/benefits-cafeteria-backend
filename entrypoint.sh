@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 echo "Starting memcached"
 /etc/init.d/memcached start
 
