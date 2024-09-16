@@ -12,11 +12,11 @@ class Settings(BaseSettings):
 
     DEBUG: bool = False
 
-    POSTGRES_HOST: str
-    POSTGRES_USER: str
-    POSTGRES_PORT: int
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    POSTGRES_HOST: str = "db"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "postgres"
 
     SECRET_KEY: SecretStr = (
         "unsecured2*t@t3b#6g$^w@zsdz57^x-g^o05@e5aztfn=)r#ijaly1-cy0"
