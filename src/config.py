@@ -1,5 +1,7 @@
 from pathlib import Path
+from typing import List
 
+from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,17 +10,25 @@ class Settings(BaseSettings):
     APP_DESCRIPTION: str = "Api for UDV Benefits Cafeteria"
     APP_VERSION: str = "0.1.0"
 
-    DEBUG: str
+    DEBUG: bool = False
 
-    DB_HOST: str
-    POSTGRES_USER: str
-    POSTGRES_PORT: int
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    POSTGRES_HOST: str = "db"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "postgres"
+
+    SECRET_KEY: SecretStr = (
+        "unsecured2*t@t3b#6g$^w@zsdz57^x-g^o05@e5aztfn=)r#ijaly1-cy0"
+    )
+
+    ALLOW_ORIGINS: List[str] = ["*"]
+
+    API_V1_PREFIX: str = "/api/v1"
 
     @property
-    def DATABASE_URL(self) -> str:
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASS}@{self.DB_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"  # noqa
+    def DATABASE_URL(self) -> PostgresDsn:
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASS}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"  # noqa
 
     model_config = SettingsConfigDict(env_file=Path(__file__).parents[1] / ".env")
 
