@@ -7,7 +7,6 @@ services:
     ports:
       - "8000:8000" # for DEBUG=off
       - "5678:5678" # for DEBUG=debugpy
-      - "5555:5555" # for DEBUG=web-pdb
     volumes:
       - .:/src
     env_file: .env
@@ -17,7 +16,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_NAME=postgres
       - POSTGRES_PORT=5432
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db/postgres
+      - POSTGRES_HOST=db
       - SECRET_KEY=888777dddssskjjdnnwmckeinoasec
     depends_on:
       db:
