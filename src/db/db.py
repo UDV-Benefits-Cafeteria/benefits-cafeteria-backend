@@ -1,22 +1,22 @@
 from typing import AsyncGenerator
 
+from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import MetaData
+
 from src.config import settings
 
-metadata = MetaData(
-    naming_convention={
-        "pk": "pk_%(table_name)s",
-        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-        "ix": "ix_%(table_name)s_%(column_0_name)s",
-        "uq": "uq_%(table_name)s_%(column_0_name)s",
-        "ck": "ck_%(table_name)s_%(constraint_name)s",
-    }
-)
 
 class Base(DeclarativeBase):
-    metadata = metadata
+    metadata = MetaData(
+        naming_convention={
+            "pk": "pk_%(table_name)s",
+            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+            "ix": "ix_%(table_name)s_%(column_0_name)s",
+            "uq": "uq_%(table_name)s_%(column_0_name)s",
+            "ck": "ck_%(table_name)s_%(constraint_name)s",
+        }
+    )
 
     repr_cols_num = 3
     repr_cols = tuple()
@@ -33,6 +33,7 @@ class Base(DeclarativeBase):
         cols_str = ", ".join(cols)
         return f"<{self.__class__.__name__}({cols_str})>"
 
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
@@ -41,6 +42,7 @@ engine = create_async_engine(
 async_session_factory = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
+
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_factory() as session:
