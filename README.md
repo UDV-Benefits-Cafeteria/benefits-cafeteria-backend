@@ -24,7 +24,7 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=postgres
 POSTGRES_PORT=5432
-DB_HOST=db
+POSTGRES_HOST=db
 ```
 
 ### 3. Set up Docker

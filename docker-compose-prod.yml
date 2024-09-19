@@ -11,7 +11,7 @@ services:
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
-      - POSTGRES_NAME
+      - POSTGRES_DB
       - POSTGRES_PORT
       - POSTGRES_HOST
       - SECRET_KEY
