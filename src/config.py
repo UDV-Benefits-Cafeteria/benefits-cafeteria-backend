@@ -30,7 +30,9 @@ class Settings(BaseSettings):
     def DATABASE_URL(self) -> PostgresDsn:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"  # noqa
 
-    model_config = SettingsConfigDict(env_file=Path(__file__).parents[1] / ".env")
+    model_config = SettingsConfigDict(
+        env_file=Path(__file__).parents[1] / ".env", extra="ignore"
+    )
 
 
 settings = Settings()
