@@ -16,7 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     services:
       db:
-        container_name: db
         image: postgres:16-alpine
         env:
           POSTGRES_USER: postgres
