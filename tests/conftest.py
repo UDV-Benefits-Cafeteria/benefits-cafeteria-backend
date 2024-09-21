@@ -20,7 +20,7 @@ pytest_plugins = ["pytest_asyncio"]
 
 @pytest.fixture(scope="session")
 def test_settings() -> Settings:
-    return Settings(_env_prefix="TEST_")
+    return Settings()
 
 
 @pytest.fixture(scope="session")

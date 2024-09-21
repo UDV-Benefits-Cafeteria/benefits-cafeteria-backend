@@ -35,10 +35,10 @@ jobs:
       - name: Create env file
         run: |
           touch .env
-          echo TEST_POSTGRES_USER=postgres >> .env
-          echo TEST_POSTGRES_PASSWORD=postgres >> .env
-          echo TEST_POSTGRES_DB=postgres >> .env
-          echo TEST_POSTGRES_HOST=localhost >> .env
+          echo POSTGRES_USER=postgres >> .env
+          echo POSTGRES_PASSWORD=postgres >> .env
+          echo POSTGRES_DB=postgres >> .env
+          echo POSTGRES_HOST=localhost >> .env
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
