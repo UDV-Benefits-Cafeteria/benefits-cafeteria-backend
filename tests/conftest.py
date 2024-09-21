@@ -1,11 +1,15 @@
 # tests/conftest.py
-import asyncio
 from typing import AsyncGenerator
 
 import pytest
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from src.config import Settings
 from src.db.db import Base, get_async_session
@@ -20,17 +24,19 @@ def test_settings() -> Settings:
 
 
 @pytest.fixture(scope="session")
-def engine_test(test_settings: Settings):
+async def engine_test(test_settings: Settings) -> AsyncGenerator[AsyncEngine, None]:
     engine = create_async_engine(
         test_settings.DATABASE_URL,
         echo=True,
     )
     yield engine
-    asyncio.run(engine.dispose())
+    await engine.dispose()
 
 
 @pytest.fixture(scope="session")
-def async_session_factory(engine_test) -> async_sessionmaker[AsyncSession]:
+async def async_session_factory(
+    engine_test: AsyncEngine,
+) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(
         bind=engine_test, class_=AsyncSession, expire_on_commit=False
     )
@@ -45,7 +51,9 @@ async def async_session(
 
 
 @pytest.fixture(scope="session")
-def override_get_async_session(async_session_factory: async_sessionmaker[AsyncSession]):
+async def override_get_async_session(
+    async_session_factory: async_sessionmaker[AsyncSession],
+):
     async def _override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
         async with async_session_factory() as session:
             yield session
@@ -56,7 +64,7 @@ def override_get_async_session(async_session_factory: async_sessionmaker[AsyncSe
 
 
 @pytest.fixture(scope="session", autouse=True)
-async def prepare_database(engine_test):
+async def prepare_database(engine_test: AsyncEngine):
     async with engine_test.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
