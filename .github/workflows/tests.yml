@@ -38,7 +38,7 @@ jobs:
           echo POSTGRES_USER=postgres >> .env
           echo POSTGRES_PASSWORD=postgres >> .env
           echo POSTGRES_DB=postgres >> .env
-          echo POSTGRES_HOSTNAME=localhost >> .env
+          echo POSTGRES_HOST=localhost >> .env
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
