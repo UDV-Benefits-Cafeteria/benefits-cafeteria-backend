@@ -1,3 +1,4 @@
+# tests/conftest.py
 import asyncio
 from typing import AsyncGenerator
 
@@ -10,30 +11,52 @@ from src.config import Settings
 from src.db.db import Base, get_async_session
 from src.main import app
 
-settings_test = Settings(_env_prefix="TEST_")
+pytest_plugins = ["pytest_asyncio"]
 
 
-engine_test = create_async_engine(
-    settings_test.DATABASE_URL,
-    echo=True,
-)
-
-async_session_factory_test = async_sessionmaker(
-    engine_test, class_=AsyncSession, expire_on_commit=False
-)
-Base.metadata.bind = engine_test
+@pytest.fixture(scope="session")
+def test_settings() -> Settings:
+    return Settings(_env_prefix="TEST_")
 
 
-async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
-    async with async_session_factory_test() as session:
+@pytest.fixture(scope="session")
+def engine_test(test_settings: Settings):
+    engine = create_async_engine(
+        test_settings.DATABASE_URL,
+        echo=True,
+    )
+    yield engine
+    asyncio.run(engine.dispose())
+
+
+@pytest.fixture(scope="session")
+def async_session_factory(engine_test) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(
+        bind=engine_test, class_=AsyncSession, expire_on_commit=False
+    )
+
+
+@pytest.fixture(scope="function")
+async def async_session(
+    async_session_factory: async_sessionmaker[AsyncSession],
+) -> AsyncGenerator[AsyncSession, None]:
+    async with async_session_factory() as session:
         yield session
 
 
-app.dependency_overrides[get_async_session] = override_get_async_session
+@pytest.fixture(scope="session")
+def override_get_async_session(async_session_factory: async_sessionmaker[AsyncSession]):
+    async def _override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
+        async with async_session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_async_session] = _override_get_async_session
+    yield
+    app.dependency_overrides.pop(get_async_session, None)
 
 
-@pytest.fixture(autouse=True, scope="session")
-async def prepare_database():
+@pytest.fixture(scope="session", autouse=True)
+async def prepare_database(engine_test):
     async with engine_test.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -42,13 +65,8 @@ async def prepare_database():
 
 
 @pytest.fixture(scope="session")
-def event_loop(request):
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-client = TestClient(app)
+def client() -> TestClient:
+    return TestClient(app)
 
 
 @pytest.fixture(scope="session")
