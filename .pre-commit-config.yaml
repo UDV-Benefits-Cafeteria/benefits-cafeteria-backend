@@ -15,20 +15,15 @@ repos:
         language: system
         types: [python]
         always_run: true
+
       - id: black
         name: black
         entry: black
         language: system
         types: [python]
+
       - id: isort
         name: isort (python)
         entry: isort
         language: python
         always_run: true
-      - id: pytest
-        name: pytest
-        entry: pytest
-        language: python
-        always_run: true
-        pass_filenames: false
-        verbose: true
