@@ -64,12 +64,13 @@ async def prepare_database(engine_test):
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def client() -> TestClient:
-    return TestClient(app)
+    with TestClient(app) as c:
+        yield c
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def ac() -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
