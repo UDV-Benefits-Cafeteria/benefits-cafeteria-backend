@@ -1,28 +1,4 @@
 services:
-  app:
-    container_name: app
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    ports:
-      - "8000:8000" # for DEBUG=off
-      - "5678:5678" # for DEBUG=debugpy
-    volumes:
-      - .:/src
-    env_file: .env
-    environment:
-      - DEBUG=True
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_HOST=db
-      - SECRET_KEY=888777dddssskjjdnnwmckeinoasec
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
   db:
     container_name: db
     image: postgres:16-alpine
@@ -34,8 +10,6 @@ services:
       - POSTGRES_PORT=5432
     ports:
       - "5432:5432"
-    volumes:
-      - ./pgdata:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD", "pg_isready", "-q", "-d", "$POSTGRES_DB", "-U", "$POSTGRES_USER" ]
       interval: 5s
