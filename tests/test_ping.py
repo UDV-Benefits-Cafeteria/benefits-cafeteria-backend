@@ -1,11 +1,12 @@
-from conftest import client
+# tests/test_ping.py
+from httpx import AsyncClient
 
 
-def test_ping():
-    response = client.get("/api/v1/ping")
+async def test_ping(async_client: AsyncClient):
+    response = await async_client.get("/api/v1/ping")
     assert response.json() == {"success": True}
 
 
-def test_index():
-    response = client.get("/api/v1/")
+async def test_index(async_client: AsyncClient):
+    response = await async_client.get("/api/v1/")
     assert response.json() == {"index": True}

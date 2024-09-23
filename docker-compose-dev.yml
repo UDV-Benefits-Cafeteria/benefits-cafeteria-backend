@@ -5,8 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "8000:8000" # for DEBUG=off
-      - "5678:5678" # for DEBUG=debugpy
+      - "8000:8000" # for FastAPI
+      - "5678:5678" # for DEBUG=True (debugpy)
     volumes:
       - .:/src
     env_file: .env

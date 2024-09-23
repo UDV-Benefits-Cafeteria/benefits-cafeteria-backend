@@ -1,4 +1,4 @@
-name: fastapi-github-actions-test
+name: Linting
 
 on:
   push:
@@ -32,6 +32,3 @@ jobs:
 
       - name: isort
         run: poetry run isort . --check --diff
-
-      - name: Run tests
-        run: poetry run pytest tests/
