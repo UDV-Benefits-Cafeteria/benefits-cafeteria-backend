@@ -6,5 +6,5 @@ def testing():
     assert 2 == 2
 
 
-async def test2(ac: AsyncClient):
-    assert ac is not None
+async def test2(async_client: AsyncClient):
+    assert async_client is not None
