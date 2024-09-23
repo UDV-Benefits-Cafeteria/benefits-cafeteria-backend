@@ -1,25 +1,29 @@
+import datetime as dt
 import enum
 from datetime import datetime
-import datetime as dt
-from typing import List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import String, Integer, Boolean, ForeignKey, DateTime
-from sqlalchemy.orm import relationship, mapped_column, Mapped
+from sqlalchemy import Boolean, DateTime
 from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from db.db import Base
 
 if TYPE_CHECKING:
-    from .payments import CoinPayment
-    from .applications import Question, Answer
+    from .applications import Answer, Question
     from .benefits import BenefitProduct
+    from .payments import CoinPayment
+
 
 class UserRole(enum.Enum):
     employee = "employee"
     hr = "hr"
     admin = "admin"
 
+
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     firstname: Mapped[str] = mapped_column(String)
@@ -34,16 +38,28 @@ class User(Base):
     password: Mapped[str] = mapped_column(String)
     role: Mapped[UserRole] = mapped_column(SQLAlchemyEnum(UserRole))
     hired_at: Mapped[DateTime] = mapped_column(DateTime)
-    legal_entity_id: Mapped[int] = mapped_column(ForeignKey('legal_entities.id', ondelete='CASCADE'))
+    legal_entity_id: Mapped[int] = mapped_column(
+        ForeignKey("legal_entities.id", ondelete="CASCADE")
+    )
 
-    legal_entity: Mapped['LegalEntity'] = relationship('LegalEntity', back_populates='users')
+    legal_entity: Mapped["LegalEntity"] = relationship(
+        "LegalEntity", back_populates="users"
+    )
 
-    coin_payments: Mapped[List['CoinPayment']] = relationship('CoinPayment', back_populates='user', cascade='all, delete-orphan')
-    processed_payments: Mapped[List['CoinPayment']] = relationship('CoinPayment', back_populates='hr')
+    coin_payments: Mapped[List["CoinPayment"]] = relationship(
+        "CoinPayment", back_populates="user", cascade="all, delete-orphan"
+    )
+    processed_payments: Mapped[List["CoinPayment"]] = relationship(
+        "CoinPayment", back_populates="hr"
+    )
 
-    benefit_products: Mapped[List['BenefitProduct']] = relationship('BenefitProduct', back_populates='user', cascade='all, delete-orphan')
-    questions: Mapped[List['Question']] = relationship('Question', back_populates='user', cascade='all, delete-orphan')
-    answers_given: Mapped[List['Answer']] = relationship('Answer', back_populates='hr')
+    benefit_products: Mapped[List["BenefitProduct"]] = relationship(
+        "BenefitProduct", back_populates="user", cascade="all, delete-orphan"
+    )
+    questions: Mapped[List["Question"]] = relationship(
+        "Question", back_populates="user", cascade="all, delete-orphan"
+    )
+    answers_given: Mapped[List["Answer"]] = relationship("Answer", back_populates="hr")
 
     @property
     def experience(self) -> int:
@@ -51,10 +67,13 @@ class User(Base):
         delta = today - self.hired_at
         return delta.days // 30
 
+
 class LegalEntity(Base):
-    __tablename__ = 'legal_entities'
+    __tablename__ = "legal_entities"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, unique=True)
 
-    users: Mapped[List['User']] = relationship('User', back_populates='legal_entity', cascade="all, delete-orphan")
+    users: Mapped[List["User"]] = relationship(
+        "User", back_populates="legal_entity", cascade="all, delete-orphan"
+    )
