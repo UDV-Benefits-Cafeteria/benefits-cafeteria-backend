@@ -1,8 +1,8 @@
 from typing import AsyncGenerator
 
-from sqlalchemy import MetaData
+from sqlalchemy import Column, DateTime, MetaData, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, declared_attr
 
 from src.config import settings
 
@@ -17,6 +17,23 @@ class Base(DeclarativeBase):
             "ck": "ck_%(table_name)s_%(constraint_name)s",
         }
     )
+
+    @declared_attr
+    def created_at(cls):
+        return Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            nullable=False,
+        )
+
+    @declared_attr
+    def updated_at(cls):
+        return Column(
+            DateTime(timezone=True),
+            onupdate=func.now(),
+            server_default=func.now(),
+            nullable=False,
+        )
 
     repr_cols_num = 3
     repr_cols = tuple()

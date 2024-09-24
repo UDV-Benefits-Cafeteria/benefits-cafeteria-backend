@@ -1,5 +1,5 @@
 import enum
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Boolean, DateTime
 from sqlalchemy import Enum as SQLAlchemyEnum
@@ -16,14 +16,19 @@ class Benefit(Base):
     __tablename__ = "benefits"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(String(100))
     description: Mapped[Text] = mapped_column(Text, nullable=True)
     cost_id: Mapped[int] = mapped_column(ForeignKey("costs.id"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    uses_max: Mapped[int] = mapped_column(Integer, nullable=True)
-    uses_per_user: Mapped[int] = mapped_column(Integer, nullable=True)
-    available_from: Mapped[DateTime] = mapped_column(DateTime, nullable=True)
-    available_by: Mapped[DateTime] = mapped_column(DateTime, nullable=True)
+    uses_max: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    uses_per_user: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    available_from: Mapped[Optional[DateTime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    available_by: Mapped[Optional[DateTime]] = mapped_column(
+        DateTime(timezone=True), timezone=True, nullable=True
+    )
+
     # можно добавить поле стоимости в реальной валюте, скрытное для пользователя, им будет пользоваться hr
 
     cost: Mapped["Cost"] = relationship("Cost")
