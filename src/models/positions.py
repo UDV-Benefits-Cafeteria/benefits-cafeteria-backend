@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db.db import Base
 
 if TYPE_CHECKING:
-    from models import User, Benefit
+    from models import Benefit, User
 
 
 class Position(Base):
@@ -17,11 +17,7 @@ class Position(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
 
-    users: Mapped[List["User"]] = relationship(
-        "User", back_populates="position"
-    )
+    users: Mapped[List["User"]] = relationship("User", back_populates="position")
     benefits: Mapped[List["Benefit"]] = relationship(
-        "Benefit",
-        secondary="benefit_positions",
-        back_populates="positions"
+        "Benefit", secondary="benefit_positions", back_populates="positions"
     )
