@@ -1,6 +1,6 @@
 from typing import AsyncGenerator
 
-from sqlalchemy import Column, DateTime, MetaData, func
+from sqlalchemy import Column, DateTime, MetaData, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, declared_attr
 
@@ -22,7 +22,7 @@ class Base(DeclarativeBase):
     def created_at(cls):
         return Column(
             DateTime(timezone=True),
-            server_default=func.now(),
+            server_default=text("TIMEZONE('utc', NOW())"),
             nullable=False,
         )
 
@@ -30,8 +30,8 @@ class Base(DeclarativeBase):
     def updated_at(cls):
         return Column(
             DateTime(timezone=True),
-            onupdate=func.now(),
-            server_default=func.now(),
+            server_default=text("TIMEZONE('utc', NOW())"),
+            onupdate=text("TIMEZONE('utc', NOW())"),
             nullable=False,
         )
 

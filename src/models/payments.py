@@ -10,15 +10,19 @@ if TYPE_CHECKING:
 
 
 class CoinPayment(Base):
-    __tablename__ = "coinpayments"
+    __tablename__ = "coin_payments"
+
+    repr_cols = ("id", "user_id", "amount")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    amount: Mapped[int] = mapped_column(Integer)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     hr_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
     user: Mapped["User"] = relationship(
         "User", back_populates="coin_payments", foreign_keys=[user_id]

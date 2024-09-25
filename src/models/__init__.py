@@ -1,10 +1,12 @@
 from db.db import Base
 
 from .applications import Answer, Question
-from .benefits import Benefit, BenefitCategory, BenefitImage, BenefitProduct, Category
+from .benefits import Benefit, BenefitCategory, BenefitImage, BenefitRequest, Category
 from .costs import Cost
+from .legal_entities import LegalEntity
 from .payments import CoinPayment
-from .users import LegalEntity, User
+from .positions import Position
+from .users import User
 
 __all__ = [
     "Base",
@@ -12,11 +14,12 @@ __all__ = [
     "LegalEntity",
     "CoinPayment",
     "Benefit",
-    "BenefitProduct",
+    "BenefitRequest",
     "BenefitImage",
     "BenefitCategory",
     "Category",
     "Cost",
     "Question",
     "Answer",
+    "Position",
 ]

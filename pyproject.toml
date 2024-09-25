@@ -16,6 +16,7 @@ asyncpg = "^0.29.0"
 pydantic-settings = "^2.5.0"
 starlette = "^0.38.5"
 loguru = "^0.7.2"
+pytest = "^8.3.3"
 
 [tool.poetry.group.dev]
 optional = true
