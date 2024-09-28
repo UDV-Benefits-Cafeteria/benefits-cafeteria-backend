@@ -1,15 +1,21 @@
 import enum
+from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Boolean, DateTime
 from sqlalchemy import Enum as SQLAlchemyEnum
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.db import Base
 
 if TYPE_CHECKING:
     from models import Cost, Position, Question, User
+
+
+class UsageLimitType(enum.Enum):
+    NON_FIXED_PERIOD = "non_fixed_period"
+    FIXED_PERIOD = "fixed_period"
 
 
 class Benefit(Base):
@@ -21,11 +27,23 @@ class Benefit(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
-    cost_id: Mapped[int] = mapped_column(ForeignKey("costs.id"), nullable=False)
-    real_currency_cost: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    uses_max: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    uses_max_per_user: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    uses_update_period: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    cost_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("costs.id", ondelete="SET NULL"), nullable=True
+    )
+    real_currency_cost: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )
+    amount: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    usage_limit_type: Mapped[UsageLimitType] = mapped_column(
+        SQLAlchemyEnum(UsageLimitType, native_enum=False, name="usage_limit_type_enum"),
+        default=UsageLimitType.NON_FIXED_PERIOD,
+        nullable=False,
+    )
+    usage_limit: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    usage_period_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    period_start_date: Mapped[Optional[DateTime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     available_from: Mapped[Optional[DateTime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -33,18 +51,18 @@ class Benefit(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    cost: Mapped["Cost"] = relationship("Cost")
+    cost: Mapped[Optional["Cost"]] = relationship("Cost", back_populates="benefits")
     images: Mapped[List["BenefitImage"]] = relationship(
-        "BenefitImage", back_populates="benefit"
+        "BenefitImage", back_populates="benefit", cascade="all, delete-orphan"
     )
     categories: Mapped[List["BenefitCategory"]] = relationship(
-        "BenefitCategory", back_populates="benefit"
+        "BenefitCategory", back_populates="benefit", cascade="all, delete-orphan"
     )
     requests: Mapped[List["BenefitRequest"]] = relationship(
-        "BenefitRequest", back_populates="benefit", cascade="all, delete-orphan"
+        "BenefitRequest", back_populates="benefit"
     )
     questions: Mapped[List["Question"]] = relationship(
-        "Question", back_populates="benefit"
+        "Question", back_populates="benefit", cascade="all, delete-orphan"
     )
     positions: Mapped[List["Position"]] = relationship(
         "Position", secondary="benefit_positions", back_populates="benefits"
@@ -65,14 +83,14 @@ class BenefitRequest(Base):
     repr_cols = ("id", "benefit_id", "user_id", "status")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    benefit_id: Mapped[int] = mapped_column(
-        ForeignKey("benefits.id", ondelete="CASCADE"), nullable=False
+    benefit_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("benefits.id", ondelete="SET NULL"), nullable=True
     )
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     status: Mapped["BenefitStatus"] = mapped_column(
-        SQLAlchemyEnum(BenefitStatus),
+        SQLAlchemyEnum(BenefitStatus, native_enum=False, name="benefit_status_enum"),
         default=BenefitStatus.PENDING,
         index=True,
         nullable=False,
@@ -80,8 +98,12 @@ class BenefitRequest(Base):
     content: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    benefit: Mapped["Benefit"] = relationship("Benefit", back_populates="requests")
-    user: Mapped["User"] = relationship("User", back_populates="benefit_requests")
+    benefit: Mapped[Optional["Benefit"]] = relationship(
+        "Benefit", back_populates="requests"
+    )
+    user: Mapped[Optional["User"]] = relationship(
+        "User", back_populates="benefit_requests"
+    )
 
 
 class BenefitImage(Base):
@@ -127,7 +149,9 @@ class BenefitCategory(Base):
     )
 
     benefit: Mapped["Benefit"] = relationship("Benefit", back_populates="categories")
-    category: Mapped["Category"] = relationship("Category")
+    category: Mapped["Category"] = relationship(
+        "Category", back_populates="benefit_categories"
+    )
 
 
 class Category(Base):
@@ -137,3 +161,7 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+
+    benefit_categories: Mapped[List["BenefitCategory"]] = relationship(
+        "BenefitCategory", back_populates="category", cascade="all, delete-orphan"
+    )

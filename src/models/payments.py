@@ -15,18 +15,18 @@ class CoinPayment(Base):
     repr_cols = ("id", "user_id", "amount")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     comment: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    hr_id: Mapped[Optional[int]] = mapped_column(
+    payer_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
-    user: Mapped["User"] = relationship(
+    user: Mapped[Optional["User"]] = relationship(
         "User", back_populates="coin_payments", foreign_keys=[user_id]
     )
-    hr: Mapped[Optional["User"]] = relationship(
-        "User", back_populates="processed_payments", foreign_keys=[hr_id]
+    payer: Mapped[Optional["User"]] = relationship(
+        "User", back_populates="processed_payments", foreign_keys=[payer_id]
     )

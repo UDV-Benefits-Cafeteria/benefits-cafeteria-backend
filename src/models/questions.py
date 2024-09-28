@@ -15,27 +15,35 @@ class Question(Base):
     repr_cols = ("id", "benefit_id", "user_id", "text")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    benefit_id: Mapped[int] = mapped_column(ForeignKey("benefits.id"), nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    benefit_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("benefits.id", ondelete="CASCADE"), nullable=True
+    )
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     text: Mapped[Text] = mapped_column(Text, nullable=False)
 
-    benefit: Mapped["Benefit"] = relationship("Benefit", back_populates="questions")
-    user: Mapped["User"] = relationship("User", back_populates="questions")
-    answer: Mapped["Answer"] = relationship("Answer", back_populates="question")
+    benefit: Mapped[Optional["Benefit"]] = relationship("Benefit", back_populates="questions")
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="questions")
+    answer: Mapped["Answer"] = relationship(
+        "Answer", back_populates="question", cascade="all, delete-orphan", uselist=False
+    )
 
 
 class Answer(Base):
     __tablename__ = "answers"
 
-    repr_cols = ("question_id", "hr_id", "text")
+    repr_cols = ("question_id", "user_id", "text")
 
     question_id: Mapped[int] = mapped_column(
         ForeignKey("questions.id", ondelete="CASCADE"), primary_key=True
     )
-    hr_id: Mapped[int] = mapped_column(
+    user_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     text: Mapped[Text] = mapped_column(Text, nullable=False)
 
-    hr: Mapped[Optional["User"]] = relationship("User", back_populates="answers")
+    user: Mapped[Optional["User"]] = relationship("User", back_populates="answers")
     question: Mapped["Question"] = relationship("Question", back_populates="answer")
+
+

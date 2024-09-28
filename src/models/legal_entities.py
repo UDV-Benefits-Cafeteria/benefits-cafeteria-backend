@@ -17,6 +17,4 @@ class LegalEntity(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
 
-    users: Mapped[List["User"]] = relationship(
-        "User", back_populates="legal_entity", cascade="all, delete-orphan"
-    )
+    users: Mapped[List["User"]] = relationship("User", back_populates="legal_entity")
