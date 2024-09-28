@@ -3,9 +3,10 @@ from typing import List
 from sqlalchemy import delete
 
 from src.db.db import async_session_factory
-from src.schemas.benefit import BenefitCreate, BenefitUpdate, BenefitRead
 from src.models.benefits import BenefitImage
+from src.schemas.benefit import BenefitCreate, BenefitRead, BenefitUpdate
 from src.utils.repository import AbstractRepository
+
 
 class BenefitsService:
     def __init__(self, benefits_repo: AbstractRepository):
@@ -13,7 +14,7 @@ class BenefitsService:
 
     async def create_benefit(self, benefit_create: BenefitCreate) -> int:
         benefit_data = benefit_create.dict(exclude_unset=True)
-        images_data = benefit_data.pop('images', [])
+        images_data = benefit_data.pop("images", [])
 
         benefit_id = await self.benefits_repo.add_one(benefit_data)
 
@@ -23,7 +24,9 @@ class BenefitsService:
 
     async def _add_images(self, benefit_id: int, images_data: List[dict]):
         async with async_session_factory() as session:
-            images = [BenefitImage(benefit_id=benefit_id, **image) for image in images_data]
+            images = [
+                BenefitImage(benefit_id=benefit_id, **image) for image in images_data
+            ]
             session.add_all(images)
             await session.commit()
 
@@ -39,19 +42,20 @@ class BenefitsService:
 
     async def update_benefit(self, id: int, benefit_update: BenefitUpdate):
         benefit_data = benefit_update.dict(exclude_unset=True)
-        images_data = benefit_data.pop('images', None)
+        images_data = benefit_data.pop("images", None)
         await self.benefits_repo.update_one(id, benefit_data)
         if images_data is not None:
             await self._update_images(id, images_data)
 
     async def _update_images(self, benefit_id: int, images_data: List[dict]):
         async with async_session_factory() as session:
-
             await session.execute(
                 delete(BenefitImage).where(BenefitImage.benefit_id == benefit_id)
             )
 
-            images = [BenefitImage(benefit_id=benefit_id, **image) for image in images_data]
+            images = [
+                BenefitImage(benefit_id=benefit_id, **image) for image in images_data
+            ]
             session.add_all(images)
             await session.commit()
 

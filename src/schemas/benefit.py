@@ -1,6 +1,6 @@
-from typing import List, Optional
-from decimal import Decimal
 from datetime import datetime
+from decimal import Decimal
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -10,11 +10,14 @@ class BenefitImageBase(BaseModel):
     is_primary: bool = False
     description: Optional[str] = None
 
+
 class BenefitImageCreate(BenefitImageBase):
     pass
 
+
 class BenefitImageUpdate(BenefitImageBase):
     pass
+
 
 class BenefitImageRead(BenefitImageBase):
     id: int
@@ -22,6 +25,7 @@ class BenefitImageRead(BenefitImageBase):
 
     class Config:
         from_attributes = True
+
 
 class BenefitBase(BaseModel):
     name: str
@@ -37,12 +41,15 @@ class BenefitBase(BaseModel):
     available_from: Optional[datetime] = None
     available_by: Optional[datetime] = None
 
+
 class BenefitCreate(BenefitBase):
     images: Optional[List[BenefitImageCreate]] = None
+
 
 class BenefitUpdate(BenefitBase):
     name: Optional[str] = None
     images: Optional[List[BenefitImageUpdate]] = None
+
 
 class BenefitRead(BenefitBase):
     id: int

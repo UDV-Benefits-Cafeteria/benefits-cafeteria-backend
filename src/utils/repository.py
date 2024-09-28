@@ -55,9 +55,11 @@ class SQLAlchemyRepository(AbstractRepository):
 
     async def find_all(self):
         async with async_session_factory() as session:
-            result = await session.execute(select(self.model).options(
+            result = await session.execute(
+                select(self.model).options(
                     selectinload(self.model.images),
-                ))
+                )
+            )
             return result.scalars().all()
 
     async def update_one(self, id: int, data: dict):
