@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.db import Base
+from src.db.db import Base
 
 if TYPE_CHECKING:
     from models import Benefit, User
@@ -45,5 +45,9 @@ class Answer(Base):
     )
     text: Mapped[Text] = mapped_column(Text, nullable=False)
 
-    user: Mapped[Optional["User"]] = relationship("User", back_populates="answers")
+    user: Mapped[Optional["User"]] = relationship(
+        "User",
+        back_populates="answers",
+        foreign_keys=[user_id],
+    )
     question: Mapped["Question"] = relationship("Question", back_populates="answer")

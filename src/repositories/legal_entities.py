@@ -1,5 +1,5 @@
-from models import LegalEntity
-from utils.repository import SQLAlchemyRepository
+from src.models import LegalEntity
+from src.utils.repository import SQLAlchemyRepository
 
 
 class LegalEntitiesRepository(SQLAlchemyRepository):

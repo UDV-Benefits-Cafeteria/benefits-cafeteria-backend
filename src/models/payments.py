@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.db import Base
+from src.db.db import Base
 
 if TYPE_CHECKING:
     from models import User
@@ -25,8 +25,12 @@ class CoinPayment(Base):
     )
 
     user: Mapped[Optional["User"]] = relationship(
-        "User", back_populates="coin_payments", foreign_keys=[user_id]
+        "User",
+        back_populates="coin_payments",
+        foreign_keys=[user_id],
     )
     payer: Mapped[Optional["User"]] = relationship(
-        "User", back_populates="processed_payments", foreign_keys=[payer_id]
+        "User",
+        back_populates="processed_payments",
+        foreign_keys=[payer_id],
     )
