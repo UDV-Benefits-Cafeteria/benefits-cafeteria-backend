@@ -1,8 +1,9 @@
 from sqlalchemy import delete
 
 from src.db.db import async_session_factory
-from src.utils.repository import SQLAlchemyRepository
 from src.models.benefits import BenefitImage
+from src.utils.repository import SQLAlchemyRepository
+
 
 class BenefitImagesRepository(SQLAlchemyRepository[BenefitImage]):
     model = BenefitImage
@@ -13,4 +14,3 @@ class BenefitImagesRepository(SQLAlchemyRepository[BenefitImage]):
                 delete(BenefitImage).where(BenefitImage.benefit_id == parent_id)
             )
             await session.commit()
-
