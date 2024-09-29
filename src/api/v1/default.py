@@ -8,6 +8,7 @@ from src.services.benefits import BenefitsService
 
 router = APIRouter()
 
+
 @router.get("/")
 async def index():
     return {"index": True}
@@ -16,6 +17,8 @@ async def index():
 @router.get("/ping")
 async def ping():
     return {"success": True}
+
+
 @router.post("/benefits", response_model=int)
 async def create_benefit(
     benefit: schemas.BenefitCreate,
