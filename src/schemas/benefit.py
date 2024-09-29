@@ -57,3 +57,12 @@ class BenefitRead(BenefitBase):
 
     class Config:
         from_attributes = True
+
+
+class BenefitFilter(BaseModel):
+    is_active: Optional[bool] = None
+    name: Optional[str] = None
+    sort_by: Optional[str] = None
+    sort_order: str = "asc"
+    limit: int = 10
+    offset: int = 0

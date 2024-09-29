@@ -65,7 +65,7 @@ class Benefit(Base):
         "BenefitImage",
         back_populates="benefit",
         cascade="all, delete-orphan",
-        lazy="select",
+        lazy="selectin",
     )
 
     image_primary: Mapped[Optional["BenefitImage"]] = relationship(
@@ -75,6 +75,7 @@ class Benefit(Base):
         ),
         uselist=False,
         viewonly=True,
+        lazy="selectin",
     )
 
     images_secondary: Mapped[List["BenefitImage"]] = relationship(
@@ -83,6 +84,7 @@ class Benefit(Base):
             id == foreign(BenefitImage.benefit_id), BenefitImage.is_primary.is_(False)
         ),
         viewonly=True,
+        lazy="selectin",
     )
     categories: Mapped[List["BenefitCategory"]] = relationship(
         "BenefitCategory", back_populates="benefit", cascade="all, delete-orphan"
