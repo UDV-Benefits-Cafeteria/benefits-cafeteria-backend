@@ -1,3 +1,6 @@
+"""
+This file is made for testing.
+"""
 from typing import List
 
 import src.schemas.benefit as schemas

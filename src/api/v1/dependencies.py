@@ -5,9 +5,11 @@ from src.services.benefits import BenefitsService
 from src.services.legal_entities import LegalEntitiesService
 
 
+# This func is made for testing.
 def get_legal_entities_service():
     return LegalEntitiesService(LegalEntitiesRepository())
 
 
+# This func is made for testing.
 def get_benefits_service():
     return BenefitsService(BenefitsRepository(), BenefitImagesRepository())

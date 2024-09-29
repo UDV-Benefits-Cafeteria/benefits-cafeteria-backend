@@ -19,6 +19,7 @@ async def ping():
     return {"success": True}
 
 
+# This func is made for testing.
 @router.post("/benefits", response_model=int)
 async def create_benefit(
     benefit: schemas.BenefitCreate,
@@ -28,6 +29,7 @@ async def create_benefit(
     return benefit_id
 
 
+# This func is made for testing.
 @router.get("/benefits/{benefit_id}", response_model=schemas.BenefitRead)
 async def read_benefit(
     benefit_id: int,
@@ -40,6 +42,7 @@ async def read_benefit(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+# This func is made for testing.
 @router.get("/benefits", response_model=List[schemas.BenefitRead])
 async def read_benefits(
     filters: Annotated[schemas.BenefitFilter, Depends()],
@@ -49,6 +52,7 @@ async def read_benefits(
     return benefits
 
 
+# This func is made for testing.
 @router.patch("/benefits/{benefit_id}")
 async def update_benefit(
     benefit_id: int,
@@ -59,6 +63,7 @@ async def update_benefit(
     return {"is_success": True}
 
 
+# This func is made for testing.
 @router.delete("/benefits/{benefit_id}")
 async def delete_benefit(
     benefit_id: int,
