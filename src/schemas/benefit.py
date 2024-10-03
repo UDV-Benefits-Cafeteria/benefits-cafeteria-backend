@@ -15,7 +15,7 @@ class BenefitImageCreate(BenefitImageBase):
     pass
 
 
-class BenefitImageUpdate(BaseModel):
+class BenefitImageUpdate(BenefitImageBase):
     image_url: Optional[str] = None
 
 
