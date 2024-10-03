@@ -35,18 +35,16 @@ class BenefitsService:
             raise Exception("Бенефит не найден")
         return schemas.BenefitRead.model_validate(benefit)
 
-    async def get_benefits(
-        self, filters: schemas.BenefitFilter
-    ) -> List[schemas.BenefitRead]:
-        benefits = await self.benefits_repo.find_all(filters)
+    async def get_benefits(self) -> List[schemas.BenefitRead]:
+        benefits = await self.benefits_repo.find_all()
         return [schemas.BenefitRead.model_validate(b) for b in benefits]
 
     async def update_benefit(self, id: int, benefit_update: schemas.BenefitUpdate):
         benefit_data = benefit_update.model_dump(exclude_unset=True)
-        images_data = benefit_data.pop("images", None)
+        benefit_data.pop("images", None)
         await self.benefits_repo.update_one(id, benefit_data)
-        if images_data is not None:
-            await self._update_images(id, images_data)
+        # if images_data is not None:
+        # await self._update_images(id, images_data)
 
     async def _update_images(self, benefit_id: int, images_data: List[dict]):
         await self.images_repo.delete_by_parent_id(benefit_id)

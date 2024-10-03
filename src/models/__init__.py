@@ -1,7 +1,6 @@
 from src.db.db import Base
 
 from .benefits import Benefit, BenefitCategory, BenefitImage, BenefitRequest, Category
-from .costs import Cost
 from .legal_entities import LegalEntity
 from .payments import CoinPayment
 from .positions import Position
@@ -18,7 +17,6 @@ __all__ = [
     "BenefitImage",
     "BenefitCategory",
     "Category",
-    "Cost",
     "Question",
     "Answer",
     "Position",

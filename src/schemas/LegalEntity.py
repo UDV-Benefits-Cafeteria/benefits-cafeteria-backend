@@ -1,11 +1,21 @@
-"""
-This file is made for testing.
-"""
-from pydantic import BaseModel
+from typing import Annotated, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class LegalEntitySchemaAdd(BaseModel):
-    name: str
+class LegalEntityBase(BaseModel):
+    name: Annotated[str, Field(max_length=255)]
 
-    class Config:
-        from_attributes = True
+
+class LegalEntityCreate(LegalEntityBase):
+    pass
+
+
+class LegalEntityUpdate(BaseModel):
+    name: Annotated[Optional[str], Field(max_length=255)] = None
+
+
+class LegalEntityRead(LegalEntityBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)

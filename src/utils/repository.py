@@ -1,8 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
+from typing import Generic, List, Optional, Type, TypeVar
 
-from sqlalchemy import UnaryExpression, delete, select, update
+from sqlalchemy import delete, select, update
 
 from src.db.db import async_session_factory
 
@@ -63,22 +63,9 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    async def find_all(
-        self,
-        filters: Optional[Dict[str, any]] = None,
-        order_by: Optional[Any] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[T]:
+    async def find_all(self) -> List[T]:
         """
-        Retrieve all entities from the data store, with optional filters, ordering,
-        and pagination (limit, offset).
-
-        Args:
-            filters: Optional expressions to filter results.
-            order_by: Optional expression to order the results.
-            limit: Optional limit on the number of returned records.
-            offset: Optional offset for pagination.
+        Retrieve all entities from the data store.
 
         Returns:
             A list of entities matching the query.
@@ -172,37 +159,14 @@ class SQLAlchemyRepository(AbstractRepository[T]):
             )
             return result.scalar_one_or_none()
 
-    async def find_all(
-        self,
-        filters: Optional[Dict[str, any]] = None,
-        order_by: Optional[UnaryExpression] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[T]:
+    async def find_all(self) -> List[T]:
         """
-        Retrieve all entities from the data store, with optional filters, ordering,
-        and pagination (limit, offset).
-
-        Args:
-            filters: Optional expressions to filter results.
-            order_by: Optional expression to order the results.
-            limit: Optional limit on the number of returned records.
-            offset: Optional offset for pagination.
-
+        Retrieve all entities from the data store
         Returns:
             A list of entities matching the query.
         """
         async with async_session_factory() as session:
             query = select(self.model)
-
-            if filters:
-                query = query.where(*filters)
-            if order_by:
-                query = query.order_by(order_by)
-            if limit:
-                query = query.limit(limit)
-            if offset:
-                query = query.offset(offset)
 
             result = await session.execute(query)
             return result.scalars().all()
