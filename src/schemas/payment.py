@@ -1,6 +1,6 @@
 from typing import Annotated, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.user import UserRead
 
@@ -12,7 +12,6 @@ class CoinPaymentBase(BaseModel):
     payer_id: Optional[int] = None
 
 
-
 class CoinPaymentCreate(CoinPaymentBase):
     pass
 
@@ -22,6 +21,4 @@ class CoinPaymentRead(CoinPaymentBase):
     user: Optional["UserRead"] = None
     payer: Optional["UserRead"] = None
 
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    model_config = ConfigDict(from_attributes=True)

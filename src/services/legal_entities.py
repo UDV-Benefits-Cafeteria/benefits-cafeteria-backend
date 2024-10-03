@@ -1,6 +1,7 @@
 """
 This file is made for testing.
 """
+"""
 from src.schemas.legalentity import LegalEntityCreate
 from src.utils.repository import AbstractRepository
 
@@ -13,3 +14,4 @@ class LegalEntitiesService:
         legal_entities_dict = legal_entity.model_dump()
         legal_entity_id = await self.legal_entities_repo.add_one(legal_entities_dict)
         return legal_entity_id
+"""

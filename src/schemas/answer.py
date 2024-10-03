@@ -1,6 +1,6 @@
-from typing import Annotated, Optional
+from typing import Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 
 class AnswerBase(BaseModel):
@@ -14,6 +14,7 @@ class AnswerCreate(AnswerBase):
 
 class AnswerUpdate(AnswerBase):
     text: Optional[str] = None
+
 
 class AnswerRead(AnswerBase):
     question_id: int

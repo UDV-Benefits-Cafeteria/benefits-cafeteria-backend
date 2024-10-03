@@ -1,9 +1,15 @@
 from datetime import date
-
-from typing import Optional, Annotated, Self
 from enum import Enum
+from typing import Annotated, Optional, Self
 
-from pydantic import BaseModel, Field, EmailStr, ConfigDict, computed_field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    computed_field,
+    model_validator,
+)
 
 from src.schemas.legalentity import LegalEntityRead
 from src.schemas.position import PositionRead
@@ -34,14 +40,13 @@ class UserRegister(UserBase):
     password: Annotated[str, Field(min_length=8, max_length=255)]
     re_password: Annotated[str, Field(min_length=8, max_length=255)]
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def check_passwords_match(self) -> Self:
         pw1 = self.password
         pw2 = self.re_password
         if pw1 is not None and pw2 is not None and pw1 != pw2:
-            raise ValueError('Пароли различаются')
+            raise ValueError("Пароли различаются")
         return self
-
 
 
 class UserUpdate(UserBase):
@@ -70,8 +75,4 @@ class UserRead(UserBase):
     def level(self) -> int:
         return self.experience // 30
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        use_enum_values=True
-    )
-
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)

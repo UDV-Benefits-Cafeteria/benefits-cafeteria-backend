@@ -1,6 +1,6 @@
 from typing import Annotated, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PositionBase(BaseModel):
@@ -14,8 +14,8 @@ class PositionCreate(PositionBase):
 class PositionUpdate(BaseModel):
     name: Annotated[Optional[str], Field(max_length=150)] = None
 
+
 class PositionRead(PositionBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
-
