@@ -7,7 +7,7 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from db.db import Base
+from src.db.db import Base
 
 if TYPE_CHECKING:
     from models import (
@@ -62,10 +62,14 @@ class User(Base):
         "Position", back_populates="users"
     )
     coin_payments: Mapped[List["CoinPayment"]] = relationship(
-        "CoinPayment", back_populates="user"
+        "CoinPayment",
+        back_populates="user",
+        foreign_keys="CoinPayment.user_id",
     )
     processed_payments: Mapped[List["CoinPayment"]] = relationship(
-        "CoinPayment", back_populates="payer"
+        "CoinPayment",
+        back_populates="payer",
+        foreign_keys="CoinPayment.payer_id",
     )
     benefit_requests: Mapped[List["BenefitRequest"]] = relationship(
         "BenefitRequest", back_populates="user"

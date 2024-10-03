@@ -7,7 +7,7 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import ForeignKey, Integer, Numeric, String, Text, and_
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
-from db.db import Base
+from src.db.db import Base
 
 if TYPE_CHECKING:
     from models import Cost, Position, Question, User
@@ -65,23 +65,26 @@ class Benefit(Base):
         "BenefitImage",
         back_populates="benefit",
         cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     image_primary: Mapped[Optional["BenefitImage"]] = relationship(
         "BenefitImage",
         primaryjoin=and_(
-            id == foreign(BenefitImage.benefit_id), BenefitImage.is_primary
+            id == foreign(BenefitImage.benefit_id), BenefitImage.is_primary.is_(True)
         ),
         uselist=False,
         viewonly=True,
+        lazy="selectin",
     )
 
     images_secondary: Mapped[List["BenefitImage"]] = relationship(
         "BenefitImage",
         primaryjoin=and_(
-            id == foreign(BenefitImage.benefit_id), not (BenefitImage.is_primary)
+            id == foreign(BenefitImage.benefit_id), BenefitImage.is_primary.is_(False)
         ),
         viewonly=True,
+        lazy="selectin",
     )
     categories: Mapped[List["BenefitCategory"]] = relationship(
         "BenefitCategory", back_populates="benefit", cascade="all, delete-orphan"

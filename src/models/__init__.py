@@ -1,4 +1,4 @@
-from db.db import Base
+from src.db.db import Base
 
 from .benefits import Benefit, BenefitCategory, BenefitImage, BenefitRequest, Category
 from .costs import Cost
