@@ -45,7 +45,7 @@ class UserRegister(UserBase):
         pw1 = self.password
         pw2 = self.re_password
         if pw1 is not None and pw2 is not None and pw1 != pw2:
-            raise ValueError("Пароли различаются")
+            raise ValueError("Passwords are different")
         return self
 
 
