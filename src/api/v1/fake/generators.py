@@ -1,14 +1,15 @@
-from faker import Faker
-
+import random
 from datetime import datetime, timedelta
 from decimal import Decimal
-import random
 
-from src.schemas.benefit import BenefitRead, BenefitImageRead
+from faker import Faker
+
+from src.schemas.benefit import BenefitImageRead, BenefitRead
 from src.schemas.category import CategoryRead
 from src.schemas.position import PositionRead
 
-fake = Faker('ru_RU')
+fake = Faker("ru_RU")
+
 
 def generate_fake_benefit(benefit_id: int) -> BenefitRead:
     name = fake.sentence(nb_words=4)
@@ -30,21 +31,14 @@ def generate_fake_benefit(benefit_id: int) -> BenefitRead:
             benefit_id=benefit_id,
             image_url=fake.image_url(),
             is_primary=(i == 1),
-            description=fake.sentence(nb_words=5)
-        ) for i in range(1, 4)
+            description=fake.sentence(nb_words=5),
+        )
+        for i in range(1, 4)
     ]
 
-    category = CategoryRead(
-        id=random.randint(1, 100),
-        name=fake.word()
-    )
+    category = CategoryRead(id=random.randint(1, 100), name=fake.word())
     if random.choice([True, False]):
-        positions = [
-            PositionRead(
-                id=i,
-                name=fake.job()
-            ) for i in range(1, 4)
-        ]
+        positions = [PositionRead(id=i, name=fake.job()) for i in range(1, 4)]
     else:
         positions = []
 
@@ -67,8 +61,7 @@ def generate_fake_benefit(benefit_id: int) -> BenefitRead:
         min_level_cost=min_level_cost,
         adaptation_required=adaptation_required,
         images=images,
-        positions=positions
+        positions=positions,
     )
 
     return benefit
-

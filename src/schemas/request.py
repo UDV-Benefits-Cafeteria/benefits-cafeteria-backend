@@ -1,6 +1,5 @@
-
 from enum import Enum
-from typing import  Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -9,9 +8,9 @@ from src.schemas.user import UserRead
 
 
 class BenefitStatus(str, Enum):
-    PENDING = "pending" # В ожидании
-    APPROVED = "approved" # Одобрен
-    DECLINED = "declined" # Отклонен
+    PENDING = "pending"  # В ожидании
+    APPROVED = "approved"  # Одобрен
+    DECLINED = "declined"  # Отклонен
 
 
 class BenefitRequestBase(BaseModel):
@@ -20,6 +19,7 @@ class BenefitRequestBase(BaseModel):
     status: BenefitStatus = BenefitStatus.PENDING
     content: Optional[str] = None
     comment: Optional[str] = None
+
 
 class BenefitRequestCreate(BenefitRequestBase):
     pass

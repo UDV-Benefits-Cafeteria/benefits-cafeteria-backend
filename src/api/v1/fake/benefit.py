@@ -3,9 +3,15 @@ from typing import List
 from fastapi import APIRouter
 
 from src.api.v1.fake.generators import generate_fake_benefit
-from src.schemas.benefit import BenefitRead, BenefitCreate, BenefitUpdate, BenefitImageCreate
+from src.schemas.benefit import (
+    BenefitCreate,
+    BenefitImageCreate,
+    BenefitRead,
+    BenefitUpdate,
+)
 
 router = APIRouter()
+
 
 @router.get("/fake/benefits/{benefit_id}", response_model=BenefitRead)
 async def get_benefit(benefit_id: int):
@@ -15,14 +21,13 @@ async def get_benefit(benefit_id: int):
 
 @router.post("/fake/benefits", response_model=BenefitCreate)
 async def create_benefit(benefit: BenefitCreate):
-
     images = []
     if benefit.images:
         for image in benefit.images:
             image_read = BenefitImageCreate(
                 image_url=image.image_url,
                 is_primary=image.is_primary,
-                description=image.description
+                description=image.description,
             )
             images.append(image_read.model_dump())
     else:
@@ -31,7 +36,6 @@ async def create_benefit(benefit: BenefitCreate):
     benefit.model_dump()["images"] = images
 
     return benefit
-
 
 
 @router.patch("/fake/benefits/{benefit_id}")
