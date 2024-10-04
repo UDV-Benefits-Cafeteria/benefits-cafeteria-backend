@@ -4,6 +4,9 @@ from typing import Annotated, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.schemas.category import CategoryRead
+from src.schemas.position import PositionRead
+
 
 class BenefitImageBase(BaseModel):
     image_url: str
@@ -28,6 +31,7 @@ class BenefitImageRead(BenefitImageBase):
 
 class BenefitBase(BaseModel):
     name: Annotated[str, Field(max_length=100)]
+    category_id: Optional[int] = None
     is_active: bool = True
     description: Optional[str] = None
     real_currency_cost: Annotated[
@@ -54,10 +58,13 @@ class BenefitUpdate(BenefitBase):
     coins_cost: Annotated[Optional[int], Field(ge=0)]
     min_level_cost: Annotated[Optional[int], Field(ge=0)]
     images: Optional[List[BenefitImageCreate]] = None
+    category_id: Optional[int] = None
 
 
 class BenefitRead(BenefitBase):
     id: int
     images: Optional[List[BenefitImageRead]] = None
+    category: Optional[CategoryRead] = None
+    positions: Optional[List[PositionRead]] = None
 
     model_config = ConfigDict(from_attributes=True)
