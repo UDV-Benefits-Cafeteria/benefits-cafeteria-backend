@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.db import Base
 
 if TYPE_CHECKING:
-    from models import User
+    from src.models import User
 
 
 class LegalEntity(Base):

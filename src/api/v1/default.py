@@ -45,10 +45,9 @@ async def read_benefit(
 # This func is made for testing.
 @router.get("/benefits", response_model=List[schemas.BenefitRead])
 async def read_benefits(
-    filters: Annotated[schemas.BenefitFilter, Depends()],
     benefits_service: Annotated[BenefitsService, Depends(get_benefits_service)],
 ):
-    benefits = await benefits_service.get_benefits(filters)
+    benefits = await benefits_service.get_benefits()
     return benefits
 
 

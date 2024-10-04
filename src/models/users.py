@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.db import Base
 
 if TYPE_CHECKING:
-    from models import (
+    from src.models import (
         Answer,
         BenefitRequest,
         CoinPayment,
@@ -35,9 +35,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(
         String(255), unique=True, index=True, nullable=False
     )
-    firstname: Mapped[str] = mapped_column(String(50), nullable=False)
-    lastname: Mapped[str] = mapped_column(String(50), nullable=False)
-    middlename: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    firstname: Mapped[str] = mapped_column(String(100), nullable=False)
+    lastname: Mapped[str] = mapped_column(String(100), nullable=False)
+    middlename: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     position_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("positions.id", ondelete="SET NULL"), nullable=True
     )

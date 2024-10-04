@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 from src.db.db import Base
 
 if TYPE_CHECKING:
-    from models import Cost, Position, Question, User
+    from src.models import Position, Question, User
 
 
 class BenefitImage(Base):
@@ -38,8 +38,10 @@ class Benefit(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
-    cost_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("costs.id", ondelete="SET NULL"), nullable=True
+    coins_cost: Mapped[int] = mapped_column(Integer, nullable=False)
+    min_level_cost: Mapped[int] = mapped_column(Integer, nullable=False)
+    adaptation_required: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
     )
     real_currency_cost: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(10, 2), nullable=True
@@ -60,7 +62,6 @@ class Benefit(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    cost: Mapped[Optional["Cost"]] = relationship("Cost", back_populates="benefits")
     images: Mapped[List["BenefitImage"]] = relationship(
         "BenefitImage",
         back_populates="benefit",
