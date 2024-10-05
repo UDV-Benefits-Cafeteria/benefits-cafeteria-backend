@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.benefit import BenefitRead
 from src.schemas.user import UserRead
@@ -33,5 +33,7 @@ class BenefitRequestRead(BenefitRequestBase):
     id: int
     benefit: Optional["BenefitRead"] = None
     user: Optional["UserRead"] = None
+    benefit_id: Optional[int] = Field(None, exclude=True)
+    user_id: Optional[int] = Field(None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)

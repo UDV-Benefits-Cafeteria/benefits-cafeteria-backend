@@ -6,9 +6,10 @@ from faker import Faker
 
 from src.schemas.benefit import BenefitImageRead, BenefitRead
 from src.schemas.category import CategoryRead
+from src.schemas.legalentity import LegalEntityRead
 from src.schemas.position import PositionRead
 from src.schemas.request import BenefitRequestRead, BenefitStatus
-from src.schemas.user import UserRead
+from src.schemas.user import UserRead, UserRole
 
 fake = Faker("ru_RU")
 
@@ -96,21 +97,45 @@ def generate_fake_benefit_request(
     return benefit_request
 
 
+def generate_fake_position(position_id: int) -> PositionRead:
+    name = fake.job()
+    position = PositionRead(id=position_id, name=name)
+    return position
+
+
+def generate_fake_legal_entity(entity_id: int) -> LegalEntityRead:
+    name = fake.company()
+    legal_entity = LegalEntityRead(id=entity_id, name=name)
+    return legal_entity
+
+
 def generate_fake_user(user_id: int) -> UserRead:
+    position_id = random.randint(1, 100)
+    position = generate_fake_position(position_id)
+
+    legal_entity_id = random.randint(1, 100)
+    legal_entity = generate_fake_legal_entity(legal_entity_id)
+
+    hired_at = fake.date_between(start_date="-5y", end_date="today")
+
+    role = random.choice(list(UserRole))
+
     user = UserRead(
         id=user_id,
         email=fake.email(),
         firstname=fake.first_name(),
         lastname=fake.last_name(),
-        middlename=fake.middle_name(),
-        position_id=None,
-        role="employee",
-        hired_at=datetime.now().date(),
+        middlename=fake.middle_name() if random.choice([True, False]) else None,
+        position_id=position_id,
+        legal_entity_id=legal_entity_id,
+        position=position,
+        legal_entity=legal_entity,
+        role=role,
+        hired_at=hired_at,
         is_active=True,
         is_adapted=random.choice([True, False]),
         is_verified=random.choice([True, False]),
         coins=random.randint(0, 1000),
-        legal_entity_id=None,
     )
 
     return user

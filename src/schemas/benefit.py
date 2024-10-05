@@ -66,5 +66,6 @@ class BenefitRead(BenefitBase):
     images: Optional[List[BenefitImageRead]] = None
     category: Optional[CategoryRead] = None
     positions: Optional[List[PositionRead]] = None
+    category_id: Optional[int] = Field(None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True)
