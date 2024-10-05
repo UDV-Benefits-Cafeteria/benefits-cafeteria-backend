@@ -16,6 +16,7 @@ asyncpg = "^0.29.0"
 pydantic-settings = "^2.5.0"
 starlette = "^0.38.5"
 loguru = "^0.7.2"
+pydantic = {extras = ["email"], version = "^2.9.2"}
 
 [tool.poetry.group.dev]
 optional = true
