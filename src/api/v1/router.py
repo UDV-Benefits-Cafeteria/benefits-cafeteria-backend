@@ -1,8 +1,7 @@
 from fastapi import APIRouter
 
 from src.api.v1 import default
-from src.api.v1.fake import benefit
-from src.api.v1.fake import request
+from src.api.v1.fake import benefit, request
 
 router = APIRouter()
 router.include_router(

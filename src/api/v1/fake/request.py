@@ -3,8 +3,17 @@ from typing import List
 
 from fastapi import APIRouter
 
-from src.api.v1.fake.generators import generate_fake_benefit, generate_fake_user, generate_fake_benefit_request
-from src.schemas.request import BenefitRequestCreate, BenefitRequestRead, BenefitStatus, BenefitRequestUpdate
+from src.api.v1.fake.generators import (
+    generate_fake_benefit,
+    generate_fake_benefit_request,
+    generate_fake_user,
+)
+from src.schemas.request import (
+    BenefitRequestCreate,
+    BenefitRequestRead,
+    BenefitRequestUpdate,
+    BenefitStatus,
+)
 
 router = APIRouter()
 
@@ -13,7 +22,9 @@ router = APIRouter()
 async def create_benefit_request(benefit_request: BenefitRequestCreate):
     request_id = random.randint(1, 1000)
 
-    benefit = generate_fake_benefit(benefit_request.benefit_id or random.randint(1, 100))
+    benefit = generate_fake_benefit(
+        benefit_request.benefit_id or random.randint(1, 100)
+    )
     user = generate_fake_user(benefit_request.user_id or random.randint(1, 100))
 
     benefit_request_read = BenefitRequestRead(
@@ -24,10 +35,11 @@ async def create_benefit_request(benefit_request: BenefitRequestCreate):
         content=benefit_request.content,
         comment=benefit_request.comment,
         benefit=benefit,
-        user=user
+        user=user,
     )
 
     return benefit_request_read
+
 
 @router.get("/benefit-requests/user/{user_id}", response_model=List[BenefitRequestRead])
 async def get_benefit_requests_by_user(user_id: int):
@@ -43,6 +55,7 @@ async def get_benefit_request(request_id: int):
     benefit_request = generate_fake_benefit_request(request_id=request_id)
     return benefit_request
 
+
 @router.get("/benefit-requests", response_model=List[BenefitRequestRead])
 async def get_benefit_requests():
     requests = []
@@ -51,9 +64,11 @@ async def get_benefit_requests():
         requests.append(benefit_request)
     return requests
 
-@router.patch("/benefit-requests/{request_id}", response_model=BenefitRequestUpdate)
-async def update_benefit_request(request_id: int, benefit_request_update: BenefitRequestUpdate):
 
+@router.patch("/benefit-requests/{request_id}", response_model=BenefitRequestUpdate)
+async def update_benefit_request(
+    request_id: int, benefit_request_update: BenefitRequestUpdate
+):
     existing_request = generate_fake_benefit_request(request_id=request_id)
 
     update_data = benefit_request_update.model_dump(exclude_unset=True)
@@ -65,9 +80,6 @@ async def update_benefit_request(request_id: int, benefit_request_update: Benefi
     return updated_request
 
 
-
-
 @router.delete("/benefit-requests/{request_id}")
 async def delete_benefit_request(request_id: int):
     return {"is_success": True}
-

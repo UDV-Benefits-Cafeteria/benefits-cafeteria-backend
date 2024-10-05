@@ -69,7 +69,9 @@ def generate_fake_benefit(benefit_id: int) -> BenefitRead:
     return benefit
 
 
-def generate_fake_benefit_request(request_id: int, user_id: int = None) -> BenefitRequestRead:
+def generate_fake_benefit_request(
+    request_id: int, user_id: int = None
+) -> BenefitRequestRead:
     benefit_id = random.randint(1, 100)
     if not user_id:
         user_id = random.randint(1, 100)
@@ -88,14 +90,13 @@ def generate_fake_benefit_request(request_id: int, user_id: int = None) -> Benef
         content=content,
         comment=comment,
         benefit=benefit,
-        user=user
+        user=user,
     )
 
     return benefit_request
 
 
 def generate_fake_user(user_id: int) -> UserRead:
-
     user = UserRead(
         id=user_id,
         email=fake.email(),
@@ -109,7 +110,7 @@ def generate_fake_user(user_id: int) -> UserRead:
         is_adapted=random.choice([True, False]),
         is_verified=random.choice([True, False]),
         coins=random.randint(0, 1000),
-        legal_entity_id=None
+        legal_entity_id=None,
     )
 
     return user
