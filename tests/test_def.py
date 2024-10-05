@@ -1,4 +1,3 @@
-"""
 from httpx import AsyncClient
 
 
@@ -9,4 +8,3 @@ def testing():
 
 async def test2(async_client: AsyncClient):
     assert async_client is not None
-"""
