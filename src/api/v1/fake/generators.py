@@ -1,6 +1,7 @@
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal
+from typing import Optional
 
 from faker import Faker
 
@@ -39,7 +40,7 @@ def generate_fake_benefit(benefit_id: int) -> BenefitRead:
         for i in range(1, 4)
     ]
 
-    category = CategoryRead(id=random.randint(1, 100), name=fake.word())
+    category = generate_fake_category(None)
     if random.choice([True, False]):
         positions = [PositionRead(id=i, name=fake.job()) for i in range(1, 4)]
     else:
@@ -95,6 +96,13 @@ def generate_fake_benefit_request(
     )
 
     return benefit_request
+
+
+def generate_fake_category(category_id: Optional[int]) -> CategoryRead:
+    id = category_id if category_id else random.randint(1, 100)
+    category = CategoryRead(id=id, name=fake.word())
+
+    return category
 
 
 def generate_fake_position(position_id: int) -> PositionRead:

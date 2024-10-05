@@ -3,7 +3,7 @@ from typing import List
 
 from fastapi import APIRouter
 
-from src.api.v1.fake.generators import generate_fake_benefit
+from src.api.v1.fake.generators import generate_fake_benefit, generate_fake_category
 from src.schemas.benefit import (
     BenefitCreate,
     BenefitImageRead,
@@ -39,6 +39,7 @@ async def create_benefit(benefit: BenefitCreate):
             images.append(image_read.model_dump())
 
     benefit_result["images"] = images
+    benefit_result["category"] = generate_fake_category(benefit_result["category_id"])
     return benefit_result
 
 

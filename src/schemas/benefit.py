@@ -58,7 +58,6 @@ class BenefitUpdate(BenefitBase):
     coins_cost: Annotated[Optional[int], Field(ge=0)]
     min_level_cost: Annotated[Optional[int], Field(ge=0)]
     images: Optional[List[BenefitImageCreate]] = None
-    category_id: Optional[int] = None
 
 
 class BenefitRead(BenefitBase):
