@@ -4,7 +4,11 @@ from typing import List
 from fastapi import APIRouter
 
 from src.api.v1.fake.generators import generate_fake_legal_entity
-from src.schemas.legalentity import LegalEntityCreate, LegalEntityRead, LegalEntityUpdate
+from src.schemas.legalentity import (
+    LegalEntityCreate,
+    LegalEntityRead,
+    LegalEntityUpdate,
+)
 
 router = APIRouter(prefix="/legal-entities", tags=["Legal Entities"])
 
