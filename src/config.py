@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     ALLOW_ORIGINS: List[str] = ["*"]
 
-    API_V1_PREFIX: str = "/api/v1"
+    API_PREFIX: str = "/api"
 
     @property
     def DATABASE_URL(self) -> PostgresDsn:

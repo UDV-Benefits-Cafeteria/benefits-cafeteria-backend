@@ -10,16 +10,16 @@ from src.schemas.benefit import (
     BenefitUpdate,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/benefits", tags=["Benefits"])
 
 
-@router.get("/benefits/{benefit_id}", response_model=BenefitRead)
+@router.get("/{benefit_id}", response_model=BenefitRead)
 async def get_benefit(benefit_id: int):
     benefit = generate_fake_benefit(benefit_id)
     return benefit
 
 
-@router.post("/benefits", response_model=BenefitCreate)
+@router.post("", response_model=BenefitCreate)
 async def create_benefit(benefit: BenefitCreate):
     images = []
     if benefit.images:
@@ -38,17 +38,17 @@ async def create_benefit(benefit: BenefitCreate):
     return benefit
 
 
-@router.patch("/benefits/{benefit_id}")
+@router.patch("/{benefit_id}")
 async def update_benefit(benefit_id: int, benefit_update: BenefitUpdate):
     return {"is_success": True}
 
 
-@router.delete("/benefits/{benefit_id}")
+@router.delete("/{benefit_id}")
 async def delete_benefit(benefit_id: int):
     return {"is_success": True}
 
 
-@router.get("/benefits", response_model=List[BenefitRead])
+@router.get("", response_model=List[BenefitRead])
 async def get_benefits():
     benefits = []
     for id in range(10):
