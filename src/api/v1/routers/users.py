@@ -2,16 +2,17 @@ from typing import List
 
 from fastapi import APIRouter
 
-
 from src.api.v1.fake.generators import generate_fake_user
 from src.schemas.user import UserRead, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+
 @router.get("/me", response_model=UserRead)
 async def get_user_me():
     user = generate_fake_user(228)
     return user
+
 
 @router.get("/{user_id}", response_model=UserRead)
 async def get_user(user_id: int):
@@ -26,6 +27,7 @@ async def get_users():
         benefit_request = generate_fake_user(i)
         requests.append(benefit_request)
     return requests
+
 
 @router.patch("/{user_id}", response_model=UserRead)
 async def update_user(user_id: int, user_update: UserUpdate):
