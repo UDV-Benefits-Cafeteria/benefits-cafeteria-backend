@@ -7,7 +7,6 @@ from src.schemas.user import (
     UserError,
     UserLogin,
     UserRegister,
-    UserTokens,
     UserVerified,
     UserVerify,
 )
@@ -26,7 +25,7 @@ async def signin(user_login: UserLogin, response: Response):
 
 @router.post("/signup")
 async def signup(user_register: UserRegister):
-    user = generate_fake_user(user_id=user_register.id, is_verified=False)
+    generate_fake_user(user_id=user_register.id, is_verified=False)
     return {"is_success": True}
 
 
