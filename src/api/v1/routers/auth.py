@@ -25,7 +25,7 @@ async def signin(user_login: UserLogin, response: Response):
 
 @router.post("/signup")
 async def signup(user_register: UserRegister):
-    generate_fake_user(user_id=user_register.id, is_verified=False)
+    generate_fake_user(user_id=user_register.id, is_verified=True)
     return {"is_success": True}
 
 
