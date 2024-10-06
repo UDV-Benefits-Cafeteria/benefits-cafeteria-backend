@@ -5,7 +5,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from src.api.v1 import router as api_v1_router
 
-from .config import settings
+from src.config import settings
 
 logging.basicConfig(level=logging.INFO)
 

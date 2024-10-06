@@ -10,7 +10,7 @@ from pydantic import (
     Field,
     computed_field,
     field_validator,
-    model_validator,
+    model_validator, SecretStr,
 )
 from pydantic_core.core_schema import ValidationInfo
 
@@ -50,7 +50,8 @@ class UserBase(BaseModel):
         return name
 
 
-class UserRegister(UserBase):
+class UserRegister(BaseModel):
+    id: int
     password: Annotated[str, Field(min_length=8, max_length=255)]
     re_password: Annotated[str, Field(min_length=8, max_length=255)]
 
@@ -61,6 +62,28 @@ class UserRegister(UserBase):
         if pw1 is not None and pw2 is not None and pw1 != pw2:
             raise ValueError("Passwords are different")
         return self
+
+
+class UserLogin(BaseModel):
+    email: Annotated[EmailStr, Field(max_length=255)]
+    password: Annotated[str, Field(min_length=8, max_length=255)]
+
+
+class UserVerify(BaseModel):
+    email: Annotated[EmailStr, Field(max_length=255)]
+
+
+class UserTokens(BaseModel):
+    secret: SecretStr
+    refresh: SecretStr
+
+
+class UserVerified(BaseModel):
+    id: int
+
+
+class UserError(BaseModel):
+    error: str
 
 
 class UserUpdate(UserBase):

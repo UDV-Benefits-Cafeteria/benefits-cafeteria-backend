@@ -26,6 +26,9 @@ class Settings(BaseSettings):
 
     API_PREFIX: str = "/api"
 
+    ALGORITHM: str = 'HS256'
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
+
     @property
     def DATABASE_URL(self) -> PostgresDsn:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"  # noqa
