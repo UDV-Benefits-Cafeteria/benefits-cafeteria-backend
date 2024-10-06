@@ -1,11 +1,34 @@
-from typing import List
+import random
 
 from fastapi import APIRouter
 
-from src.api.v1.fake.generators import generate_fake_user
-from src.schemas.user import UserRead, UserUpdate
+from src.api.v1.fake.generators import (
+    generate_fake_legal_entity,
+    generate_fake_position,
+    generate_fake_user,
+)
+from src.schemas.user import UserBase, UserRead, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@router.post("", response_model=UserRead)
+async def create_user(user: UserBase):
+    user_id = random.randint(1, 1000)
+
+    user_data = user.model_dump()
+    user_data["id"] = user_id
+    user_data["is_verified"] = False
+    user_data["position"] = (
+        generate_fake_position(user.position_id) if user.position_id else None
+    )
+    user_data["legal_entity"] = (
+        generate_fake_legal_entity(user.legal_entity_id)
+        if user.legal_entity_id
+        else None
+    )
+    user_read = UserRead(**user_data)
+    return user_read
 
 
 @router.get("/me", response_model=UserRead)
@@ -20,7 +43,7 @@ async def get_user(user_id: int):
     return user
 
 
-@router.get("", response_model=List[UserRead])
+@router.get("", response_model=list[UserRead])
 async def get_users():
     requests = []
     for i in range(1, 11):

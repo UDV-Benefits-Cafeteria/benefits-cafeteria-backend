@@ -1,5 +1,4 @@
 import random
-from typing import List
 
 from fastapi import APIRouter
 
@@ -39,7 +38,7 @@ async def delete_position(position_id: int):
     return {"is_success": True}
 
 
-@router.get("", response_model=List[PositionRead])
+@router.get("", response_model=list[PositionRead])
 async def get_positions():
     positions = []
     for id in range(1, 11):

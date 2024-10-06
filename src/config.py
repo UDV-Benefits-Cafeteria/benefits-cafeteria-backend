@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     API_PREFIX: str = "/api"
 
-    ALGORITHM: str = 'HS256'
+    ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
 
     @property

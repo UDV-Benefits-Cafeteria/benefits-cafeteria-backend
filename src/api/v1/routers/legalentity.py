@@ -1,5 +1,4 @@
 import random
-from typing import List
 
 from fastapi import APIRouter
 
@@ -43,7 +42,7 @@ async def delete_legal_entity(entity_id: int):
     return {"is_success": True}
 
 
-@router.get("", response_model=List[LegalEntityRead])
+@router.get("", response_model=list[LegalEntityRead])
 async def get_legal_entities():
     legal_entities = []
     for id in range(1, 11):

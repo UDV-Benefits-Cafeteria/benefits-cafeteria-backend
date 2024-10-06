@@ -8,9 +8,10 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
+    SecretStr,
     computed_field,
     field_validator,
-    model_validator, SecretStr,
+    model_validator,
 )
 from pydantic_core.core_schema import ValidationInfo
 

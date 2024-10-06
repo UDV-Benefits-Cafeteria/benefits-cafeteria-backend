@@ -1,5 +1,4 @@
 import random
-from typing import List
 
 from fastapi import APIRouter
 
@@ -39,7 +38,7 @@ async def delete_category(category_id: int):
     return {"is_success": True}
 
 
-@router.get("", response_model=List[CategoryRead])
+@router.get("", response_model=list[CategoryRead])
 async def get_categories():
     categories = []
     for id in range(1, 11):

@@ -1,5 +1,4 @@
 import random
-from typing import List
 
 from fastapi import APIRouter
 
@@ -74,7 +73,7 @@ async def delete_benefit(benefit_id: int):
     return {"is_success": True}
 
 
-@router.get("", response_model=List[BenefitRead])
+@router.get("", response_model=list[BenefitRead])
 async def get_benefits():
     benefits = []
     for id in range(10):

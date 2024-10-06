@@ -1,5 +1,4 @@
 import random
-from typing import List
 
 from fastapi import APIRouter
 
@@ -41,7 +40,7 @@ async def create_benefit_request(benefit_request: BenefitRequestCreate):
     return benefit_request_read
 
 
-@router.get("/user/{user_id}", response_model=List[BenefitRequestRead])
+@router.get("/user/{user_id}", response_model=list[BenefitRequestRead])
 async def get_benefit_requests_by_user(user_id: int):
     requests = []
     for i in range(1, 6):
@@ -56,7 +55,7 @@ async def get_benefit_request(request_id: int):
     return benefit_request
 
 
-@router.get("", response_model=List[BenefitRequestRead])
+@router.get("", response_model=list[BenefitRequestRead])
 async def get_benefit_requests():
     requests = []
     for i in range(1, 11):

@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -43,7 +43,7 @@ async def read_benefit(
 
 
 # This func is made for testing.
-@router.get("/benefits", response_model=List[schemas.BenefitRead])
+@router.get("/benefits", response_model=list[schemas.BenefitRead])
 async def read_benefits(
     benefits_service: Annotated[BenefitsService, Depends(get_benefits_service)],
 ):

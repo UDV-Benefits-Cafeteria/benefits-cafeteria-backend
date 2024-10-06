@@ -117,7 +117,16 @@ def generate_fake_legal_entity(entity_id: int) -> LegalEntityRead:
     return legal_entity
 
 
-def generate_fake_user(user_id: int) -> UserRead:
+def generate_fake_user(
+    user_id: int = None, email: str = None, is_verified: bool = None
+) -> UserRead:
+    if user_id is None:
+        user_id = random.randint(1, 1000)
+    if email is None:
+        email = fake.email()
+    if is_verified is None:
+        is_verified = random.choice([True, False])
+
     position_id = random.randint(1, 100)
     position = generate_fake_position(position_id)
 
@@ -130,7 +139,7 @@ def generate_fake_user(user_id: int) -> UserRead:
 
     user = UserRead(
         id=user_id,
-        email=fake.email(),
+        email=email,
         firstname=fake.first_name(),
         lastname=fake.last_name(),
         middlename=fake.middle_name() if random.choice([True, False]) else None,
@@ -142,7 +151,7 @@ def generate_fake_user(user_id: int) -> UserRead:
         hired_at=hired_at,
         is_active=True,
         is_adapted=random.choice([True, False]),
-        is_verified=random.choice([True, False]),
+        is_verified=is_verified,
         coins=random.randint(0, 1000),
     )
 
