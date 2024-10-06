@@ -12,10 +12,9 @@ RUN apt update
 RUN apt install libmemcached-tools memcached -y
 
 RUN pip install poetry
-RUN poetry install --with prod
+RUN poetry install
 
-COPY src /src/
+COPY . /src/
 COPY entrypoint.sh /src/entrypoint.sh
 
 RUN chmod a+x entrypoint.sh
-ENTRYPOINT ["bash", "entrypoint.sh"]

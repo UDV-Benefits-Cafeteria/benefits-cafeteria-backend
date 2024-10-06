@@ -1,11 +1,26 @@
 #!/bin/sh
 echo "Starting memcached"
-/etc/init.d/memcached start
-if [ "$DEBUG" = "True" ]
-then
-  echo "Running in debug mode"
-  poetry run debugpy --listen 0.0.0.0:5678 -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
-else
-  echo "Running in production mode"
-  poetry run uvicorn src.main:app --host=0.0.0.0 --reload
-fi
+until /etc/init.d/memcached start
+do
+  echo "Waiting for memcached to be ready..."
+  sleep 2
+done
+echo "Init migrations"
+until poetry run alembic upgrade head
+do
+  echo "Waiting for init migrations..."
+  sleep 2
+done
+echo "Creating migrations"
+until poetry run alembic revision --autogenerate
+do
+  echo "Waiting for create migrations..."
+  sleep 2
+done
+echo "Applying migrations"
+until poetry run alembic upgrade head
+do
+  echo "Waiting for apply migrations..."
+  sleep 2
+done
+exec "$@"
