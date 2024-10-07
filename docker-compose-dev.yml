@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    entrypoint: ["bash", "entrypoint.sh"]
+    command: poetry run debugpy --listen 0.0.0.0:5678 -m uvicorn src.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000" # for FastAPI
       - "5678:5678" # for DEBUG=True (debugpy)
@@ -42,3 +44,46 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+
+  rabbitmq:
+    image: "rabbitmq:4-management"
+
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    ports:
+      - "5672:5672"
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: poetry run celery -A src.celery.celery worker -l debug --without-mingle --without-gossip
+    environment:
+      - DATABASE_URL=postgres+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/${POSTGRES_DB}
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq//
+    depends_on:
+      - rabbitmq
+      - db
+      - app
+    restart: on-failure
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    hostname: flower
+    environment:
+      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq//
+      - CELERY_RESULT_BACKEND=rpc://
+      - FLOWER_PORT=5555
+      - DATABASE_URL=postgres+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/${POSTGRES_DB}
+    command: poetry run celery -A src.celery.celery flower
+    depends_on:
+      - rabbitmq
+      - db
+      - app
+    ports:
+      - "5555:5555"

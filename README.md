@@ -25,6 +25,11 @@ POSTGRES_PASSWORD=postgres
 POSTGRES_DB=postgres
 POSTGRES_PORT=5432
 POSTGRES_HOST=db
+SECRET_KEY=some_secret_key
+FLOWER_LOGIN=admin
+FLOWER_PASSWORD=admin
+CELERY_BROKER_URL=amqp://guest:guest@rabbitmq//
+CELERY_RESULT_BACKEND=rpc://
 ```
 
 ### 3. Set up Docker

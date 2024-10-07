@@ -1,17 +1,19 @@
-from typing import Annotated
+from typing import Annotated, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 import src.schemas.benefit as schemas
 from src.api.v1.dependencies import get_benefits_service
+from src.celery.tasks import test_task
 from src.services.benefits import BenefitsService
 
 router = APIRouter()
 
 
 @router.get("/")
-async def index():
-    return {"index": True}
+async def index() -> Dict[str, str]:
+    status = test_task.apply_async()
+    return {"status": status.wait(timeout=None, interval=0.5)}
 
 
 @router.get("/ping")
