@@ -1,5 +1,4 @@
 import enum
-from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Boolean, DateTime
@@ -35,6 +34,9 @@ class Benefit(Base):
     repr_cols = ("id", "name", "description")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
+    )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
@@ -43,7 +45,7 @@ class Benefit(Base):
     adaptation_required: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
-    real_currency_cost: Mapped[Optional[Decimal]] = mapped_column(
+    real_currency_cost: Mapped[Optional[Numeric]] = mapped_column(
         Numeric(10, 2), nullable=True
     )
     amount: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -87,8 +89,8 @@ class Benefit(Base):
         viewonly=True,
         lazy="selectin",
     )
-    categories: Mapped[List["BenefitCategory"]] = relationship(
-        "BenefitCategory", back_populates="benefit", cascade="all, delete-orphan"
+    category: Mapped[Optional["Category"]] = relationship(
+        "Category", back_populates="benefits"
     )
     requests: Mapped[List["BenefitRequest"]] = relationship(
         "BenefitRequest", back_populates="benefit"
@@ -149,25 +151,6 @@ class BenefitPosition(Base):
     )
 
 
-class BenefitCategory(Base):
-    __tablename__ = "benefit_categories"
-
-    repr_cols = ("id", "benefit_id", "category_id")
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    benefit_id: Mapped[int] = mapped_column(
-        ForeignKey("benefits.id", ondelete="CASCADE"), nullable=False
-    )
-    category_id: Mapped[int] = mapped_column(
-        ForeignKey("categories.id", ondelete="CASCADE"), nullable=False
-    )
-
-    benefit: Mapped["Benefit"] = relationship("Benefit", back_populates="categories")
-    category: Mapped["Category"] = relationship(
-        "Category", back_populates="benefit_categories"
-    )
-
-
 class Category(Base):
     __tablename__ = "categories"
 
@@ -176,6 +159,6 @@ class Category(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
 
-    benefit_categories: Mapped[List["BenefitCategory"]] = relationship(
-        "BenefitCategory", back_populates="category", cascade="all, delete-orphan"
+    benefits: Mapped[List["Benefit"]] = relationship(
+        "Benefit", back_populates="category", cascade="all, delete-orphan"
     )

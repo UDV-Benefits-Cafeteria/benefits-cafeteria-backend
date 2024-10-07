@@ -3,9 +3,8 @@ import logging
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from src.api.v1.router import router as api_v1_router
-
-from .config import settings
+from src.api.v1 import router as api_v1_router
+from src.config import settings
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,7 +25,7 @@ def get_application() -> FastAPI:
         allow_headers=["*"],
     )
 
-    application.include_router(api_v1_router, prefix=settings.API_V1_PREFIX)
+    application.include_router(api_v1_router, prefix=settings.API_PREFIX)
 
     return application
 
