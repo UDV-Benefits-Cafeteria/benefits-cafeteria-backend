@@ -1,6 +1,8 @@
-from typing import TypeVar, Generic
-from src.repositories.abstract import AbstractRepository
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel
+
+from src.repositories.abstract import AbstractRepository
 
 TCreate = TypeVar("TCreate", bound=BaseModel)
 TRead = TypeVar("TRead", bound=BaseModel)
