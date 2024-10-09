@@ -87,3 +87,9 @@ services:
       - app
     ports:
       - "5555:5555"
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"

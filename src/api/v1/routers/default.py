@@ -27,7 +27,7 @@ async def create_benefit(
     benefit: schemas.BenefitCreate,
     benefits_service: Annotated[BenefitsService, Depends(get_benefits_service)],
 ):
-    benefit_id = await benefits_service.create_benefit(benefit)
+    benefit_id = await benefits_service.create(benefit)
     return benefit_id
 
 
