@@ -29,6 +29,17 @@ class AbstractService(Generic[TCreate, TRead, TUpdate]):
         entity_id = await self.repo.add_one(data)
         return entity_id
 
+    async def create_and_get_one(self, create_schema: TCreate) -> TRead:
+        """
+        Create a new entity and return the created entity's details.
+
+        :param create_schema: Schema containing data for creating a new entity.
+        :return: The created entity represented by the read schema.
+        """
+        entity_id: int = await self.create(create_schema)
+        entity: TRead = await self.get_one(entity_id)
+        return entity
+
     async def create_many(self, create_schemas: list[TCreate]) -> list[int]:
         """
         Create multiple entities using the provided creation schemas.
@@ -40,23 +51,50 @@ class AbstractService(Generic[TCreate, TRead, TUpdate]):
         entity_ids = await self.repo.add_many(data)
         return entity_ids
 
-    async def update(self, id: int, update_schema: TUpdate):
+    async def create_many_and_get_many(
+        self, create_schemas: list[TCreate]
+    ) -> list[TRead]:
+        """
+        Create multiple entities and return their details.
+
+        :param create_schemas: List of schemas for creating multiple entities.
+        :return: List of read schemas representing the created entities.
+        """
+        entity_ids: list[int] = await self.create_many(create_schemas)
+        entities: list[TRead] = [await self.get_one(entity) for entity in entity_ids]
+        return entities
+
+    async def update(self, id: int, update_schema: TUpdate) -> bool:
         """
         Update an existing entity using the provided update schema.
 
         :param id: ID of the entity to be updated.
         :param update_schema: Schema containing data to update the entity.
-        :return: Result of the update operation.
+        :return: True if the update operation was successful, False otherwise.
         """
         data = update_schema.model_dump(exclude_unset=True)
         return await self.repo.update_one(id, data)
 
-    async def delete(self, id: int):
+    async def update_and_get_one(self, id: int, update_schema: TUpdate) -> bool | TRead:
+        """
+        Update an existing entity and return the updated entity's details if successful.
+
+        :param id: ID of the entity to be updated.
+        :param update_schema: Schema containing data to update the entity.
+        :return: The updated entity represented by the read schema if successful,
+                 otherwise a boolean indicating failure.
+        """
+        is_updated: bool = await self.update(id, update_schema)
+        if is_updated:
+            return await self.get_one(id)
+        return is_updated
+
+    async def delete(self, id: int) -> bool:
         """
         Delete an entity by its ID.
 
         :param id: ID of the entity to be deleted.
-        :return: Result of the delete operation.
+        :return: True if the delete operation was successful, False otherwise.
         """
         return await self.repo.delete_one(id)
 
