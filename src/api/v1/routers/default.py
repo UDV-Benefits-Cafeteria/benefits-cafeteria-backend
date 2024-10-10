@@ -21,14 +21,26 @@ async def ping():
     return {"success": True}
 
 
-# This func is made for testing.
+ServiceDep = Annotated[BenefitsService, Depends(get_benefits_service)]
+
+
 @router.post("/benefits", response_model=int)
 async def create_benefit(
     benefit: schemas.BenefitCreate,
-    benefits_service: Annotated[BenefitsService, Depends(get_benefits_service)],
+    benefits_service: ServiceDep,
 ):
-    benefit_id = await benefits_service.create_benefit(benefit)
+    benefit_id = await benefits_service.create(benefit)
     return benefit_id
+
+
+@router.patch("/benefits/{benefit_id}")
+async def update_benefit(
+    benefit_id: int,
+    benefit: schemas.BenefitUpdate,
+    benefits_service: ServiceDep,
+):
+    await benefits_service.update(benefit_id, benefit)
+    return {"is_success": True}
 
 
 # This func is made for testing.
@@ -54,14 +66,6 @@ async def read_benefits(
 
 
 # This func is made for testing.
-@router.patch("/benefits/{benefit_id}")
-async def update_benefit(
-    benefit_id: int,
-    benefit: schemas.BenefitUpdate,
-    benefits_service: Annotated[BenefitsService, Depends(get_benefits_service)],
-):
-    await benefits_service.update_benefit(benefit_id, benefit)
-    return {"is_success": True}
 
 
 # This func is made for testing.

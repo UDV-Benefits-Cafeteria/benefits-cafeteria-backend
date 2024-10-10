@@ -55,8 +55,8 @@ class BenefitCreate(BenefitBase):
 
 class BenefitUpdate(BenefitBase):
     name: Annotated[Optional[str], Field(max_length=100)] = None
-    coins_cost: Annotated[Optional[int], Field(ge=0)]
-    min_level_cost: Annotated[Optional[int], Field(ge=0)]
+    coins_cost: Annotated[Optional[int], Field(ge=0)] = None
+    min_level_cost: Annotated[Optional[int], Field(ge=0)] = None
     images: Optional[List[BenefitImageCreate]] = None
 
 

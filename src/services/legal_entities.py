@@ -3,7 +3,7 @@ This file is made for testing.
 """
 """
 from src.schemas.legalentity import LegalEntityCreate
-from src.utils.repository import AbstractRepository
+from src.repositories.abstract import AbstractRepository
 
 
 class LegalEntitiesService:
