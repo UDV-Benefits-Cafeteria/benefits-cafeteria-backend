@@ -51,7 +51,9 @@ class AbstractService(Generic[TCreate, TRead, TUpdate]):
         entity_ids = await self.repo.add_many(data)
         return entity_ids
 
-    async def create_many_and_get_many(self, create_schemas: list[TCreate]) -> list[TRead]:
+    async def create_many_and_get_many(
+        self, create_schemas: list[TCreate]
+    ) -> list[TRead]:
         """
         Create multiple entities and return their details.
 
