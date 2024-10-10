@@ -70,7 +70,7 @@ class AbstractService(Generic[TCreate, TRead, TUpdate]):
 
         :param id: ID of the entity to be updated.
         :param update_schema: Schema containing data to update the entity.
-        :return: Result of the update operation.
+        :return: True if the update operation was successful, False otherwise.
         """
         data = update_schema.model_dump(exclude_unset=True)
         return await self.repo.update_one(id, data)
@@ -94,7 +94,7 @@ class AbstractService(Generic[TCreate, TRead, TUpdate]):
         Delete an entity by its ID.
 
         :param id: ID of the entity to be deleted.
-        :return: Result of the delete operation.
+        :return: True if the delete operation was successful, False otherwise.
         """
         return await self.repo.delete_one(id)
 
