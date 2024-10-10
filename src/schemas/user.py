@@ -87,6 +87,10 @@ class UserError(BaseModel):
     error: str
 
 
+class UserCreate(UserBase):
+    pass
+
+
 class UserUpdate(UserBase):
     email: Annotated[Optional[EmailStr], Field(max_length=255)] = None
     firstname: Annotated[Optional[str], Field(max_length=100)] = None
