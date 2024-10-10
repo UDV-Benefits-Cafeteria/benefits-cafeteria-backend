@@ -45,7 +45,7 @@ class User(Base):
         SQLAlchemyEnum(UserRole, native_enum=False, name="user_role_enum"),
         nullable=False,
     )
-    password: Mapped[str] = mapped_column(String(255), nullable=False)
+    password: Mapped[str] = mapped_column(String(255), nullable=True)
     hired_at: Mapped[dt.date] = mapped_column(Date, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_adapted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
