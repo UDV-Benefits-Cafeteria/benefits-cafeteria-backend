@@ -42,7 +42,12 @@ class User(Base):
         ForeignKey("positions.id", ondelete="SET NULL"), nullable=True
     )
     role: Mapped[UserRole] = mapped_column(
-        SQLAlchemyEnum(UserRole, native_enum=False, name="user_role_enum"),
+        SQLAlchemyEnum(
+            UserRole,
+            native_enum=False,
+            name="user_role_enum",
+            values_callable=lambda enum_class: [member.value for member in enum_class],
+        ),
         nullable=False,
     )
     password: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -56,10 +61,14 @@ class User(Base):
     )
 
     legal_entity: Mapped[Optional["LegalEntity"]] = relationship(
-        "LegalEntity", back_populates="users"
+        "LegalEntity",
+        back_populates="users",
+        lazy="selectin",
     )
     position: Mapped[Optional["Position"]] = relationship(
-        "Position", back_populates="users"
+        "Position",
+        back_populates="users",
+        lazy="selectin",
     )
     coin_payments: Mapped[List["CoinPayment"]] = relationship(
         "CoinPayment",

@@ -1,65 +1,66 @@
-import random
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.api.v1.fake.generators import (
-    generate_fake_legal_entity,
-    generate_fake_position,
-    generate_fake_user,
-)
-from src.schemas.user import UserBase, UserRead, UserUpdate
+import src.schemas.user as schemas
+from src.api.v1.dependencies import get_user_service
+from src.services.users import UsersService
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("", response_model=UserRead)
-async def create_user(user: UserBase):
-    user_id = random.randint(1, 1000)
-
-    user_data = user.model_dump()
-    user_data["id"] = user_id
-    user_data["is_verified"] = False
-    user_data["position"] = (
-        generate_fake_position(user.position_id) if user.position_id else None
-    )
-    user_data["legal_entity"] = (
-        generate_fake_legal_entity(user.legal_entity_id)
-        if user.legal_entity_id
-        else None
-    )
-    user_read = UserRead(**user_data)
-    return user_read
+ServiceDep = Annotated[UsersService, Depends(get_user_service)]
 
 
-@router.get("/me", response_model=UserRead)
-async def get_user_me():
-    user = generate_fake_user(228)
+@router.post("/", response_model=schemas.UserRead, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    user: schemas.UserCreate,
+    service: ServiceDep,
+):
+    try:
+        created_user = await service.create_and_get_one(user)
+        return created_user
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/{user_id}", response_model=schemas.UserRead)
+async def update_user(
+    user_id: int,
+    user_update: schemas.UserUpdate,
+    service: ServiceDep,
+):
+    try:
+        updated_user = await service.update_and_get_one(user_id, user_update)
+        if not updated_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return updated_user
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{user_id}", response_model=schemas.UserRead)
+async def get_user(
+    user_id: int,
+    service: ServiceDep,
+):
+    user = await service.get_one(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
-@router.get("/{user_id}", response_model=UserRead)
-async def get_user(user_id: int):
-    user = generate_fake_user(user_id)
-    return user
-
-
-@router.get("", response_model=list[UserRead])
-async def get_users():
-    requests = []
-    for i in range(1, 11):
-        benefit_request = generate_fake_user(i)
-        requests.append(benefit_request)
-    return requests
-
-
-@router.patch("/{user_id}", response_model=UserRead)
-async def update_user(user_id: int, user_update: UserUpdate):
-    existing_user = generate_fake_user(user_id)
-
-    update_data = user_update.model_dump(exclude_unset=True)
-    updated_user_data = existing_user.model_dump()
-    updated_user_data.update(update_data)
-
-    updated_user = UserRead(**updated_user_data)
-
-    return updated_user
+@router.post(
+    "/batch", response_model=list[schemas.UserRead], status_code=status.HTTP_201_CREATED
+)
+async def create_users(
+    users_create: schemas.UsersCreate,
+    service: ServiceDep,
+):
+    for user in users_create.users:
+        user.is_verified = False
+    try:
+        created_users = await service.create_many_and_get_many(users_create.users)
+        return created_users
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

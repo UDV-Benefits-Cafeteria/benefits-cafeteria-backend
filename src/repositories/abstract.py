@@ -99,6 +99,10 @@ class AbstractRepository(ABC, Generic[T]):
         """
         pass
 
+    @abstractmethod
+    async def find_by_email(self, email: str) -> Optional[T]:
+        pass
+
 
 class SQLAlchemyRepository(AbstractRepository[T]):
     """
