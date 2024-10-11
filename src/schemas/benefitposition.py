@@ -13,7 +13,6 @@ class BenefitPositionCreate(BenefitPositionBase):
 
 
 class BenefitPositionUpdate(BenefitPositionBase):
-    benefit_id: Optional[int] = None
     position_id: Optional[int] = None
 
 

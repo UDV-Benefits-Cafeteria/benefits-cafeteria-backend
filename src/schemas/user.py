@@ -30,14 +30,13 @@ class UserBase(BaseModel):
     firstname: Annotated[str, Field(max_length=100)]
     lastname: Annotated[str, Field(max_length=100)]
     middlename: Annotated[Optional[str], Field(max_length=100)] = None
+    coins: Annotated[Optional[int], Field(ge=0)] = None
     position_id: Optional[int] = None
     legal_entity_id: Optional[int] = None
     role: UserRole
     hired_at: date
     is_active: bool = True
     is_adapted: bool = False
-    is_verified: bool = False
-    coins: int = 0
 
     @field_validator("firstname", "middlename", "lastname")
     @classmethod
@@ -83,30 +82,23 @@ class UserVerified(BaseModel):
     id: int
 
 
-class UserError(BaseModel):
-    error: str
-
-
 class UserCreate(UserBase):
-    pass
+    is_verified: bool = Field(default=False, exclude=True)
+    is_active: bool = Field(default=True, exclude=True)
 
 
 class UsersCreate(BaseModel):
     users: list[UserCreate]
 
 
-class UserUpdate(BaseModel):
+class UserUpdate(UserBase):
     email: Annotated[Optional[EmailStr], Field(max_length=255)] = None
     firstname: Annotated[Optional[str], Field(max_length=100)] = None
     lastname: Annotated[Optional[str], Field(max_length=100)] = None
-    middlename: Annotated[Optional[str], Field(max_length=100)] = None
-    position_id: Optional[int] = None
-    legal_entity_id: Optional[int] = None
     role: Optional[UserRole] = None
     hired_at: Optional[date] = None
     is_active: Optional[bool] = None
     is_adapted: Optional[bool] = None
-    coins: Optional[int] = None
 
 
 class UserPasswordUpdate(BaseModel):
@@ -134,3 +126,13 @@ class UserRead(UserBase):
         return self.experience // 30
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+
+
+class UserUploadError(BaseModel):
+    row: int
+    error: str
+
+
+class UserUploadResponse(BaseModel):
+    created_users: list[UserRead]
+    errors: list[UserUploadError]

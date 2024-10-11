@@ -9,7 +9,7 @@ def create_access_token(
     user_id: str,
     role: str,
     expires_delta: timedelta = None,
-):
+) -> str:
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 

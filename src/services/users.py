@@ -1,7 +1,7 @@
 from typing import Optional
 
 import src.schemas.user as schemas
-from src.models import User
+from src.models import LegalEntity, Position, User
 from src.services.abstract import AbstractService
 
 
@@ -23,3 +23,9 @@ class UsersService(
         data = password_update.model_dump()
         data["is_verified"] = True
         return await self.repo.update_one(id, data)
+
+    async def get_position_by_name(self, name: str) -> Optional[Position]:
+        return await self.repo.get_position_by_name(name)
+
+    async def get_legal_entity_by_name(self, name: str) -> Optional[LegalEntity]:
+        return await self.repo.get_legal_entity_by_name(name)

@@ -21,6 +21,9 @@ flower = "^2.0.1"
 pydantic = {extras = ["email"], version = "^2.9.2"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 pyjwt = "^2.9.0"
+pandas = "^2.2.3"
+openpyxl = "^3.1.5"
+python-multipart = "^0.0.12"
 
 [tool.poetry.group.dev]
 optional = true
