@@ -9,13 +9,13 @@ from src.services.users import UsersService
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-ServiceDep = Annotated[UsersService, Depends(get_user_service)]
+ServiceDependency = Annotated[UsersService, Depends(get_user_service)]
 
 
 @router.post("/", response_model=schemas.UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user(
     user: schemas.UserCreate,
-    service: ServiceDep,
+    service: ServiceDependency,
 ):
     try:
         created_user = await service.create_and_get_one(user)
@@ -28,7 +28,7 @@ async def create_user(
 async def update_user(
     user_id: int,
     user_update: schemas.UserUpdate,
-    service: ServiceDep,
+    service: ServiceDependency,
 ):
     try:
         updated_user = await service.update_and_get_one(user_id, user_update)
@@ -42,7 +42,7 @@ async def update_user(
 @router.get("/{user_id}", response_model=schemas.UserRead)
 async def get_user(
     user_id: int,
-    service: ServiceDep,
+    service: ServiceDependency,
 ):
     user = await service.get_one(user_id)
     if not user:
@@ -55,7 +55,7 @@ async def get_user(
 )
 async def create_users(
     users_create: schemas.UsersCreate,
-    service: ServiceDep,
+    service: ServiceDependency,
 ):
     for user in users_create.users:
         user.is_verified = False

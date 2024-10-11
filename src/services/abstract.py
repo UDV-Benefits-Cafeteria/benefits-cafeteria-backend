@@ -7,12 +7,12 @@ from src.repositories.abstract import AbstractRepository
 TCreate = TypeVar("TCreate", bound=BaseModel)
 TRead = TypeVar("TRead", bound=BaseModel)
 TUpdate = TypeVar("TUpdate", bound=BaseModel)
-
+TRepo = TypeVar("TRepo", bound=AbstractRepository)
 
 class AbstractService(Generic[TCreate, TRead, TUpdate]):
     def __init__(
         self,
-        repo: AbstractRepository,
+        repo: type(TRepo),
         create_schema: type[TCreate],
         read_schema: type[TRead],
         update_schema: type[TUpdate],
