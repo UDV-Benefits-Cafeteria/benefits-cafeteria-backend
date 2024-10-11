@@ -19,7 +19,7 @@ async def create_user(
         created_user = await service.create_and_get_one(user)
         return created_user
     except Exception:
-        raise HTTPException(status_code=500)
+        raise HTTPException(status_code=400)
 
 
 @router.patch("/{user_id}", response_model=schemas.UserRead)
@@ -34,7 +34,7 @@ async def update_user(
             raise HTTPException(status_code=404, detail="User not found")
         return updated_user
     except Exception:
-        raise HTTPException(status_code=500)
+        raise HTTPException(status_code=400)
 
 
 @router.get("/{user_id}", response_model=schemas.UserRead)
@@ -66,7 +66,7 @@ async def upload_users(service: UserServiceDependency, file: UploadFile = File(.
         contents = await file.read()
         df = pd.read_excel(BytesIO(contents))
     except Exception:
-        raise HTTPException(status_code=500, detail="Error reading Excel file.")
+        raise HTTPException(status_code=400, detail="Error reading Excel file.")
 
     required_columns = [
         "email",
