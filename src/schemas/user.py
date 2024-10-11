@@ -95,13 +95,22 @@ class UsersCreate(BaseModel):
     users: list[UserCreate]
 
 
-class UserUpdate(UserBase):
+class UserUpdate(BaseModel):
     email: Annotated[Optional[EmailStr], Field(max_length=255)] = None
     firstname: Annotated[Optional[str], Field(max_length=100)] = None
     lastname: Annotated[Optional[str], Field(max_length=100)] = None
+    middlename: Annotated[Optional[str], Field(max_length=100)] = None
+    position_id: Optional[int] = None
+    legal_entity_id: Optional[int] = None
     role: Optional[UserRole] = None
     hired_at: Optional[date] = None
+    is_active: Optional[bool] = None
+    is_adapted: Optional[bool] = None
     coins: Optional[int] = None
+
+
+class UserPasswordUpdate(BaseModel):
+    password: Annotated[str, Field(min_length=8, max_length=255)]
 
 
 class UserRead(UserBase):

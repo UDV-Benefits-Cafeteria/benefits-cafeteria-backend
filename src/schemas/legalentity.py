@@ -11,7 +11,7 @@ class LegalEntityCreate(LegalEntityBase):
     pass
 
 
-class LegalEntityUpdate(BaseModel):
+class LegalEntityUpdate(LegalEntityBase):
     name: Annotated[Optional[str], Field(max_length=255)] = None
 
 

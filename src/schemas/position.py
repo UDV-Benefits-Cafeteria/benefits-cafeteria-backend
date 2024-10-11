@@ -11,7 +11,7 @@ class PositionCreate(PositionBase):
     pass
 
 
-class PositionUpdate(BaseModel):
+class PositionUpdate(PositionBase):
     name: Annotated[Optional[str], Field(max_length=150)] = None
 
 

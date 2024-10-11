@@ -11,7 +11,7 @@ class CategoryCreate(CategoryBase):
     pass
 
 
-class CategoryUpdate(BaseModel):
+class CategoryUpdate(CategoryBase):
     name: Annotated[Optional[str], Field(max_length=255)] = None
 
 

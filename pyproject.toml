@@ -19,6 +19,8 @@ loguru = "^0.7.2"
 celery = "^5.4.0"
 flower = "^2.0.1"
 pydantic = {extras = ["email"], version = "^2.9.2"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+pyjwt = "^2.9.0"
 
 [tool.poetry.group.dev]
 optional = true

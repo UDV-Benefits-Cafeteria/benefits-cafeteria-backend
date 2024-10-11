@@ -1,3 +1,7 @@
+from typing import Annotated
+
+from fastapi import Depends
+
 from src.repositories.benefits import BenefitsRepository
 from src.repositories.users import UsersRepository
 from src.schemas.benefit import BenefitCreate, BenefitRead, BenefitUpdate
@@ -14,3 +18,6 @@ def get_benefits_service():
 
 def get_user_service():
     return UsersService(UsersRepository(), UserCreate, UserRead, UserUpdate)
+
+
+UserServiceDependency = Annotated[UsersService, Depends(get_user_service)]
