@@ -100,7 +100,6 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
 
-
 class SQLAlchemyRepository(AbstractRepository[T]):
     """
     SQLAlchemy-based implementation of the AbstractRepository. Provides

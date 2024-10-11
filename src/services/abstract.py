@@ -9,6 +9,7 @@ TRead = TypeVar("TRead", bound=BaseModel)
 TUpdate = TypeVar("TUpdate", bound=BaseModel)
 TRepo = TypeVar("TRepo", bound=AbstractRepository)
 
+
 class AbstractService(Generic[TCreate, TRead, TUpdate]):
     def __init__(
         self,
