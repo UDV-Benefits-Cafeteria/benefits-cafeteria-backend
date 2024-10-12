@@ -6,13 +6,11 @@ from src.services.abstract import AbstractService
 class BenefitsService(
     AbstractService[schemas.BenefitCreate, schemas.BenefitRead, schemas.BenefitUpdate]
 ):
-    pass
+    repo = BenefitsRepository
+    create_schema = schemas.BenefitCreate
+    read_schema = schemas.BenefitRead
+    update_schema = schemas.BenefitUpdate
 
 
 def get_benefits_service():
-    return BenefitsService(
-        BenefitsRepository(),
-        schemas.BenefitCreate,
-        schemas.BenefitRead,
-        schemas.BenefitUpdate,
-    )
+    return BenefitsService()

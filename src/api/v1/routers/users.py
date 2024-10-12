@@ -4,7 +4,7 @@ import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
 import src.schemas.user as schemas
-from src.api.v1.dependencies import UserServiceDependency
+from src.api.v1.dependencies import UsersServiceDependency
 from src.utils.role_mapper import map_role
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @router.post("/", response_model=schemas.UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user(
     user: schemas.UserCreate,
-    service: UserServiceDependency,
+    service: UsersServiceDependency,
 ):
     try:
         created_user = await service.create_and_get_one(user)
@@ -26,7 +26,7 @@ async def create_user(
 async def update_user(
     user_id: int,
     user_update: schemas.UserUpdate,
-    service: UserServiceDependency,
+    service: UsersServiceDependency,
 ):
     try:
         updated_user = await service.update_and_get_one(user_id, user_update)
@@ -40,7 +40,7 @@ async def update_user(
 @router.get("/{user_id}", response_model=schemas.UserRead)
 async def get_user(
     user_id: int,
-    service: UserServiceDependency,
+    service: UsersServiceDependency,
 ):
     user = await service.get_one(user_id)
     if not user:
@@ -53,7 +53,7 @@ async def get_user(
     response_model=schemas.UserUploadResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def upload_users(service: UserServiceDependency, file: UploadFile = File(...)):
+async def upload_users(service: UsersServiceDependency, file: UploadFile = File(...)):
     if (
         file.content_type
         != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
