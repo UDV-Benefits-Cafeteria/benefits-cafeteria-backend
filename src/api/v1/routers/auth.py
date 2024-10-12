@@ -31,9 +31,9 @@ async def verify_email(
 @router.post("/signup")
 async def signup(
     user_register: UserRegister,
-    service: UsersServiceDependency,
+    user_service: UsersServiceDependency,  # Should be in AuthService
 ):
-    user = await service.get_one(user_register.id)
+    user = await user_service.get(user_register.id)
     if not user or user.is_verified:
         raise HTTPException(
             status_code=400, detail="User not found or already verified"
@@ -42,9 +42,10 @@ async def signup(
     hashed_password = hash_password(user_register.password)
     password_update = UserPasswordUpdate(password=hashed_password)
 
-    is_updated = await service.update_password_and_verify(
-        user_register.id, password_update
-    )
+    password_updated = user_service.update_password(user.id, password_update)
+    verification_completed = user_service.verify(user.id)
+
+    is_updated = password_updated and verification_completed
     return {"is_success": is_updated}
 
 
@@ -52,9 +53,9 @@ async def signup(
 async def signin(
     user_login: UserLogin,
     response: Response,
-    service: UsersServiceDependency,
+    user_service: UsersServiceDependency,  # Should be AuthService
 ):
-    user = await service.get_model_by_email(user_login.email)
+    user = await user_service.get_by_email(user_login.email)
     if not user or not user.is_verified:
         raise HTTPException(status_code=400, detail="Invalid credentials")
 

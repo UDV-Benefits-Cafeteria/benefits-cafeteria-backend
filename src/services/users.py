@@ -20,19 +20,23 @@ class UsersService(
             return self.read_schema.model_validate(entity)
         return None
 
-    # async def get_model_by_email(self, email: str) -> Optional[User]:
-    #     return await self.repo.find_by_email(email)
-
-    async def update_password_and_verify(
+    # Should be in AuthService
+    async def update_password(
         self, entity_id: int, password_update: schemas.UserPasswordUpdate
     ) -> bool:
         data = password_update.model_dump()
-        data["is_verified"] = True
         return await self.repo.update_one(entity_id, data)
 
+    # Should be in AuthService
+    async def verify(self, entity_id: int) -> bool:
+        data = {"is_verified": True}
+        return await self.repo.update_one(entity_id, data)
+
+    # Should be in PositionsService
     async def get_position_by_name(self, name: str) -> Optional[Position]:
         return await self.repo.get_position_by_name(name)
 
+    # Should be in LegalEntitiesService
     async def get_legal_entity_by_name(self, name: str) -> Optional[LegalEntity]:
         return await self.repo.get_legal_entity_by_name(name)
 

@@ -16,7 +16,7 @@ async def create_user(
     service: UsersServiceDependency,
 ):
     try:
-        created_user = await service.create_and_get_one(user)
+        created_user = await service.create(user)
         return created_user
     except Exception:
         raise HTTPException(status_code=400)
@@ -29,7 +29,7 @@ async def update_user(
     service: UsersServiceDependency,
 ):
     try:
-        updated_user = await service.update_and_get_one(user_id, user_update)
+        updated_user = await service.update(user_id, user_update)
         if not updated_user:
             raise HTTPException(status_code=404, detail="User not found")
         return updated_user
@@ -42,7 +42,7 @@ async def get_user(
     user_id: int,
     service: UsersServiceDependency,
 ):
-    user = await service.get_one(user_id)
+    user = await service.get(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -116,7 +116,7 @@ async def upload_users(service: UsersServiceDependency, file: UploadFile = File(
                 legal_entity_id=legal_entity_id,
             )
 
-            created_user = await service.create_and_get_one(user_data)
+            created_user = await service.create(user_data)
             created_users.append(created_user)
         except ValueError as ve:
             errors.append({"row": idx, "error": f"Value Error: {str(ve)}"})
