@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Response
 
-from src.api.v1.dependencies import UserServiceDependency
+from src.api.v1.dependencies import UsersServiceDependency
 from src.schemas.user import (
     UserLogin,
     UserPasswordUpdate,
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 @router.post("/verify", response_model=UserVerified)
 async def verify_email(
     email_data: UserVerify,
-    service: UserServiceDependency,
+    service: UsersServiceDependency,
 ):
     user = await service.get_by_email(email_data.email)
     if user and not user.is_verified:
@@ -31,7 +31,7 @@ async def verify_email(
 @router.post("/signup")
 async def signup(
     user_register: UserRegister,
-    service: UserServiceDependency,
+    service: UsersServiceDependency,
 ):
     user = await service.get_one(user_register.id)
     if not user or user.is_verified:
@@ -52,7 +52,7 @@ async def signup(
 async def signin(
     user_login: UserLogin,
     response: Response,
-    service: UserServiceDependency,
+    service: UsersServiceDependency,
 ):
     user = await service.get_model_by_email(user_login.email)
     if not user or not user.is_verified:
