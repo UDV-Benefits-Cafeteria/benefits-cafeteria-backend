@@ -2,6 +2,7 @@ from typing import Optional
 
 import src.schemas.user as schemas
 from src.models import LegalEntity, Position, User
+from src.repositories.users import UsersRepository
 from src.services.abstract import AbstractService
 
 
@@ -29,3 +30,9 @@ class UsersService(
 
     async def get_legal_entity_by_name(self, name: str) -> Optional[LegalEntity]:
         return await self.repo.get_legal_entity_by_name(name)
+
+
+def get_users_service():
+    return UsersService(
+        UsersRepository(), schemas.UserCreate, schemas.UserRead, schemas.UserUpdate
+    )
