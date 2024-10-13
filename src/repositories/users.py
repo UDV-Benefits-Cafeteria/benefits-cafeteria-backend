@@ -3,7 +3,6 @@ from typing import Optional
 from sqlalchemy import select
 
 from src.db.db import async_session_factory
-from src.models import LegalEntity, Position
 from src.models.users import User
 from src.repositories.abstract import SQLAlchemyRepository
 
@@ -15,19 +14,5 @@ class UsersRepository(SQLAlchemyRepository[User]):
         async with async_session_factory() as session:
             result = await session.execute(
                 select(self.model).where(self.model.email == email)
-            )
-            return result.scalar_one_or_none()
-
-    async def get_position_by_name(self, name: str) -> Optional[Position]:
-        async with async_session_factory() as session:
-            result = await session.execute(
-                select(Position).where(Position.name == name)
-            )
-            return result.scalar_one_or_none()
-
-    async def get_legal_entity_by_name(self, name: str) -> Optional[LegalEntity]:
-        async with async_session_factory() as session:
-            result = await session.execute(
-                select(LegalEntity).where(LegalEntity.name == name)
             )
             return result.scalar_one_or_none()

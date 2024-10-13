@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Generic, List, Optional, Type, TypeVar
+from typing import Any, Generic, List, Optional, Type, TypeVar
 
 from sqlalchemy import delete, select, update
 
@@ -22,9 +22,10 @@ class AbstractRepository(ABC, Generic[T]):
     """
 
     model: Type[T]
+    primary_key: str = "id"
 
     @abstractmethod
-    async def add_one(self, data: dict) -> int:
+    async def add_one(self, data: dict) -> Any:
         """
         Add a single entity to the data store.
 
@@ -37,7 +38,7 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    async def add_many(self, data_list: List[dict]) -> List[int]:
+    async def add_many(self, data_list: List[dict]) -> List[Any]:
         """
         Add multiple entities to the data store.
 
@@ -50,7 +51,7 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    async def find_one(self, entity_id: int) -> Optional[T]:
+    async def find_one(self, entity_id: Any) -> Optional[T]:
         """
         Retrieve a single entity from the data store by its unique identifier.
 
@@ -73,7 +74,7 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    async def update_one(self, entity_id: int, data: dict) -> bool:
+    async def update_one(self, entity_id: Any, data: dict) -> bool:
         """
         Update a single entity in the data store by its unique identifier.
 
@@ -87,7 +88,7 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    async def delete_one(self, entity_id: int) -> bool:
+    async def delete_one(self, entity_id: Any) -> bool:
         """
         Delete a single entity from the data store by its unique identifier.
 
@@ -107,8 +108,9 @@ class SQLAlchemyRepository(AbstractRepository[T]):
     """
 
     model: Type[T]
+    primary_key: str = "id"
 
-    async def add_one(self, data: dict) -> int:
+    async def add_one(self, data: dict) -> Any:
         """
         Add a single entity to the data store.
 
@@ -123,9 +125,9 @@ class SQLAlchemyRepository(AbstractRepository[T]):
             session.add(instance)
             await session.commit()
             await session.refresh(instance)
-            return instance.id
+            return getattr(instance, self.primary_key)
 
-    async def add_many(self, data_list: List[dict]) -> List[int]:
+    async def add_many(self, data_list: List[dict]) -> List[Any]:
         """
         Add multiple entities to the data store.
 
@@ -141,9 +143,9 @@ class SQLAlchemyRepository(AbstractRepository[T]):
             await session.commit()
             for instance in instances:
                 await session.refresh(instance)
-            return [instance.id for instance in instances]
+            return [getattr(instance, self.primary_key) for instance in instances]
 
-    async def find_one(self, entity_id: int) -> Optional[T]:
+    async def find_one(self, entity_id: Any) -> Optional[T]:
         """
         Retrieve a single entity from the data store by its unique identifier.
 
@@ -155,7 +157,9 @@ class SQLAlchemyRepository(AbstractRepository[T]):
         """
         async with async_session_factory() as session:
             result = await session.execute(
-                select(self.model).where(self.model.id == entity_id)
+                select(self.model).where(
+                    getattr(self.model, self.primary_key) == entity_id
+                )
             )
             return result.scalar_one_or_none()
 
@@ -171,7 +175,7 @@ class SQLAlchemyRepository(AbstractRepository[T]):
             result = await session.execute(query)
             return result.scalars().all()
 
-    async def update_one(self, entity_id: int, data: dict) -> bool:
+    async def update_one(self, entity_id: Any, data: dict) -> bool:
         """
         Update a single entity in the data store by its unique identifier.
 
@@ -184,12 +188,14 @@ class SQLAlchemyRepository(AbstractRepository[T]):
         """
         async with async_session_factory() as session:
             result = await session.execute(
-                update(self.model).where(self.model.id == entity_id).values(**data)
+                update(self.model)
+                .where(getattr(self.model, self.primary_key) == entity_id)
+                .values(**data)
             )
             await session.commit()
             return result.rowcount > 0
 
-    async def delete_one(self, entity_id: int) -> bool:
+    async def delete_one(self, entity_id: Any) -> bool:
         """
         Delete a single entity from the data store by its unique identifier.
 
@@ -201,7 +207,9 @@ class SQLAlchemyRepository(AbstractRepository[T]):
         """
         async with async_session_factory() as session:
             result = await session.execute(
-                delete(self.model).where(self.model.id == entity_id)
+                delete(self.model).where(
+                    getattr(self.model, self.primary_key) == entity_id
+                )
             )
             await session.commit()
             return result.rowcount > 0

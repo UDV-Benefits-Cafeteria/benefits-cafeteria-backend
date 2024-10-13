@@ -1,17 +1,22 @@
-"""
-This file is made for testing.
-"""
-"""
-from src.schemas.legalentity import LegalEntityCreate
-from src.repositories.abstract import AbstractRepository
+from typing import Optional
+
+import src.schemas.legalentity as schemas
+from src.repositories.legal_entities import LegalEntitiesRepository
+from src.services.abstract import AbstractService
 
 
-class LegalEntitiesService:
-    def __init__(self, legal_entities_repo: AbstractRepository):
-        self.legal_entities_repo: AbstractRepository = legal_entities_repo
+class LegalEntitiesService(
+    AbstractService[
+        schemas.LegalEntityCreate, schemas.LegalEntityRead, schemas.LegalEntityUpdate
+    ]
+):
+    repo = LegalEntitiesRepository()
+    create_schema = schemas.LegalEntityCreate
+    read_schema = schemas.LegalEntityRead
+    update_schema = schemas.LegalEntityUpdate
 
-    async def add_legal_entity(self, legal_entity: LegalEntityCreate):
-        legal_entities_dict = legal_entity.model_dump()
-        legal_entity_id = await self.legal_entities_repo.add_one(legal_entities_dict)
-        return legal_entity_id
-"""
+    async def get_by_name(self, name: str) -> Optional[schemas.LegalEntityRead]:
+        entity = await self.repo.find_by_name(name)
+        if entity:
+            return self.read_schema.model_validate(entity)
+        return None

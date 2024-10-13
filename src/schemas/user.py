@@ -36,6 +36,7 @@ class UserBase(BaseModel):
     role: UserRole
     hired_at: date
     is_active: bool = True
+    is_verified: bool = False
     is_adapted: bool = False
 
     @field_validator("firstname", "middlename", "lastname")
@@ -136,3 +137,10 @@ class UserUploadError(BaseModel):
 class UserUploadResponse(BaseModel):
     created_users: list[UserRead]
     errors: list[UserUploadError]
+
+
+class UserAuth(BaseModel):
+    id: int
+    is_verified: bool
+    password: Annotated[Optional[str], Field(min_length=8, max_length=255)] = None
+    model_config = ConfigDict(from_attributes=True)

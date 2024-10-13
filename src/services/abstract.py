@@ -12,9 +12,9 @@ TRepo = TypeVar("TRepo", bound=AbstractRepository)
 
 class AbstractService(Generic[TCreate, TRead, TUpdate]):
     repo: AbstractRepository
-    create_schema: TCreate
-    read_schema: TRead
-    update_schema: TUpdate
+    create_schema: type(TCreate)
+    read_schema: type(TRead)
+    update_schema: type(TUpdate)
 
     async def _create(self, create_schema: TCreate) -> int:
         """
@@ -80,7 +80,7 @@ class AbstractService(Generic[TCreate, TRead, TUpdate]):
         :return: The updated entity represented by the read schema if successful,
                  otherwise a boolean indicating failure.
         """
-        is_updated: bool = await self.update(entity_id, update_schema)
+        is_updated: bool = await self._update(entity_id, update_schema)
         if is_updated:
             return await self.get(entity_id)
         return None
@@ -102,7 +102,7 @@ class AbstractService(Generic[TCreate, TRead, TUpdate]):
         :return: Schema representing the retrieved entity.
         """
         entity = await self.repo.find_one(entity_id)
-        return TRead.model_validate(entity)
+        return self.read_schema.model_validate(entity)
 
     async def get_all(self) -> list[TRead]:
         """
@@ -111,4 +111,4 @@ class AbstractService(Generic[TCreate, TRead, TUpdate]):
         :return: List of schemas representing all entities.
         """
         entities = await self.repo.find_all()
-        return [TRead.model_validate(e) for e in entities]
+        return [self.read_schema.model_validate(e) for e in entities]

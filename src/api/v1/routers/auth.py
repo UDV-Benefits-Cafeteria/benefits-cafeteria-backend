@@ -1,15 +1,13 @@
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 
-from src.api.v1.dependencies import UsersServiceDependency
-from src.schemas.user import (
-    UserLogin,
-    UserPasswordUpdate,
-    UserRegister,
-    UserVerified,
-    UserVerify,
+from src.api.v1.dependencies import (
+    AuthServiceDependency,
+    SessionsServiceDependency,
+    UsersServiceDependency,
 )
-from src.utils.jwt import create_access_token
-from src.utils.security import hash_password, verify_password
+from src.config import settings
+from src.schemas.user import UserLogin, UserRegister, UserVerified, UserVerify
+from src.utils.security import verify_password
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -31,19 +29,24 @@ async def verify_email(
 @router.post("/signup")
 async def signup(
     user_register: UserRegister,
-    user_service: UsersServiceDependency,  # Should be in AuthService
+    auth_service: AuthServiceDependency,
 ):
-    user = await user_service.get(user_register.id)
+    user = await auth_service.get_auth_data(user_id=user_register.id)
+
     if not user or user.is_verified:
         raise HTTPException(
             status_code=400, detail="User not found or already verified"
         )
 
-    hashed_password = hash_password(user_register.password)
-    password_update = UserPasswordUpdate(password=hashed_password)
+    if user.password:
+        raise HTTPException(
+            status_code=400, detail="Password already set for this user"
+        )
 
-    password_updated = user_service.update_password(user.id, password_update)
-    verification_completed = user_service.verify(user.id)
+    password_updated = await auth_service.update_password(
+        user.id, user_register.password
+    )
+    verification_completed = await auth_service.verify_user(user.id)
 
     is_updated = password_updated and verification_completed
     return {"is_success": is_updated}
@@ -53,23 +56,44 @@ async def signup(
 async def signin(
     user_login: UserLogin,
     response: Response,
-    user_service: UsersServiceDependency,  # Should be AuthService
+    auth_service: AuthServiceDependency,
+    sessions_service: SessionsServiceDependency,
 ):
-    user = await user_service.get_by_email(user_login.email)
+    user = await auth_service.get_auth_data(email=user_login.email)
+
     if not user or not user.is_verified:
         raise HTTPException(status_code=400, detail="Invalid credentials")
+
+    if not user.password:
+        raise HTTPException(status_code=400, detail="Password not set for this user")
 
     is_valid_password = verify_password(user_login.password, user.password)
     if not is_valid_password:
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    token = create_access_token(str(user.id), str(user.role.value))
+    session_id = await sessions_service.create_session(
+        user.id, settings.SESSION_EXPIRE_TIME
+    )
 
-    response.set_cookie(key="access_token", value=token)
+    response.set_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        value=session_id,
+        max_age=settings.SESSION_EXPIRE_TIME,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+    )
     return {"is_success": True}
 
 
 @router.post("/logout")
-async def logout(response: Response):
-    response.delete_cookie(key="access_token")
+async def logout(
+    response: Response,
+    request: Request,
+    sessions_service: SessionsServiceDependency,
+):
+    session_id = request.cookies.get(settings.SESSION_COOKIE_NAME)
+    if session_id:
+        await sessions_service.delete_session(session_id)
+        response.delete_cookie(settings.SESSION_COOKIE_NAME)
     return {"is_success": True}

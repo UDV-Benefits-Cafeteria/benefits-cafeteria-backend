@@ -4,7 +4,11 @@ import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
 import src.schemas.user as schemas
-from src.api.v1.dependencies import UsersServiceDependency
+from src.api.v1.dependencies import (
+    LegalEntitiesServiceDependency,
+    PositionsServiceDependency,
+    UsersServiceDependency,
+)
 from src.utils.role_mapper import map_role
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -53,7 +57,12 @@ async def get_user(
     response_model=schemas.UserUploadResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def upload_users(service: UsersServiceDependency, file: UploadFile = File(...)):
+async def upload_users(
+    service: UsersServiceDependency,
+    positions_service: PositionsServiceDependency,
+    legal_entities_service: LegalEntitiesServiceDependency,
+    file: UploadFile = File(...),
+):
     if (
         file.content_type
         != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -93,12 +102,12 @@ async def upload_users(service: UsersServiceDependency, file: UploadFile = File(
         try:
             role = map_role(row["роль"])
 
-            position = await service.get_position_by_name(row["должность"])
+            position = await positions_service.get_by_name(row["должность"])
             if not position:
                 raise ValueError(f"Position '{row['должность']}' not found.")
             position_id = position.id
 
-            legal_entity = await service.get_legal_entity_by_name(row["юр. лицо"])
+            legal_entity = await legal_entities_service.get_by_name(row["юр. лицо"])
             if not legal_entity:
                 raise ValueError(f"Legal entity '{row['юр. лицо']}' not found.")
             legal_entity_id = legal_entity.id

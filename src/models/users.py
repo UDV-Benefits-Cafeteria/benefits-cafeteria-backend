@@ -17,6 +17,7 @@ if TYPE_CHECKING:
         LegalEntity,
         Position,
         Question,
+        Session,
     )
 
 
@@ -87,6 +88,10 @@ class User(Base):
         "Question", back_populates="user"
     )
     answers: Mapped[List["Answer"]] = relationship("Answer", back_populates="user")
+
+    sessions: Mapped[List["Session"]] = relationship(
+        "Session", back_populates="user", cascade="all, delete-orphan"
+    )
 
     @property
     def experience(self) -> int:

@@ -22,6 +22,9 @@ class Settings(BaseSettings):
         "unsecured2*t@t3b#6g$^w@zsdz57^x-g^o05@e5aztfn=)r#ijaly1-cy0"
     )
 
+    SESSION_COOKIE_NAME: str = "session_id"
+    SESSION_EXPIRE_TIME: int = 86400 * 7  # неделя
+
     ALLOW_ORIGINS: List[str] = ["*"]
 
     API_PREFIX: str = "/api"
