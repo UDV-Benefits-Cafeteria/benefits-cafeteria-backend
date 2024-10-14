@@ -85,7 +85,7 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         try:
             data = create_schema.model_dump(exclude_unset=True)
             entity = await self.repo.create(data)
-            validated_entity: TRead = await self.read_schema.model_validate(entity)
+            validated_entity: TRead = self.read_schema.model_validate(entity)
             logger.info(
                 f"Successfully created {self.create_schema.__name__}: {validated_entity}"
             )
@@ -108,7 +108,7 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
             data = [schema.model_dump(exclude_unset=True) for schema in create_schemas]
             entities = await self.repo.create_many(data)
             validated_entities: List[TRead] = [
-                await self.read_schema.model_validate(entity) for entity in entities
+                self.read_schema.model_validate(entity) for entity in entities
             ]
             logger.info(
                 f"Successfully created multiple {self.create_schema.__name__} entities: {validated_entities}"
