@@ -47,6 +47,11 @@ jobs:
       - name: Install libs
         run: poetry install --with dev
 
+      - name: Create Alembic versions directory
+        run: |
+          mkdir -p alembic/versions
+          chmod -R 777 alembic/versions
+
       - name: Init migrations
         run: poetry run alembic upgrade head
 
