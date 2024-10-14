@@ -71,14 +71,14 @@ class SessionMiddleware(BaseHTTPMiddleware):
 
         now = datetime.now(timezone.utc)
 
-        session_duration = timedelta(seconds=self.session_expire_time)
+        session_expiration_timedelta = timedelta(seconds=self.session_expire_time)
 
-        last_refreshed_at = session.expires_at - session_duration
+        last_refreshed_at = session.expires_at - session_expiration_timedelta
 
         time_since_last_refresh = now - last_refreshed_at
 
         if time_since_last_refresh >= self.refresh_threshold:
-            new_expires_at = now + session_duration
+            new_expires_at = now + session_expiration_timedelta
 
             success = await self.sessions_service.update_session_expiration(
                 session_id, new_expires_at
