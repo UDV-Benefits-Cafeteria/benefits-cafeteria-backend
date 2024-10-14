@@ -34,3 +34,13 @@ class SessionsService:
     ) -> bool:
         data = {"expires_at": new_expires_at}
         return await self.repo.update_by_id(session_id, data)
+
+    async def cleanup_expired_sessions(self) -> int:
+        """
+        Delete all expired sessions.
+
+        :return: Number of deleted sessions.
+        """
+        current_time = datetime.now(timezone.utc)
+        deleted_count = await self.repo.delete_expired_sessions(current_time)
+        return deleted_count
