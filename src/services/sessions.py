@@ -20,3 +20,7 @@ class SessionsService:
 
     async def delete_session(self, session_id: str) -> bool:
         return await self.repo.delete_one(session_id)
+
+    async def update_session_expiration(self, session_id: str, new_expires_at: datetime) -> bool:
+        data = {"expires_at": new_expires_at}
+        return await self.repo.update_one(session_id, data)

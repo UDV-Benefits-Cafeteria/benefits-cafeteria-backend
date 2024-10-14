@@ -25,7 +25,6 @@ class AuthService:
     async def update_password(self, user_id: int, password: str) -> bool:
         hashed_password = hash_password(password)
         data = {"password": hashed_password}
-        print(f"Updating password for user {user_id}, {data}")
         return await self.users_repo.update_one(user_id, data)
 
     async def verify_user(self, user_id: int) -> bool:
