@@ -1,7 +1,9 @@
-from fastapi import Request, FastAPI
+from datetime import datetime, timedelta, timezone
+
+from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from datetime import datetime, timezone, timedelta
+
 from src.config import settings
 from src.services.sessions import SessionsService
 
@@ -19,12 +21,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
         self.session_expire_time = session_expire_time
         self.refresh_threshold = timedelta(seconds=refresh_threshold)
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next
-    ) -> Response:
-
+    async def dispatch(self, request: Request, call_next) -> Response:
         response: Response = await call_next(request)
 
         session_id = request.cookies.get(settings.SESSION_COOKIE_NAME)

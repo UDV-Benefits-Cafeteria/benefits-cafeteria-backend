@@ -1,5 +1,3 @@
-
-
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
@@ -10,7 +8,6 @@ from src.services.sessions import SessionsService
 
 
 def get_application() -> FastAPI:
-
     application = FastAPI(
         debug=settings.DEBUG,
         title=settings.APP_TITLE,
@@ -30,7 +27,7 @@ def get_application() -> FastAPI:
         SessionMiddleware,
         sessions_service=SessionsService(),
         session_expire_time=settings.SESSION_EXPIRE_TIME,
-        refresh_threshold=settings.SESSION_REFRESH_THRESHOLD
+        refresh_threshold=settings.SESSION_REFRESH_THRESHOLD,
     )
 
     application.include_router(api_v1_router, prefix=settings.API_PREFIX)
