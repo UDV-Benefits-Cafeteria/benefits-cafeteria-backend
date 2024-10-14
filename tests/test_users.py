@@ -1,8 +1,6 @@
 import pytest
-from httpx import AsyncClient
 from fastapi import status
-import pandas as pd
-from io import BytesIO
+from httpx import AsyncClient
 
 # Test data
 user_data = {
@@ -25,6 +23,7 @@ update_data = {
     "lastname": "Doe",
 }
 
+
 # Test case for creating a user
 @pytest.mark.asyncio
 async def test_create_user(async_client: AsyncClient):
@@ -34,6 +33,7 @@ async def test_create_user(async_client: AsyncClient):
     assert created_user["email"] == user_data["email"]
     assert created_user["firstname"] == user_data["firstname"]
     assert created_user["lastname"] == user_data["lastname"]
+
 
 # Test case for updating a user
 @pytest.mark.asyncio
@@ -46,6 +46,7 @@ async def test_update_user(async_client: AsyncClient):
     assert updated_user["firstname"] == update_data["firstname"]
     assert updated_user["lastname"] == update_data["lastname"]
 
+
 # Test case for getting a user by ID
 @pytest.mark.asyncio
 async def test_get_user(async_client: AsyncClient):
@@ -56,6 +57,7 @@ async def test_get_user(async_client: AsyncClient):
     user = response.json()
     assert user["id"] == user_id
     assert user["email"] == "test@example.com"
+
 
 # # Test case for handling non-existent user
 # @pytest.mark.asyncio

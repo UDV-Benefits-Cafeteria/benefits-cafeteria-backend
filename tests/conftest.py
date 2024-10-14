@@ -3,9 +3,8 @@ from typing import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.db import Base, async_session_factory, engine
+from src.db.db import Base, engine
 from src.main import app
 
 pytest_plugins = ["pytest_asyncio"]
@@ -24,5 +23,7 @@ async def setup_db():
 @pytest.fixture(scope="session")
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     transport = ASGITransport(app)
-    async with AsyncClient(transport=transport, base_url="http://test/api/v1") as client:
+    async with AsyncClient(
+        transport=transport, base_url="http://test/api/v1"
+    ) as client:
         yield client
