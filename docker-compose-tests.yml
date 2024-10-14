@@ -4,6 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.tests
+    entrypoint: ["bash", "entrypoint_tests.sh"]
     command: ["poetry", "run", "pytest"]
     ports:
       - "8000:8000" # for FastAPI
