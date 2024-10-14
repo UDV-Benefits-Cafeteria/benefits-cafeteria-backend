@@ -9,6 +9,12 @@ from src.api.v1.dependencies import (
     PositionsServiceDependency,
     UsersServiceDependency,
 )
+from src.services.exceptions import (
+    EntityCreateError,
+    EntityNotFoundError,
+    EntityReadError,
+    EntityUpdateError,
+)
 from src.utils.role_mapper import map_role
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -22,8 +28,10 @@ async def create_user(
     try:
         created_user = await service.create(user)
         return created_user
-    except Exception:
-        raise HTTPException(status_code=400)
+    except EntityCreateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create user"
+        )
 
 
 @router.patch("/{user_id}", response_model=schemas.UserRead)
@@ -33,12 +41,16 @@ async def update_user(
     service: UsersServiceDependency,
 ):
     try:
-        updated_user = await service.update(user_id, user_update)
-        if not updated_user:
-            raise HTTPException(status_code=404, detail="User not found")
+        updated_user = await service.update_by_id(user_id, user_update)
         return updated_user
-    except Exception:
-        raise HTTPException(status_code=400)
+    except EntityNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    except EntityUpdateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update user"
+        )
 
 
 @router.get("/{user_id}", response_model=schemas.UserRead)
@@ -46,10 +58,17 @@ async def get_user(
     user_id: int,
     service: UsersServiceDependency,
 ):
-    user = await service.get(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+    try:
+        user = await service.read_by_id(user_id)
+        return user
+    except EntityNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    except EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to read user"
+        )
 
 
 @router.post(
@@ -68,14 +87,17 @@ async def upload_users(
         != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ):
         raise HTTPException(
-            status_code=400, detail="Invalid file type. Please upload an Excel file."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Please upload an Excel file.",
         )
 
     try:
         contents = await file.read()
         df = pd.read_excel(BytesIO(contents))
     except Exception:
-        raise HTTPException(status_code=400, detail="Error reading Excel file.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Error reading Excel file."
+        )
 
     required_columns = [
         "email",
@@ -92,7 +114,8 @@ async def upload_users(
     missing_columns = set(required_columns) - set(df.columns)
     if missing_columns:
         raise HTTPException(
-            status_code=400, detail=f"Missing columns: {', '.join(missing_columns)}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Missing columns: {', '.join(missing_columns)}",
         )
 
     created_users = []

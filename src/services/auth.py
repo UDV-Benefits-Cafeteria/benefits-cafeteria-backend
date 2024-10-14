@@ -8,13 +8,13 @@ from src.utils.security import hash_password
 class AuthService:
     users_repo = UsersRepository()
 
-    async def get_auth_data(
+    async def read_auth_data(
         self, email: Optional[str] = None, user_id: Optional[int] = None
     ) -> Optional[UserAuth]:
         if email:
-            user = await self.users_repo.find_by_email(email)
+            user = await self.users_repo.read_by_email(email)
         elif user_id:
-            user = await self.users_repo.find_one(user_id)
+            user = await self.users_repo.read_by_id(user_id)
         else:
             return None
 
@@ -25,8 +25,8 @@ class AuthService:
     async def update_password(self, user_id: int, password: str) -> bool:
         hashed_password = hash_password(password)
         data = {"password": hashed_password}
-        return await self.users_repo.update_one(user_id, data)
+        return await self.users_repo.update_by_id(user_id, data)
 
     async def verify_user(self, user_id: int) -> bool:
         data = {"is_verified": True}
-        return await self.users_repo.update_one(user_id, data)
+        return await self.users_repo.update_by_id(user_id, data)

@@ -30,7 +30,7 @@ async def get_current_user(
     if not session:
         raise HTTPException(status_code=400, detail="Session expired or invalid")
 
-    user = await users_service.get(session.user_id)
+    user = await users_service.read_by_id(session.user_id)
     if not user:
         raise HTTPException(status_code=400, detail="User not found")
     return user

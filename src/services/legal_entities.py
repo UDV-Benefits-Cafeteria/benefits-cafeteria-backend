@@ -2,11 +2,11 @@ from typing import Optional
 
 import src.schemas.legalentity as schemas
 from src.repositories.legal_entities import LegalEntitiesRepository
-from src.services.abstract import AbstractService
+from src.services.abstract import BaseService
 
 
 class LegalEntitiesService(
-    AbstractService[
+    BaseService[
         schemas.LegalEntityCreate, schemas.LegalEntityRead, schemas.LegalEntityUpdate
     ]
 ):
@@ -15,8 +15,8 @@ class LegalEntitiesService(
     read_schema = schemas.LegalEntityRead
     update_schema = schemas.LegalEntityUpdate
 
-    async def get_by_name(self, name: str) -> Optional[schemas.LegalEntityRead]:
-        entity = await self.repo.find_by_name(name)
+    async def read_by_name(self, name: str) -> Optional[schemas.LegalEntityRead]:
+        entity = await self.repo.read_by_name(name)
         if entity:
             return self.read_schema.model_validate(entity)
         return None

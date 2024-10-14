@@ -39,7 +39,7 @@ async def update_benefit(
     benefit: schemas.BenefitUpdate,
     benefits_service: ServiceDep,
 ):
-    await benefits_service.update(benefit_id, benefit)
+    await benefits_service.update_by_id(benefit_id, benefit)
     return {"is_success": True}
 
 
@@ -50,7 +50,7 @@ async def read_benefit(
     benefits_service: Annotated[BenefitsService, Depends(get_benefits_service)],
 ):
     try:
-        benefit = await benefits_service.get_benefit(benefit_id)
+        benefit = await benefits_service.read_by_id(benefit_id)
         return benefit
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -61,7 +61,7 @@ async def read_benefit(
 async def read_benefits(
     benefits_service: Annotated[BenefitsService, Depends(get_benefits_service)],
 ):
-    benefits = await benefits_service.get_benefits()
+    benefits = await benefits_service.read_all()
     return benefits
 
 
@@ -74,5 +74,5 @@ async def delete_benefit(
     benefit_id: int,
     benefits_service: Annotated[BenefitsService, Depends(get_benefits_service)],
 ):
-    await benefits_service.delete_benefit(benefit_id)
+    await benefits_service.delete_by_id(benefit_id)
     return {"is_success": True}
