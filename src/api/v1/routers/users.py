@@ -29,7 +29,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
     responses={
         201: {"description": "User created successfully"},
         400: {"description": "Failed to create user"},
-    }
+    },
 )
 async def create_user(
     user: schemas.UserCreate,
@@ -62,7 +62,7 @@ async def create_user(
     responses={
         200: {"description": "Current user information"},
         401: {"description": "Unauthorized, user not authenticated"},
-    }
+    },
 )
 async def get_current_user(
     current_user: Annotated[schemas.UserRead, Depends(active_user)],
@@ -87,7 +87,7 @@ async def get_current_user(
         200: {"description": "User updated successfully"},
         404: {"description": "User not found"},
         400: {"description": "Failed to update user"},
-    }
+    },
 )
 async def update_user(
     user_id: int,
@@ -128,7 +128,7 @@ async def update_user(
         200: {"description": "User retrieved successfully"},
         404: {"description": "User not found"},
         400: {"description": "Failed to read user"},
-    }
+    },
 )
 async def get_user(
     user_id: int,
@@ -167,7 +167,7 @@ async def get_user(
     responses={
         201: {"description": "Users uploaded successfully"},
         400: {"description": "Invalid file type or error reading Excel file"},
-    }
+    },
 )
 async def upload_users(
     service: UsersServiceDependency,

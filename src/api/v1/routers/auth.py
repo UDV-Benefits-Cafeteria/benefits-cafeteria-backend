@@ -1,5 +1,4 @@
-from fastapi import status
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from src.api.v1.dependencies import (
     AuthServiceDependency,
@@ -21,7 +20,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
         200: {"description": "User email verification successful"},
         400: {"description": "User already verified"},
         404: {"description": "User not found"},
-    }
+    },
 )
 async def verify_email(
     email_data: UserVerify,
@@ -63,7 +62,7 @@ async def verify_email(
         200: {"description": "User signup and verification successful"},
         404: {"description": "User not found"},
         400: {"description": "User already verified or password already set"},
-    }
+    },
 )
 async def signup(
     user_register: UserRegister,
@@ -124,8 +123,10 @@ async def signup(
     "/signin",
     responses={
         200: {"description": "User signin successful"},
-        400: {"description": "Invalid credentials, user not verified, or password not set"},
-    }
+        400: {
+            "description": "Invalid credentials, user not verified, or password not set"
+        },
+    },
 )
 async def signin(
     user_login: UserLogin,
@@ -199,7 +200,7 @@ async def signin(
         200: {"description": "User logged out successfully"},
         400: {"description": "No session found"},
         500: {"description": "Failed to log out"},
-    }
+    },
 )
 async def logout(
     response: Response,
