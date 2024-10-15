@@ -67,6 +67,7 @@ async def test_get_user_not_found(async_client: AsyncClient):
     response = await async_client.get(f"/users/{user_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
+
 # # Test case for uploading users via Excel
 # @pytest.mark.asyncio
 # async def test_upload_users(async_client: AsyncClient):
