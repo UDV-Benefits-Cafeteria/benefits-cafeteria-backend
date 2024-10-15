@@ -24,10 +24,15 @@ async def verify_email(
 
         if user and not user.is_verified:
             return UserVerified(id=user.id)
-        else:
+        elif user.is_verified:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"User with email '{email_data.email}' already verified",
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"User with email '{email_data.email}' not found",
             )
     except EntityNotFoundError:
         raise HTTPException(
