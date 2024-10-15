@@ -22,17 +22,12 @@ async def verify_email(
     try:
         user = await service.read_by_email(email_data.email)
 
-        if user and not user.is_verified:
+        if not user.is_verified:
             return UserVerified(id=user.id)
-        elif user and user.is_verified:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"User with email '{email_data.email}' already verified",
-            )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"User with email '{email_data.email}' not found",
+                detail=f"User with email '{email_data.email}' already verified",
             )
     except EntityNotFoundError:
         raise HTTPException(
