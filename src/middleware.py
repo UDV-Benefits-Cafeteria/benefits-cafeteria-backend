@@ -91,7 +91,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
                     max_age=self.session_expire_time,
                     httponly=True,
                     samesite="lax",
-                    secure=False,  # needs to be set True in prod
+                    secure=not settings.DEBUG,
                 )
 
         return response

@@ -1,13 +1,15 @@
 from io import BytesIO
+from typing import Annotated
 
 import pandas as pd
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 import src.schemas.user as schemas
 from src.api.v1.dependencies import (
     LegalEntitiesServiceDependency,
     PositionsServiceDependency,
     UsersServiceDependency,
+    active_user,
 )
 from src.services.exceptions import (
     EntityCreateError,
@@ -32,6 +34,13 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create user"
         )
+
+
+@router.get("/me", response_model=schemas.UserRead)
+async def get_current_user(
+    current_user: Annotated[schemas.UserRead, Depends(active_user)],
+):
+    return current_user
 
 
 @router.patch("/{user_id}", response_model=schemas.UserRead)

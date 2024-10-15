@@ -42,7 +42,7 @@ async def signup(
     auth_service: AuthServiceDependency,
 ):
     try:
-        user = await auth_service.get_auth_data(user_id=user_register.id)
+        user = await auth_service.read_auth_data(user_id=user_register.id)
 
         if not user:
             raise HTTPException(
@@ -88,7 +88,7 @@ async def signin(
 ):
     try:
         # Retrieve user data based on email
-        user = await auth_service.get_auth_data(email=user_login.email)
+        user = await auth_service.read_auth_data(email=user_login.email)
 
         if not user:
             raise HTTPException(
@@ -124,7 +124,7 @@ async def signin(
             max_age=settings.SESSION_EXPIRE_TIME,
             httponly=True,
             samesite="lax",
-            secure=False,
+            secure=not settings.DEBUG,
         )
         return {"is_success": True}
 
