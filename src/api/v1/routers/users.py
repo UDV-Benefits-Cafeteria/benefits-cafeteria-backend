@@ -22,11 +22,31 @@ from src.utils.role_mapper import map_role
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("/", response_model=schemas.UserRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=schemas.UserRead,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        201: {"description": "User created successfully"},
+        400: {"description": "Failed to create user"},
+    }
+)
 async def create_user(
     user: schemas.UserCreate,
     service: UsersServiceDependency,
 ):
+    """
+    Create a new user.
+
+    - **user**: The user creation data.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If user creation fails.
+
+    Returns:
+    - **schemas.UserRead**: The created user information.
+    """
     try:
         created_user = await service.create(user)
         return created_user
@@ -36,19 +56,58 @@ async def create_user(
         )
 
 
-@router.get("/me", response_model=schemas.UserRead)
+@router.get(
+    "/me",
+    response_model=schemas.UserRead,
+    responses={
+        200: {"description": "Current user information"},
+        401: {"description": "Unauthorized, user not authenticated"},
+    }
+)
 async def get_current_user(
     current_user: Annotated[schemas.UserRead, Depends(active_user)],
 ):
+    """
+    Retrieve the current authenticated user's information.
+
+    Returns:
+    - **schemas.UserRead**: The current user's information.
+
+    Raises:
+    - **HTTPException**:
+        - 401: If the user is not authenticated.
+    """
     return current_user
 
 
-@router.patch("/{user_id}", response_model=schemas.UserRead)
+@router.patch(
+    "/{user_id}",
+    response_model=schemas.UserRead,
+    responses={
+        200: {"description": "User updated successfully"},
+        404: {"description": "User not found"},
+        400: {"description": "Failed to update user"},
+    }
+)
 async def update_user(
     user_id: int,
     user_update: schemas.UserUpdate,
     service: UsersServiceDependency,
 ):
+    """
+    Update an existing user by ID.
+
+    - **user_id**: The ID of the user to update.
+    - **user_update**: The data to update the user.
+
+    Raises:
+    - **HTTPException**:
+        - 404: If the user is not found.
+        - 400: If user update fails.
+
+    Returns:
+    - **schemas.UserRead**: The updated user information.
+    """
     try:
         updated_user = await service.update_by_id(user_id, user_update)
         return updated_user
@@ -62,11 +121,32 @@ async def update_user(
         )
 
 
-@router.get("/{user_id}", response_model=schemas.UserRead)
+@router.get(
+    "/{user_id}",
+    response_model=schemas.UserRead,
+    responses={
+        200: {"description": "User retrieved successfully"},
+        404: {"description": "User not found"},
+        400: {"description": "Failed to read user"},
+    }
+)
 async def get_user(
     user_id: int,
     service: UsersServiceDependency,
 ):
+    """
+    Retrieve a user by ID.
+
+    - **user_id**: The ID of the user to retrieve.
+
+    Raises:
+    - **HTTPException**:
+        - 404: If the user is not found.
+        - 400: If user read fails.
+
+    Returns:
+    - **schemas.UserRead**: The retrieved user information.
+    """
     try:
         user = await service.read_by_id(user_id)
         return user
@@ -84,6 +164,10 @@ async def get_user(
     "/upload",
     response_model=schemas.UserUploadResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        201: {"description": "Users uploaded successfully"},
+        400: {"description": "Invalid file type or error reading Excel file"},
+    }
 )
 async def upload_users(
     service: UsersServiceDependency,
@@ -91,6 +175,18 @@ async def upload_users(
     legal_entities_service: LegalEntitiesServiceDependency,
     file: UploadFile = File(...),
 ):
+    """
+    Upload users from an Excel file.
+
+    - **file**: The Excel file containing user data.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If the file type is invalid or there are errors reading the file.
+
+    Returns:
+    - **schemas.UserUploadResponse**: Information about created users and errors.
+    """
     if (
         file.content_type
         != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

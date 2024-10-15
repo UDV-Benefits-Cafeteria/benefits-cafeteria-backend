@@ -1,4 +1,4 @@
-from fastapi import status  # Import status for better readability
+from fastapi import status
 from fastapi import APIRouter, HTTPException, Request, Response
 
 from src.api.v1.dependencies import (
@@ -14,11 +14,32 @@ from src.utils.security import verify_password
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/verify", response_model=UserVerified)
+@router.post(
+    "/verify",
+    response_model=UserVerified,
+    responses={
+        200: {"description": "User email verification successful"},
+        400: {"description": "User already verified"},
+        404: {"description": "User not found"},
+    }
+)
 async def verify_email(
     email_data: UserVerify,
     service: UsersServiceDependency,
 ):
+    """
+    Verify the user's email.
+
+    - **email_data**: The user verification data containing the email.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If the user is already verified.
+        - 404: If the user is not found.
+
+    Returns:
+    - **UserVerified**: Information about the verified user.
+    """
     try:
         user = await service.read_by_email(email_data.email)
 
@@ -36,11 +57,31 @@ async def verify_email(
         )
 
 
-@router.post("/signup")
+@router.post(
+    "/signup",
+    responses={
+        200: {"description": "User signup and verification successful"},
+        404: {"description": "User not found"},
+        400: {"description": "User already verified or password already set"},
+    }
+)
 async def signup(
     user_register: UserRegister,
     auth_service: AuthServiceDependency,
 ):
+    """
+    Sign up a new user and verify their account.
+
+    - **user_register**: The registration data for the user.
+
+    Raises:
+    - **HTTPException**:
+        - 404: If the user is not found.
+        - 400: If the user is already verified or password is already set.
+
+    Returns:
+    - **dict**: A dictionary indicating success or failure of the operation.
+    """
     try:
         user = await auth_service.read_auth_data(user_id=user_register.id)
 
@@ -79,13 +120,31 @@ async def signup(
         )
 
 
-@router.post("/signin")
+@router.post(
+    "/signin",
+    responses={
+        200: {"description": "User signin successful"},
+        400: {"description": "Invalid credentials, user not verified, or password not set"},
+    }
+)
 async def signin(
     user_login: UserLogin,
     response: Response,
     auth_service: AuthServiceDependency,
     sessions_service: SessionsServiceDependency,
 ):
+    """
+    Sign in a user and create a session.
+
+    - **user_login**: The login data containing user credentials.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If the credentials are invalid, user is not verified, or password is not set.
+
+    Returns:
+    - **dict**: A dictionary indicating success or failure of the operation.
+    """
     try:
         # Retrieve user data based on email
         user = await auth_service.read_auth_data(email=user_login.email)
@@ -134,12 +193,30 @@ async def signin(
         )
 
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    responses={
+        200: {"description": "User logged out successfully"},
+        400: {"description": "No session found"},
+        500: {"description": "Failed to log out"},
+    }
+)
 async def logout(
     response: Response,
     request: Request,
     sessions_service: SessionsServiceDependency,
 ):
+    """
+    Log out a user by deleting their session.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If no session is found.
+        - 500: If logout fails.
+
+    Returns:
+    - **dict**: A dictionary indicating success of the logout operation.
+    """
     session_id = request.cookies.get(settings.SESSION_COOKIE_NAME)
 
     if not session_id:
