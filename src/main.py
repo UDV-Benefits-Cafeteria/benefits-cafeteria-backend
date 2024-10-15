@@ -3,7 +3,8 @@ from starlette.middleware.cors import CORSMiddleware
 
 from src.api.v1 import router as api_v1_router
 from src.config import settings
-from src.middleware import SessionMiddleware
+from src.middlewares.csrf_middleware import CSRFMiddleware
+from src.middlewares.session_middleware import SessionMiddleware
 from src.services.sessions import SessionsService
 
 
@@ -29,6 +30,13 @@ def get_application() -> FastAPI:
         session_expire_time=settings.SESSION_EXPIRE_TIME,
         refresh_threshold=settings.SESSION_REFRESH_THRESHOLD,
     )
+
+    if not settings.DEBUG:
+        application.add_middleware(
+            CSRFMiddleware,
+            csrf_token_name=settings.CSRF_COOKIE_NAME,
+            csrf_token_expiry=settings.CSRF_EXPIRE_TIME,
+        )
 
     application.include_router(api_v1_router, prefix=settings.API_PREFIX)
 

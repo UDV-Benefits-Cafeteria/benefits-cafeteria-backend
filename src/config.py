@@ -23,16 +23,15 @@ class Settings(BaseSettings):
     )
 
     SESSION_COOKIE_NAME: str = "session_id"
-
     SESSION_EXPIRE_TIME: int = 86400 * 7  # 7 дней
     SESSION_REFRESH_THRESHOLD: int = 86400 * 1  # 1 день
+
+    CSRF_COOKIE_NAME: str = "csrftoken"
+    CSRF_EXPIRE_TIME: int = 10 * 24 * 60 * 60  # 10 дней
 
     ALLOW_ORIGINS: List[str] = ["*"]
 
     API_PREFIX: str = "/api"
-
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
 
     @property
     def DATABASE_URL(self) -> PostgresDsn:
