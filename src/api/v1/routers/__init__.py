@@ -3,7 +3,6 @@ from .benefit import router as benefit
 from .category import router as category
 from .legalentity import router as legalentity
 from .position import router as position
-from .protected import router as protected
 from .request import router as request
 from .users import router as users
 
@@ -15,5 +14,4 @@ list_of_routers = [
     position,
     request,
     users,
-    protected,
 ]

@@ -40,3 +40,6 @@ class SessionsService:
     ) -> bool:
         data = {"expires_at": new_expires_at, "csrf_token": new_csrf_token}
         return await self.repo.update_by_id(session_id, data)
+
+    async def delete_session(self, session_id: str) -> bool:
+        return await self.repo.delete_by_id(session_id)
