@@ -6,7 +6,6 @@ from .position import router as position
 from .protected import router as protected
 from .request import router as request
 from .users import router as users
-from .users_fake import router as users_fake
 
 list_of_routers = [
     auth,
@@ -15,7 +14,6 @@ list_of_routers = [
     legalentity,
     position,
     request,
-    users_fake,
     users,
     protected,
 ]
