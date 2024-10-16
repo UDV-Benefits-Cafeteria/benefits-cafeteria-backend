@@ -10,6 +10,25 @@ if TYPE_CHECKING:
 
 
 class Question(Base):
+    """
+    Represents a question asked about a benefit.
+
+    This class maps to the 'questions' table in the database and includes
+    attributes for the question's unique identifier, associated benefit,
+    user who asked, and the question text.
+
+    Attributes:
+        id (int): The unique identifier for the question.
+        benefit_id (Optional[int]): The identifier of the benefit associated with the question.
+        user_id (Optional[int]): The identifier of the user who asked the question.
+        text (Text): The content of the question.
+
+    Relationships:
+        benefit (Benefit): The benefit associated with this question, linked to the Benefit model.
+        user (User): The user who asked, linked to the User model.
+        answer (Answer): The answer to this question, linked to the Answer model.
+    """
+
     __tablename__ = "questions"
 
     repr_cols = ("id", "benefit_id", "user_id", "text")
@@ -33,6 +52,23 @@ class Question(Base):
 
 
 class Answer(Base):
+    """
+    Represents an answer to a question.
+
+    This class maps to the 'answers' table in the database and includes
+    attributes for the answer's associated question, user who provided the
+    answer, and the answer text.
+
+    Attributes:
+        question_id (int): The identifier of the question being answered.
+        user_id (Optional[int]): The identifier of the user who provided the answer.
+        text (Text): The content of the answer.
+
+    Relationships:
+        user (User): The user who provided the answer, linked to the User model.
+        question (Question): The question this answer responds to, linked to the Question model.
+    """
+
     __tablename__ = "answers"
 
     repr_cols = ("question_id", "user_id", "text")

@@ -10,6 +10,19 @@ if TYPE_CHECKING:
 
 
 class Position(Base):
+    """
+    Represents a job position within the system.
+
+    This class maps to the 'positions' table in the database and includes
+    attributes for the position's unique identifier and name.
+
+    Attributes:
+        id (int): The unique identifier for the position.
+        name (str): The name of the position. Must be unique.
+        users (List[User]): A list of users associated with this position.
+        benefits (List[Benefit]): A list of benefits associated with this position.
+    """
+
     __tablename__ = "positions"
 
     repr_cols = ("id", "name")

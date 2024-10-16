@@ -21,6 +21,27 @@ class UsersService(
     update_schema = schemas.UserUpdate
 
     async def read_by_email(self, email: str) -> Optional[schemas.UserRead]:
+        """
+        Retrieve a user by their email address.
+
+        This method attempts to find a user entity in the repository
+        using the provided email. If the user is found, the entity is
+        validated and returned. If not found, it raises a
+        `service_exceptions.EntityNotFoundError`.
+
+        Args:
+            email (str): The email address of the user to retrieve.
+
+        Returns:
+            Optional[schemas.UserRead]: The validated user entity if found,
+            None otherwise.
+
+        Raises:
+            service_exceptions.EntityNotFoundError: If no user is found
+            with the provided email.
+            service_exceptions.EntityReadError: If an error occurs
+            while reading from the repository.
+        """
         try:
             entity = await self.repo.read_by_email(email)
             if not entity:

@@ -10,6 +10,25 @@ if TYPE_CHECKING:
 
 
 class CoinPayment(Base):
+    """
+    Represents a payment made using coins within the system.
+
+    This class maps to the 'coin_payments' table in the database and includes
+    attributes for the payment's unique identifier, associated user, amount,
+    optional comment, and payer information.
+
+    Attributes:
+        id (int): The unique identifier for the coin payment.
+        user_id (Optional[int]): The identifier of the user making the payment.
+        amount (int): The amount of coins involved in the payment.
+        comment (Optional[str]): An optional comment associated with the payment.
+        payer_id (Optional[int]): The identifier of the user processing the payment.
+
+    Relationships:
+        user (User): The user making the payment, linked to the User model.
+        payer (User): The user processing the payment, linked to the User model.
+    """
+
     __tablename__ = "coin_payments"
 
     repr_cols = ("id", "user_id", "amount")

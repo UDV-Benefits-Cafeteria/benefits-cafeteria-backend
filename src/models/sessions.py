@@ -11,6 +11,23 @@ if TYPE_CHECKING:
 
 
 class Session(Base):
+    """
+    Represents a user session in the application.
+
+    This class maps to the 'sessions' table in the database and includes
+    attributes related to user sessions, including session ID, user ID,
+    expiration time, and CSRF token.
+
+    Attributes:
+        session_id (str): The unique identifier for the session.
+        user_id (int): The identifier of the user associated with this session.
+        expires_at (datetime): The expiration date and time of the session.
+        csrf_token (str): The CSRF token associated with this session.
+
+    Relationships:
+        user (User): The user associated with this session, linked to the User model.
+    """
+
     __tablename__ = "sessions"
 
     updated_at = None

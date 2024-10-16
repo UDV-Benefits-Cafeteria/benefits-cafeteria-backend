@@ -13,7 +13,6 @@ from src.services.sessions import SessionsService
 
 
 def get_application() -> FastAPI:
-    # Not adding CSRF middleware in dev mode and on tests
     if not settings.DEBUG:
         sentry_sdk.init(
             dsn=settings.SENTRY_DSN,
@@ -38,7 +37,7 @@ def get_application() -> FastAPI:
         refresh_threshold=settings.SESSION_REFRESH_THRESHOLD,
     )
 
-    # Not adding CSRF middleware in dev mode and on tests
+    # Not adding middleware in dev mode and on tests
     if not settings.DEBUG:
         application.add_middleware(
             CORSMiddleware,

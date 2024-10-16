@@ -7,6 +7,19 @@ from src.config import settings
 
 
 class Base(DeclarativeBase):
+    """
+    Base class for SQLAlchemy models with default metadata and timestamp columns.
+
+    This class defines a base model that other models can inherit from. It sets up
+    metadata with a naming convention for primary keys, foreign keys, indexes,
+    unique constraints, and check constraints. Additionally, it provides automatic
+    `created_at` and `updated_at` columns with UTC timestamps.
+
+    Attributes:
+        repr_cols_num (int): The default number of columns to display in the `__repr__` output.
+        repr_cols (tuple): A tuple of specific column names to include in the `__repr__` output.
+    """
+
     metadata = MetaData(
         naming_convention={
             "pk": "pk_%(table_name)s",
@@ -19,6 +32,14 @@ class Base(DeclarativeBase):
 
     @declared_attr
     def created_at(cls):
+        """
+        The UTC timestamp when a record is created.
+
+        This column is automatically populated with the current UTC time
+        when a record is inserted.
+
+        :return: A DateTime column with timezone support.
+        """
         return Column(
             DateTime(timezone=True),
             server_default=text("TIMEZONE('utc', NOW())"),
@@ -27,6 +48,14 @@ class Base(DeclarativeBase):
 
     @declared_attr
     def updated_at(cls):
+        """
+        The UTC timestamp when a record is last updated.
+
+        This column is automatically updated with the current UTC time whenever
+        the record is modified.
+
+        :return: A DateTime column with timezone support.
+        """
         return Column(
             DateTime(timezone=True),
             server_default=text("TIMEZONE('utc', NOW())"),
@@ -38,6 +67,15 @@ class Base(DeclarativeBase):
     repr_cols = tuple()
 
     def __repr__(self) -> str:
+        """
+        Generate a string representation of the model instance.
+
+        The representation includes a subset of the model's columns. By default,
+        it displays the first three columns or the columns specified in `repr_cols`.
+
+        :return: A string representation of the model instance.
+        :rtype: str
+        """
         column_names = list(self.__table__.columns.keys())
         cols = []
 
@@ -50,6 +88,7 @@ class Base(DeclarativeBase):
         return f"<{self.__class__.__name__}({cols_str})>"
 
 
+# Create a SQLAlchemy engine for asynchronous operations.
 if settings.DEBUG:
     engine = create_async_engine(
         settings.DATABASE_URL, echo=settings.DEBUG, poolclass=NullPool, future=True
@@ -57,6 +96,7 @@ if settings.DEBUG:
 else:
     engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG)
 
+# Create an async session factory using the configured engine.
 async_session_factory = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
