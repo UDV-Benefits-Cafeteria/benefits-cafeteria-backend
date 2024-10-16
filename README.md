@@ -30,7 +30,7 @@ FLOWER_LOGIN=admin
 FLOWER_PASSWORD=admin
 CELERY_BROKER_URL=amqp://guest:guest@rabbitmq//
 CELERY_RESULT_BACKEND=rpc://
-SENTRY_DSN='https://<public_key>@o<organization>.ingest.sentry.io/<project_id>'
+SENTRY_DSN=emptyurl
 SENTRY_ENVIRONMENT=development
 ```
 
