@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     SENTRY_ENVIRONMENT: str = "development"
 
     ALLOW_ORIGINS: List[str] = ["*"]
+    ALLOW_HOSTS: List[str] = ["*"]
 
     API_PREFIX: str = "/api"
 
