@@ -3,6 +3,8 @@ from datetime import datetime, timedelta, timezone
 from secrets import token_urlsafe
 from typing import Optional
 
+import src.repositories.exceptions as repo_exceptions
+import src.services.exceptions as service_exceptions
 from src.repositories.sessions import SessionsRepository
 from src.schemas.session import SessionRead
 
@@ -33,8 +35,11 @@ class SessionsService:
             "expires_at": expires_at,
             "csrf_token": csrf_token,
         }
-        session = await self.repo.create(data)
-        return session.session_id
+        try:
+            session = await self.repo.create(data)
+            return session.session_id
+        except repo_exceptions.EntityCreateError as e:
+            raise service_exceptions.EntityCreateError("Session", str(e))
 
     async def get_session(self, session_id: str) -> Optional[SessionRead]:
         """
@@ -49,10 +54,13 @@ class SessionsService:
         Returns:
             Optional[SessionRead]: The session data if found and valid, None otherwise.
         """
-        session = await self.repo.read_by_id(session_id)
-        if session and session.expires_at > datetime.now(timezone.utc):
+        try:
+            session = await self.repo.read_by_id(session_id)
+            if not session or session.expires_at <= datetime.now(timezone.utc):
+                raise service_exceptions.EntityNotFoundError("Session", session_id)
             return SessionRead.model_validate(session)
-        return None
+        except repo_exceptions.EntityReadError as e:
+            raise service_exceptions.EntityReadError("Session", session_id, str(e))
 
     async def get_csrf_token(self, session_id: str) -> Optional[str]:
         """
@@ -67,10 +75,9 @@ class SessionsService:
         Returns:
             Optional[str]: The CSRF token if the session is valid, None otherwise.
         """
+
         session = await self.get_session(session_id)
-        if session:
-            return session.csrf_token
-        return None
+        return session.csrf_token
 
     async def update_session_expiration(
         self, session_id: str, new_expires_at: datetime, new_csrf_token: str
@@ -90,7 +97,19 @@ class SessionsService:
             bool: True if the update was successful, False otherwise.
         """
         data = {"expires_at": new_expires_at, "csrf_token": new_csrf_token}
-        return await self.repo.update_by_id(session_id, data)
+        try:
+            is_updated = await self.repo.update_by_id(session_id, data)
+            if not is_updated:
+                raise service_exceptions.EntityNotFoundError("Session", session_id)
+            return True
+        except repo_exceptions.EntityUpdateError as e:
+            raise service_exceptions.EntityUpdateError("Session", session_id, str(e))
 
     async def delete_session(self, session_id: str) -> bool:
-        return await self.repo.delete_by_id(session_id)
+        try:
+            is_deleted = await self.repo.delete_by_id(session_id)
+            if not is_deleted:
+                raise service_exceptions.EntityNotFoundError("Session", session_id)
+            return True
+        except repo_exceptions.EntityDeleteError as e:
+            raise service_exceptions.EntityDeletionError("Session", session_id, str(e))
