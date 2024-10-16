@@ -37,6 +37,11 @@ async def get_user_me():
     return user
 
 
+@router.get("/trigger_error")
+async def trigger_error():
+    raise ZeroDivisionError
+
+
 @router.get("/{user_id}", response_model=UserRead)
 async def get_user(user_id: int):
     user = generate_fake_user(user_id)

@@ -1,3 +1,4 @@
+import sentry_sdk
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
@@ -9,6 +10,13 @@ from src.services.sessions import SessionsService
 
 
 def get_application() -> FastAPI:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        profiles_sample_rate=settings.SENTRY_SAMPLE_PROFILER_RATE,
+        environment=settings.SENTRY_ENVIRONMENT,
+    )
+
     application = FastAPI(
         debug=settings.DEBUG,
         title=settings.APP_TITLE,

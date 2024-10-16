@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     CSRF_COOKIE_NAME: str = "csrftoken"
     CSRF_EXPIRE_TIME: int = 86400 * 7  # 7 дней
 
+    SENTRY_DSN: str = (
+        "https://<public_key>@o<organization>.ingest.sentry.io/<project_id>"
+    )
+    SENTRY_TRACES_SAMPLE_RATE: float = 1.0
+    SENTRY_SAMPLE_PROFILER_RATE: float = 1.0
+    SENTRY_ENVIRONMENT: str = "development"
+
     ALLOW_ORIGINS: List[str] = ["*"]
 
     API_PREFIX: str = "/api"
