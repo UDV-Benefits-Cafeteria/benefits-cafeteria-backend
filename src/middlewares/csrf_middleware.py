@@ -66,7 +66,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         if csrf_token != csrf_token_from_header:
             logger.error("Invalid CSRF token.")
-            return PlainTextResponse("Invalid CSRF token", status_code=403)
+            return PlainTextResponse("Forbidden", status_code=403)
 
         response = await call_next(request)
         return response

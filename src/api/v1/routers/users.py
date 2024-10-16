@@ -9,7 +9,7 @@ from src.api.v1.dependencies import (
     LegalEntitiesServiceDependency,
     PositionsServiceDependency,
     UsersServiceDependency,
-    active_user,
+    get_active_user,
 )
 from src.services.exceptions import (
     EntityCreateError,
@@ -65,7 +65,7 @@ async def create_user(
     },
 )
 async def get_current_user(
-    current_user: Annotated[schemas.UserRead, Depends(active_user)],
+    current_user: Annotated[schemas.UserRead, Depends(get_active_user)],
 ):
     """
     Retrieve the current authenticated user's information.
