@@ -4,6 +4,14 @@ from .category import router as category
 from .legalentity import router as legalentity
 from .position import router as position
 from .request import router as request
-from .users import router as user
+from .users import router as users
 
-list_of_routers = [auth, benefit, category, legalentity, position, request, user]
+list_of_routers = [
+    auth,
+    benefit,
+    category,
+    legalentity,
+    position,
+    request,
+    users,
+]

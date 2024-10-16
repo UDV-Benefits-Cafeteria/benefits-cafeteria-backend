@@ -5,6 +5,7 @@ from .legal_entities import LegalEntity
 from .payments import CoinPayment
 from .positions import Position
 from .questions import Answer, Question
+from .sessions import Session
 from .users import User
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "Question",
     "Answer",
     "Position",
+    "Session",
 ]

@@ -17,16 +17,60 @@ if TYPE_CHECKING:
         LegalEntity,
         Position,
         Question,
+        Session,
     )
 
 
 class UserRole(enum.Enum):
+    """
+    Enumeration of user roles within the application.
+
+    Attributes:
+        EMPLOYEE: Base user.
+        HR: The HR.
+        ADMIN: The admin.
+    """
+
     EMPLOYEE = "employee"
     HR = "hr"
     ADMIN = "admin"
 
 
 class User(Base):
+    """
+    Represents a user in the application.
+
+    This class maps to the 'users' table in the database and contains
+    attributes related to user information, roles, and relationships with
+    other entities in the application.
+
+    Attributes:
+        id (int): The unique identifier for the user.
+        email (str): The user's email address, which must be unique.
+        firstname (str): The user's first name.
+        lastname (str): The user's last name.
+        middlename (Optional[str]): The user's middle name (if applicable).
+        position_id (Optional[int]): The ID of the user's position, linked to the Position model.
+        role (UserRole): The role of the user, defined as an enumeration.
+        password (str): The user's password (hashed).
+        hired_at (date): The date the user was hired.
+        is_active (bool): Indicates if the user account is active.
+        is_adapted (bool): Indicates if the user has completed adaptation.
+        is_verified (bool): Indicates if the user has verified their account.
+        coins (int): The number of coins the user has.
+        legal_entity_id (Optional[int]): The ID of the legal entity the user belongs to.
+
+    Relationships:
+        legal_entity (Optional[LegalEntity]): The legal entity associated with the user.
+        position (Optional[Position]): The position associated with the user.
+        coin_payments (List[CoinPayment]): The list of coin payments made by the user.
+        processed_payments (List[CoinPayment]): The list of coin payments processed by the user.
+        benefit_requests (List[BenefitRequest]): The list of benefit requests made by the user.
+        questions (List[Question]): The list of questions asked by the user.
+        answers (List[Answer]): The list of answers provided by the user.
+        sessions (List[Session]): The list of active sessions associated with the user.
+    """
+
     __tablename__ = "users"
 
     repr_cols = ("id", "email", "firstname", "lastname")
@@ -42,7 +86,12 @@ class User(Base):
         ForeignKey("positions.id", ondelete="SET NULL"), nullable=True
     )
     role: Mapped[UserRole] = mapped_column(
-        SQLAlchemyEnum(UserRole, native_enum=False, name="user_role_enum"),
+        SQLAlchemyEnum(
+            UserRole,
+            native_enum=False,
+            name="user_role_enum",
+            values_callable=lambda enum_class: [member.value for member in enum_class],
+        ),
         nullable=False,
     )
     password: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -56,10 +105,14 @@ class User(Base):
     )
 
     legal_entity: Mapped[Optional["LegalEntity"]] = relationship(
-        "LegalEntity", back_populates="users"
+        "LegalEntity",
+        back_populates="users",
+        lazy="selectin",
     )
     position: Mapped[Optional["Position"]] = relationship(
-        "Position", back_populates="users"
+        "Position",
+        back_populates="users",
+        lazy="selectin",
     )
     coin_payments: Mapped[List["CoinPayment"]] = relationship(
         "CoinPayment",
@@ -79,13 +132,31 @@ class User(Base):
     )
     answers: Mapped[List["Answer"]] = relationship("Answer", back_populates="user")
 
+    sessions: Mapped[List["Session"]] = relationship(
+        "Session", back_populates="user", cascade="all, delete-orphan"
+    )
+
     @property
     def experience(self) -> int:
+        """
+        Calculates the user's experience in days based on the hired date.
+
+        :return: days
+        :rtype: int
+        """
         today = dt.date.today()
         delta = today - self.hired_at
         return delta.days
 
     @property
     def level(self) -> int:
+        """
+        Calculates the user's level based on experience.
+
+        The level is determined by dividing the number of experience days by 30.
+
+        :return: level
+        :rtype: int
+        """
         experience_days = self.experience
         return experience_days // 30

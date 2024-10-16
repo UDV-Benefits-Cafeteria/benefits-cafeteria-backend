@@ -35,6 +35,7 @@ jobs:
       - name: Create env file
         run: |
           touch .env
+          echo DEBUG=True >> .env
           echo POSTGRES_USER=postgres >> .env
           echo POSTGRES_PASSWORD=postgres >> .env
           echo POSTGRES_DB=postgres >> .env
@@ -45,6 +46,20 @@ jobs:
 
       - name: Install libs
         run: poetry install --with dev
+
+      - name: Create Alembic versions directory
+        run: |
+          mkdir -p alembic/versions
+          chmod -R 777 alembic/versions
+
+      - name: Init migrations
+        run: poetry run alembic upgrade head
+
+      - name: Create migrations
+        run: poetry run alembic revision --autogenerate
+
+      - name: Applying migrations
+        run: poetry run alembic upgrade head
 
       - name: Run tests
         run: poetry run pytest tests/

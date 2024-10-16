@@ -1,8 +1,12 @@
 import src.schemas.benefit as schemas
-from src.services.abstract import AbstractService
+from src.repositories.benefits import BenefitsRepository
+from src.services.abstract import BaseService
 
 
 class BenefitsService(
-    AbstractService[schemas.BenefitCreate, schemas.BenefitRead, schemas.BenefitUpdate]
+    BaseService[schemas.BenefitCreate, schemas.BenefitRead, schemas.BenefitUpdate]
 ):
-    pass
+    repo = BenefitsRepository
+    create_schema = schemas.BenefitCreate
+    read_schema = schemas.BenefitRead
+    update_schema = schemas.BenefitUpdate

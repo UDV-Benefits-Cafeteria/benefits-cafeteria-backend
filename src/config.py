@@ -22,12 +22,22 @@ class Settings(BaseSettings):
         "unsecured2*t@t3b#6g$^w@zsdz57^x-g^o05@e5aztfn=)r#ijaly1-cy0"
     )
 
+    SESSION_COOKIE_NAME: str = "session_id"
+    SESSION_EXPIRE_TIME: int = 86400 * 7  # 7 дней
+    SESSION_REFRESH_THRESHOLD: int = 86400 * 1  # 1 день
+
+    CSRF_COOKIE_NAME: str = "csrftoken"
+    CSRF_EXPIRE_TIME: int = 86400 * 7  # 7 дней
+
+    SENTRY_DSN: str = "emptyurl"
+    SENTRY_TRACES_SAMPLE_RATE: float = 1.0
+    SENTRY_SAMPLE_PROFILER_RATE: float = 1.0
+    SENTRY_ENVIRONMENT: str = "development"
+
     ALLOW_ORIGINS: List[str] = ["*"]
+    ALLOW_HOSTS: List[str] = ["*"]
 
     API_PREFIX: str = "/api"
-
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5
 
     @property
     def DATABASE_URL(self) -> PostgresDsn:

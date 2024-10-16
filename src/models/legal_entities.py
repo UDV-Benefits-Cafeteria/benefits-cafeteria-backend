@@ -10,6 +10,18 @@ if TYPE_CHECKING:
 
 
 class LegalEntity(Base):
+    """
+    Represents a legal entity within the system.
+
+    This class maps to the 'legal_entities' table in the database and includes
+    attributes for the entity's unique identifier and name.
+
+    Attributes:
+        id (int): The unique identifier for the legal entity.
+        name (str): The name of the legal entity. Must be unique.
+        users (List[User]): A list of users associated with this legal entity.
+    """
+
     __tablename__ = "legal_entities"
 
     repr_cols = ("id", "name")
