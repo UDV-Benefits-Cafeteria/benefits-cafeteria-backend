@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     SESSION_REFRESH_THRESHOLD: int = 86400 * 1  # 1 день
 
     CSRF_COOKIE_NAME: str = "csrftoken"
-    CSRF_EXPIRE_TIME: int = 10 * 24 * 60 * 60  # 10 дней
+    CSRF_EXPIRE_TIME: int = 86400 * 7  # 7 дней
 
     ALLOW_ORIGINS: List[str] = ["*"]
 

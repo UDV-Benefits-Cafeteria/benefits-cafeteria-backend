@@ -24,18 +24,21 @@ def get_application() -> FastAPI:
         allow_headers=["*"],
     )
 
+    sessions_service = SessionsService()
+
     application.add_middleware(
         SessionMiddleware,
-        sessions_service=SessionsService(),
+        sessions_service=sessions_service,
         session_expire_time=settings.SESSION_EXPIRE_TIME,
         refresh_threshold=settings.SESSION_REFRESH_THRESHOLD,
     )
 
+    # Not adding CSRF middleware in dev mode
     if not settings.DEBUG:
         application.add_middleware(
             CSRFMiddleware,
-            csrf_token_name=settings.CSRF_COOKIE_NAME,
-            csrf_token_expiry=settings.CSRF_EXPIRE_TIME,
+            sessions_service=sessions_service,
+            csrf_header_name="X-CSRF-Token",
         )
 
     application.include_router(api_v1_router, prefix=settings.API_PREFIX)

@@ -1,124 +1,72 @@
 import logging
-from secrets import token_urlsafe
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import PlainTextResponse
 
-# Set up logging
+from src.config import settings
+from src.services.sessions import SessionsService
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
     """
-    Middleware for CSRF protection.
+    Middleware for CSRF protection using the Synchronizer Token Pattern.
 
-    This middleware ensures that non-safe HTTP methods (POST, PUT, DELETE, etc.)
-    contain a valid CSRF token that matches the one stored in cookies.
-    If the token is not found or does not match, the request is rejected with a 403 status.
-
-    For safe methods (GET, HEAD, OPTIONS, TRACE), a new CSRF token is generated if one does not exist.
-
-    CSRF token is stored in cookies, and for non-safe methods, it should also be included
-    in either request headers or request body to pass the validation.
+    This middleware validates CSRF tokens on unsafe method requests by comparing
+    the token provided in the request headers with the token stored in the user's session.
     """
 
     def __init__(
         self,
         app: FastAPI,
-        csrf_token_name="csrftoken",
-        csrf_token_expiry=10 * 24 * 60 * 60,
+        sessions_service: SessionsService,
+        csrf_header_name: str = "X-CSRF-Token",
     ):
         """
-        Initializes the CSRFMiddleware with customizable token name, expiry time, and refresh threshold.
+        Initialize the CSRFMiddleware.
 
-        Steps:
-            1. Initialize the BaseHTTPMiddleware with the app.
-            2. Set the CSRF token name.
-            3. Define the expiration time for the CSRF token.
-            4. Define the refresh threshold, the time before expiration when the token should be refreshed.
-
-        :param app: The Starlette/FastAPI application instance.
-        :param csrf_token_name: The name of the CSRF token in the cookie (default: 'csrftoken').
-        :param csrf_token_expiry: Token expiration time in seconds (default: 10 days).
+        :param app: The FastAPI application instance.
+        :param sessions_service: A service for interacting with sessions.
+        :param csrf_header_name: The name of the HTTP header for CSRF token.
         """
         super().__init__(app)
-        self.CSRF_TOKEN_NAME = csrf_token_name
-        self.CSRF_TOKEN_EXPIRY = csrf_token_expiry
+        self.sessions_service = sessions_service
+        self.csrf_header_name = csrf_header_name
 
-    async def dispatch(self, request, call_next):
+    async def dispatch(self, request: Request, call_next):
         """
-        Process the incoming request and apply CSRF protection.
+        Process incoming requests to validate CSRF tokens.
 
-        Steps:
-            1. Initialize the CSRF token state in the request.
-            2. Extract the CSRF token from the request's cookies, headers, or post body.
-            3. For unsafe methods (POST, PUT, DELETE), verify that the token from the request matches
-               the token from the cookie. If not, return a 403 Forbidden response.
-            4. For safe methods (GET, HEAD, OPTIONS, TRACE), check if the token exists.
-            5. If no token is found, generate a new one.
-            6. If a token exists, calculate the time until expiration.
-            7. If the expiration time is close to the threshold, refresh the token.
-            8. If a new token is generated or refreshed, set it in the response cookies.
-            9. Return the response after applying CSRF validation.
-
-        :param request: The HTTP request being processed.
-        :param call_next: A function to pass the request to the next handler.
-
-        :return: A response object, potentially with a new or updated CSRF token in cookies.
+        :param request: The incoming HTTP request.
+        :param call_next: The next middleware or route handler.
+        :return: The HTTP response after CSRF validation.
         """
-        request.state.csrftoken = ""
-        token_new_cookie = False
-        error_text = (
-            "CSRF token validation failed. "
-            "The request could not be completed for security reasons. "
-            "Please ensure your session is valid and try again."
-        )
-        token_from_header = request.headers.get(self.CSRF_TOKEN_NAME, None)
-        token_from_cookie = request.cookies.get(self.CSRF_TOKEN_NAME, None)
-        token_from_post = None
+        if request.method in ("GET", "HEAD", "OPTIONS", "TRACE"):
+            # Safe methods do not require CSRF validation
+            response = await call_next(request)
+            return response
 
-        if hasattr(request.state, "post"):
-            token_from_post = request.state.post.get(self.CSRF_TOKEN_NAME, None)
+        session_id = request.cookies.get(settings.SESSION_COOKIE_NAME)
+        if not session_id:
+            logger.error("Session ID not found in cookies.")
+            return PlainTextResponse("Not authenticated", status_code=401)
 
-        if request.method not in ("GET", "HEAD", "OPTIONS", "TRACE"):
-            if not token_from_cookie or len(token_from_cookie) < 30:
-                logger.error("CSRF Cookie was not set. Aborting request.")
-                return PlainTextResponse(error_text, status_code=403)
+        csrf_token = await self.sessions_service.get_csrf_token(session_id)
+        if not csrf_token:
+            logger.error("CSRF token not found in session.")
+            return PlainTextResponse("CSRF token missing", status_code=403)
 
-            if (str(token_from_cookie) != str(token_from_post)) and (
-                str(token_from_cookie) != str(token_from_header)
-            ):
-                logger.error(
-                    "CSRF Cookie was not correct. "
-                    "Aborting request. "
-                    f"Cookie: {token_from_cookie} | Post: {token_from_post} | Header: {token_from_header}"
-                )
-                return PlainTextResponse(error_text, status_code=403)
+        csrf_token_from_header = request.headers.get(self.csrf_header_name)
+        if not csrf_token_from_header:
+            logger.error("CSRF token not found in headers.")
+            return PlainTextResponse("CSRF token missing in headers", status_code=403)
 
-        else:
-            if not token_from_cookie:
-                token_from_cookie = token_urlsafe(32)
-                token_new_cookie = True
-            else:
-                token_new_cookie = False
-
-        request.state.csrftoken = token_from_cookie
+        if csrf_token != csrf_token_from_header:
+            logger.error("Invalid CSRF token.")
+            return PlainTextResponse("Invalid CSRF token", status_code=403)
 
         response = await call_next(request)
-
-        if token_new_cookie:
-            logger.info("Setting up CSRF Cookie.")
-            response.set_cookie(
-                self.CSRF_TOKEN_NAME,
-                token_from_cookie,
-                max_age=self.CSRF_TOKEN_EXPIRY,
-                path="/",
-                domain=None,
-                secure=True,
-                httponly=True,
-                samesite="strict",
-            )
-
         return response

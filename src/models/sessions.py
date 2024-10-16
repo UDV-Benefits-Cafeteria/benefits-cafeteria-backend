@@ -24,6 +24,7 @@ class Session(Base):
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+    csrf_token: Mapped[str] = mapped_column(String(255), nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="sessions")
 

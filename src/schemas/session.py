@@ -8,12 +8,7 @@ class SessionBase(BaseModel):
     session_id: str
     user_id: int
     expires_at: datetime
-
-
-class SessionCreate(SessionBase):
-    user_id: int
-    expires_at: datetime
-    session_id: Optional[str] = None
+    csrf_token: str
 
 
 class SessionRead(SessionBase):

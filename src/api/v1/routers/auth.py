@@ -144,7 +144,7 @@ async def signin(
         - 400: If the credentials are invalid, user is not verified, or password is not set.
 
     Returns:
-    - **dict**: A dictionary indicating success or failure of the operation.
+    - **dict**: A dictionary indicating success of the operation.
     """
     try:
         # Retrieve user data based on email
@@ -177,7 +177,9 @@ async def signin(
             user.id, settings.SESSION_EXPIRE_TIME
         )
 
-        # Set the session cookie in the response
+        # Retrieve CSRF token from the created session
+        csrf_token = await sessions_service.get_csrf_token(session_id)
+
         response.set_cookie(
             key=settings.SESSION_COOKIE_NAME,
             value=session_id,
@@ -186,6 +188,16 @@ async def signin(
             samesite="lax",
             secure=not settings.DEBUG,
         )
+
+        response.set_cookie(
+            key=settings.CSRF_COOKIE_NAME,
+            value=csrf_token,
+            max_age=settings.CSRF_EXPIRE_TIME,
+            httponly=False,  # Accessible by JavaScript
+            samesite="lax",
+            secure=not settings.DEBUG,
+        )
+
         return {"is_success": True}
 
     except EntityNotFoundError:
@@ -230,6 +242,8 @@ async def logout(
         await sessions_service.delete_session(session_id)
         # Remove the session cookie from the response
         response.delete_cookie(settings.SESSION_COOKIE_NAME)
+        # Remove the CSRF token cookie from the response
+        response.delete_cookie(settings.CSRF_COOKIE_NAME)
         return {"is_success": True}
 
     except Exception:
