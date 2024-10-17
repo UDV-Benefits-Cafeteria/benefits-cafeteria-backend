@@ -8,9 +8,6 @@ ENV PYTHONUNBUFFERED 1
 COPY ./poetry.lock /src/poetry.lock
 COPY ./pyproject.toml /src/pyproject.toml
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
 RUN apt update
 RUN apt install libmemcached-tools memcached -y
 

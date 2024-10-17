@@ -1,14 +1,11 @@
-import logging
-
 from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import PlainTextResponse
 
-from src.config import settings
+from src.config import get_settings, logger
 from src.services.sessions import SessionsService
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):

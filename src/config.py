@@ -1,13 +1,19 @@
+import logging
+from functools import lru_cache
 from pathlib import Path
 from typing import List
 
-from pydantic import PostgresDsn, SecretStr
+from pydantic import EmailStr, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Set up logging
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
-    APP_TITLE: str = "UDV Benefits Cafeteria API"
-    APP_DESCRIPTION: str = "Api for UDV Benefits Cafeteria"
+    APP_TITLE: str = "UDV Benefits Cafeteria"
+    APP_DESCRIPTION: str = "API for UDV Benefits Cafeteria"
     APP_VERSION: str = "0.1.0"
 
     DEBUG: bool = False
@@ -34,6 +40,18 @@ class Settings(BaseSettings):
     SENTRY_SAMPLE_PROFILER_RATE: float = 1.0
     SENTRY_ENVIRONMENT: str = "development"
 
+    DOMAIN: str = "example.site"
+
+    MAIL_USERNAME: str = "username"
+    MAIL_PASSWORD: str = "passwd"
+    MAIL_FROM: EmailStr = "test@email.com"
+    MAIL_PORT: int = 587
+    MAIL_SERVER: str = "mailserver"
+    MAIL_STARTTLS: bool = True
+    MAIL_SSL_TLS: bool = False
+    MAIL_USE_CREDENTIALS: bool = True
+    MAIL_VALIDATE_CERTS: bool = False
+
     ALLOW_ORIGINS: List[str] = ["*"]
     ALLOW_HOSTS: List[str] = ["*"]
 
@@ -48,4 +66,6 @@ class Settings(BaseSettings):
     )
 
 
-settings = Settings()
+@lru_cache
+def get_settings():
+    return Settings()

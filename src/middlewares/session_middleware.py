@@ -5,8 +5,10 @@ from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from src.config import settings
+from src.config import get_settings
 from src.services.sessions import SessionsService
+
+settings = get_settings()
 
 
 class SessionMiddleware(BaseHTTPMiddleware):

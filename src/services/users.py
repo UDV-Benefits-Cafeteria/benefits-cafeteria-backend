@@ -1,15 +1,15 @@
-import logging
 from typing import Optional
 
 import src.repositories.exceptions as repo_exceptions
+import src.schemas.email as email_schemas
 import src.schemas.user as schemas
 import src.services.exceptions as service_exceptions
+from src.celery.tasks import background_send_mail
+from src.config import get_settings, logger
 from src.repositories.users import UsersRepository
 from src.services.abstract import BaseService
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 class UsersService(
@@ -64,3 +64,23 @@ class UsersService(
             raise service_exceptions.EntityReadError(
                 self.read_schema.__name__, email, str(e)
             )
+
+    @staticmethod
+    async def send_email_registration(user: schemas.UserCreate) -> None:
+        email = email_schemas.EmailSchema.model_validate(
+            {
+                "email": [user.email],
+                "body": {
+                    "name": user.firstname,
+                    "product": settings.APP_TITLE,
+                    "register_url": f"https://{settings.DOMAIN}/register?{user.email}",
+                },
+            }
+        )
+        logger.info(f"Sending registration email with data: {email.model_dump()}")
+
+        background_send_mail.delay(
+            email.model_dump(),
+            f"Регистрация на сайте {settings.APP_TITLE}",
+            "register.html",
+        )

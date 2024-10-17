@@ -5,7 +5,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
 from src.api.v1 import router as api_v1_router
-from src.config import settings
+from src.config import get_settings
 from src.middlewares.csrf_middleware import CSRFMiddleware
 from src.middlewares.server_error_middleware import CatchServerErrorMiddleware
 from src.middlewares.session_middleware import SessionMiddleware
@@ -13,6 +13,8 @@ from src.services.sessions import SessionsService
 
 
 def get_application() -> FastAPI:
+    settings = get_settings()
+
     if not settings.DEBUG:
         sentry_sdk.init(
             dsn=settings.SENTRY_DSN,

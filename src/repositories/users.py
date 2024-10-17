@@ -1,15 +1,12 @@
-import logging
 from typing import Optional
 
 from sqlalchemy import select
 
+from src.config import logger
 from src.db.db import async_session_factory
 from src.models.users import User
 from src.repositories.abstract import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class UsersRepository(SQLAlchemyRepository[User]):

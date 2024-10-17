@@ -32,6 +32,12 @@ CELERY_BROKER_URL=amqp://guest:guest@rabbitmq//
 CELERY_RESULT_BACKEND=rpc://
 SENTRY_DSN=emptyurl
 SENTRY_ENVIRONMENT=development
+DOMAIN=example.site
+MAIL_USERNAME=username
+MAIL_PASSWORD=passwd
+MAIL_FROM=test@email.com
+MAIL_PORT=465
+MAIL_SERVER=mailserver
 ```
 
 ### 3. Set up Docker

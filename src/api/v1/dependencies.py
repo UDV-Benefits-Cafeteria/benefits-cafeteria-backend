@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request
 from starlette import status
 
-from src.config import settings
+from src.config import get_settings
 from src.schemas.user import UserRead, UserRole
 from src.services.auth import AuthService
 from src.services.legal_entities import LegalEntitiesService
@@ -16,6 +16,8 @@ AuthServiceDependency = Annotated[AuthService, Depends()]
 SessionsServiceDependency = Annotated[SessionsService, Depends()]
 PositionsServiceDependency = Annotated[PositionsService, Depends()]
 LegalEntitiesServiceDependency = Annotated[LegalEntitiesService, Depends()]
+
+settings = get_settings()
 
 
 async def get_current_user(

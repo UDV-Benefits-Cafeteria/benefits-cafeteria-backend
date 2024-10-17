@@ -1,19 +1,15 @@
-import logging
 from typing import Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel
 
 import src.repositories.exceptions as repo_exceptions
 import src.services.exceptions as service_exceptions
+from src.config import logger
 from src.repositories.abstract import AbstractRepository
 
 TCreate = TypeVar("TCreate", bound=BaseModel)
 TRead = TypeVar("TRead", bound=BaseModel)
 TUpdate = TypeVar("TUpdate", bound=BaseModel)
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class BaseService(Generic[TCreate, TRead, TUpdate]):

@@ -1,15 +1,12 @@
-import logging
 from datetime import datetime
 
 from sqlalchemy import delete
 
+from src.config import logger
 from src.db.db import async_session_factory
 from src.models import Session
 from src.repositories.abstract import SQLAlchemyRepository
 from src.repositories.exceptions import EntityDeleteError
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class SessionsRepository(SQLAlchemyRepository[Session]):
