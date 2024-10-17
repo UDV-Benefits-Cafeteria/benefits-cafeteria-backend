@@ -66,7 +66,18 @@ class UsersService(
             )
 
     @staticmethod
-    async def send_email_registration(user: schemas.UserCreate) -> None:
+    async def send_email_registration(user: schemas.UserCreate | schemas.UserRead) -> None:
+        """
+        Asynchronously sends a registration email to the user.
+
+        :param user: The user for whom the registration email is being sent. This can be either a
+                     UserCreate or UserRead schema, containing information like the user's email and
+                     first name.
+        :type user: schemas.UserCreate | schemas.UserRead
+
+        :return: None. The function sends a registration email and does not return a value.
+        :rtype: None
+        """
         email = email_schemas.EmailSchema.model_validate(
             {
                 "email": [user.email],

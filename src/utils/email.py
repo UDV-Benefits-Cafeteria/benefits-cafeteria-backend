@@ -1,9 +1,10 @@
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 
 from src.config import get_settings
+from src.schemas import email as schemas
 
 settings = get_settings()
 
@@ -24,7 +25,20 @@ conf = ConnectionConfig(
 fm = FastMail(conf)
 
 
-async def send_mail(email: Dict[str, Any], subject: str, template: str):
+async def send_mail(email: dict[str, Any], subject: str, template: str):
+    """
+    Asynchronously sends an email using the provided email schema, subject, and template.
+
+    :param email: An instance of EmailSchema containing the recipient's email address and the email body.
+    :type email: schemas.EmailSchema
+    :param subject: The subject line of the email.
+    :type subject: str
+    :param template: The name of the HTML template to use for the email content.
+    :type template: str
+
+    :return: None. The function sends an email and does not return a value.
+    :rtype: None
+    """
     message = MessageSchema(
         subject=subject,
         recipients=email.get("email"),

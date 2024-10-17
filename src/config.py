@@ -1,7 +1,6 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import List
 
 from pydantic import EmailStr, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -52,8 +51,8 @@ class Settings(BaseSettings):
     MAIL_USE_CREDENTIALS: bool = True
     MAIL_VALIDATE_CERTS: bool = False
 
-    ALLOW_ORIGINS: List[str] = ["*"]
-    ALLOW_HOSTS: List[str] = ["*"]
+    ALLOW_ORIGINS: list[str] = ["*"]
+    ALLOW_HOSTS: list[str] = ["*"]
 
     API_PREFIX: str = "/api"
 

@@ -260,5 +260,6 @@ async def upload_users(
             errors.append({"row": idx, "error": f"Value Error: {str(ve)}"})
         except Exception as e:
             errors.append({"row": idx, "error": f"Error: {str(e)}"})
-
+    for user in created_users:
+        await service.send_email_registration(user)
     return schemas.UserUploadResponse(created_users=created_users, errors=errors)
