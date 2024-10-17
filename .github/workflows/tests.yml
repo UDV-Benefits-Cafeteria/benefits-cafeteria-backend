@@ -70,5 +70,5 @@ jobs:
 
       - name: Run tests
         run: |
-          poetry run celery -A src.celery.celery worker -l debug --without-mingle --without-gossip
+          poetry run celery -A src.celery.celery worker -l debug --without-mingle --without-gossip &
           poetry run pytest tests/
