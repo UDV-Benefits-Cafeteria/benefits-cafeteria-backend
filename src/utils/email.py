@@ -4,7 +4,6 @@ from typing import Any
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 
 from src.config import get_settings
-from src.schemas import email as schemas
 
 settings = get_settings()
 

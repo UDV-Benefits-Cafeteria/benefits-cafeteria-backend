@@ -66,7 +66,9 @@ class UsersService(
             )
 
     @staticmethod
-    async def send_email_registration(user: schemas.UserCreate | schemas.UserRead) -> None:
+    async def send_email_registration(
+        user: schemas.UserCreate | schemas.UserRead,
+    ) -> None:
         """
         Asynchronously sends a registration email to the user.
 
