@@ -1,13 +1,13 @@
 import enum
 from typing import TYPE_CHECKING, List, Optional
 
-from fastapi_storages.integrations.sqlalchemy import FileType
 from sqlalchemy import Boolean, DateTime
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import ForeignKey, Integer, Numeric, String, Text, and_
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
 from src.db.db import Base
+from src.models.custom_types import FileType
 from src.utils.s3 import storage
 
 if TYPE_CHECKING:
