@@ -69,7 +69,7 @@ async def test_delete_benefit_valid(async_client: AsyncClient):
     response = await async_client.delete("/benefits/1")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert data["success"] is True
+    assert data["is_success"] is True
 
 
 @pytest.mark.asyncio
