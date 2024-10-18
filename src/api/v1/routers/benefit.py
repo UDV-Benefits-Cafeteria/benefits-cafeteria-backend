@@ -217,7 +217,8 @@ async def upload_images(
         await service.add_images(images, benefit_id)
     except EntityCreateError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to upload benefit images"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to upload benefit images",
         )
 
 
@@ -229,9 +230,7 @@ async def upload_images(
         400: {"description": "Failed to delete benefit images"},
     },
 )
-async def remove_images(
-    images: list[int], service: BenefitServiceDependency
-):
+async def remove_images(images: list[int], service: BenefitServiceDependency):
     """
     Remove images for a specific benefit.
 
@@ -250,5 +249,6 @@ async def remove_images(
         await service.remove_images(images)
     except EntityDeleteError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete benefit images"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to delete benefit images",
         )

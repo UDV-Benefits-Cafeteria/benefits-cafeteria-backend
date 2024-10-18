@@ -56,6 +56,6 @@ class BenefitsService(
                 await BenefitImagesRepository().delete_by_id(image_id)
             except repo_exceptions.EntityDeleteError as e:
                 logger.error(f"Failed to delete image {image_id}: {str(e)}")
-                raise service_exceptions.EntityDeletionError(str(image_id), image_id, str(e))
-
-
+                raise service_exceptions.EntityDeletionError(
+                    str(image_id), image_id, str(e)
+                )

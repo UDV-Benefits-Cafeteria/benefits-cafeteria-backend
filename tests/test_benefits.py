@@ -1,12 +1,12 @@
 import pytest
-from httpx import AsyncClient
 from fastapi import status
+from httpx import AsyncClient
 
 benefit_data = {
     "name": "Health Insurance",
     "description": "Comprehensive health insurance for employees",
     "coins_cost": 5,
-    "min_level_cost": 1
+    "min_level_cost": 1,
 }
 
 benefit_update_data = {
@@ -37,7 +37,7 @@ async def test_create_benefit_invalid(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_get_benefit_valid(async_client: AsyncClient):
-    response = await async_client.get(f"/benefits/1")
+    response = await async_client.get("/benefits/1")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["id"] == 1
@@ -51,7 +51,7 @@ async def test_get_benefit_invalid(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_update_benefit_valid(async_client: AsyncClient):
-    response = await async_client.patch(f"/benefits/1", json=benefit_update_data)
+    response = await async_client.patch("/benefits/1", json=benefit_update_data)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["name"] == benefit_update_data["name"]
@@ -66,15 +66,13 @@ async def test_update_benefit_invalid(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_delete_benefit_valid(async_client: AsyncClient):
-    response = await async_client.delete(f"/benefits/1")
+    response = await async_client.delete("/benefits/1")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert data["success"] == True
+    assert data["success"] is True
 
 
 @pytest.mark.asyncio
 async def test_delete_benefit_invalid(async_client: AsyncClient):
     response = await async_client.delete("/benefits/9999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
