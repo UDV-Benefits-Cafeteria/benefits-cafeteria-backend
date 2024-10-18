@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, UploadFile, status
 
-from src.api.v1.dependencies import BenefitServiceDependency
+from src.api.v1.dependencies import BenefitsServiceDependency
 from src.repositories.exceptions import EntityDeleteError
-from src.schemas.benefit import BenefitCreate, BenefitRead, BenefitUpdate
+from src.schemas import benefit as schemas
 from src.services.exceptions import (
     EntityCreateError,
     EntityNotFoundError,
@@ -15,14 +15,14 @@ router = APIRouter(prefix="/benefits", tags=["Benefits"])
 
 @router.get(
     "/{benefit_id}",
-    response_model=BenefitRead,
+    response_model=schemas.BenefitRead,
     responses={
         200: {"description": "Benefit successfully retrieved"},
         404: {"description": "Benefit not found"},
         400: {"description": "Failed to read benefit"},
     },
 )
-async def get_benefit(benefit_id: int, service: BenefitServiceDependency):
+async def get_benefit(benefit_id: int, service: BenefitsServiceDependency):
     """
     Retrieve a benefit by its ID.
 
@@ -53,14 +53,16 @@ async def get_benefit(benefit_id: int, service: BenefitServiceDependency):
 
 @router.post(
     "/",
-    response_model=BenefitRead,
+    response_model=schemas.BenefitRead,
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"description": "Benefit successfully created"},
         400: {"description": "Failed to create benefit"},
     },
 )
-async def create_benefit(benefit: BenefitCreate, service: BenefitServiceDependency):
+async def create_benefit(
+    benefit: schemas.BenefitCreate, service: BenefitsServiceDependency
+):
     """
     Create a new benefit.
 
@@ -86,7 +88,7 @@ async def create_benefit(benefit: BenefitCreate, service: BenefitServiceDependen
 
 @router.patch(
     "/{benefit_id}",
-    response_model=BenefitRead,
+    response_model=schemas.BenefitRead,
     responses={
         200: {"description": "Benefit successfully updated"},
         404: {"description": "Benefit not found"},
@@ -94,7 +96,9 @@ async def create_benefit(benefit: BenefitCreate, service: BenefitServiceDependen
     },
 )
 async def update_benefit(
-    benefit_id: int, benefit_update: BenefitUpdate, service: BenefitServiceDependency
+    benefit_id: int,
+    benefit_update: schemas.BenefitUpdate,
+    service: BenefitsServiceDependency,
 ):
     """
     Update a benefit by its ID.
@@ -132,7 +136,7 @@ async def update_benefit(
         404: {"description": "Benefit not found"},
     },
 )
-async def delete_benefit(benefit_id: int, service: BenefitServiceDependency):
+async def delete_benefit(benefit_id: int, service: BenefitsServiceDependency):
     """
     Delete a benefit by its ID.
 
@@ -149,7 +153,7 @@ async def delete_benefit(benefit_id: int, service: BenefitServiceDependency):
     """
     try:
         benefit_deleted = await service.delete_by_id(benefit_id)
-        return {"success": benefit_deleted}
+        return {"is_success": benefit_deleted}
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
@@ -158,13 +162,13 @@ async def delete_benefit(benefit_id: int, service: BenefitServiceDependency):
 
 @router.get(
     "/",
-    response_model=list[BenefitRead],
+    response_model=list[schemas.BenefitRead],
     responses={
         200: {"description": "Benefits successfully retrieved"},
         400: {"description": "Failed to retrieve benefits"},
     },
 )
-async def get_benefits(service: BenefitServiceDependency):
+async def get_benefits(service: BenefitsServiceDependency):
     """
     Retrieve all benefits.
 
@@ -196,7 +200,7 @@ async def get_benefits(service: BenefitServiceDependency):
     },
 )
 async def upload_images(
-    benefit_id: int, images: list[UploadFile], service: BenefitServiceDependency
+    benefit_id: int, images: list[UploadFile], service: BenefitsServiceDependency
 ):
     """
     Upload images for a specific benefit.
@@ -230,7 +234,7 @@ async def upload_images(
         400: {"description": "Failed to delete benefit images"},
     },
 )
-async def remove_images(images: list[int], service: BenefitServiceDependency):
+async def remove_images(images: list[int], service: BenefitsServiceDependency):
     """
     Remove images for a specific benefit.
 

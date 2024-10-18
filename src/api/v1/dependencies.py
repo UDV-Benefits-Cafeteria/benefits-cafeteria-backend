@@ -14,7 +14,7 @@ from src.services.users import UsersService
 
 UsersServiceDependency = Annotated[UsersService, Depends()]
 AuthServiceDependency = Annotated[AuthService, Depends()]
-BenefitServiceDependency = Annotated[BenefitsService, Depends()]
+BenefitsServiceDependency = Annotated[BenefitsService, Depends()]
 SessionsServiceDependency = Annotated[SessionsService, Depends()]
 PositionsServiceDependency = Annotated[PositionsService, Depends()]
 LegalEntitiesServiceDependency = Annotated[LegalEntitiesService, Depends()]
