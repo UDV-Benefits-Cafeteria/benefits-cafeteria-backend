@@ -203,7 +203,7 @@ async def upload_users(
         df = pd.read_excel(BytesIO(contents))
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error reading Excel file"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Error reading Excel file"
         )
 
     required_columns = [
