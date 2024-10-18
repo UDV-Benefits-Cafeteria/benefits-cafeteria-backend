@@ -1,4 +1,4 @@
-from src.db.db import Base
+from src.models.base import Base
 
 from .benefits import Benefit, BenefitImage, BenefitRequest, Category
 from .legal_entities import LegalEntity

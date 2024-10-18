@@ -6,9 +6,8 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import ForeignKey, Integer, Numeric, String, Text, and_
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
-from src.db.db import Base
+from src.models.base import Base
 from src.models.custom_types import FileType
-from src.utils.s3 import storage
 
 if TYPE_CHECKING:
     from src.models import Position, Question, User
@@ -38,9 +37,7 @@ class BenefitImage(Base):
     benefit_id: Mapped[int] = mapped_column(
         ForeignKey("benefits.id", ondelete="CASCADE"), nullable=False
     )
-    image_url: Mapped[FileType] = mapped_column(
-        FileType(), nullable=False
-    )
+    image_url: Mapped[FileType] = mapped_column(FileType(), nullable=False)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
 

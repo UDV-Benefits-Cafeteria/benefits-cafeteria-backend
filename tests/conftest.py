@@ -4,8 +4,9 @@ from typing import AsyncGenerator
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from src.db.db import Base, engine
+from src.db.db import engine
 from src.main import app
+from src.models.base import Base
 
 pytest_plugins = ["pytest_asyncio"]
 
