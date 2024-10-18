@@ -7,10 +7,10 @@ Create Date: ${create_date}
 """
 from typing import Sequence, Union
 
+import fastapi_storages
 import sqlalchemy as sa
 
 from alembic import op
-from src.models.custom_types import FileType
 
 ${imports if imports else ""}
 
