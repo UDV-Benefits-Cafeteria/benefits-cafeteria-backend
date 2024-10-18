@@ -10,6 +10,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 
 from alembic import op
+from src.models.custom_types import FileType
 
 ${imports if imports else ""}
 

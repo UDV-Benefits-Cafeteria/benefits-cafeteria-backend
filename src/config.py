@@ -56,6 +56,13 @@ class Settings(BaseSettings):
 
     API_PREFIX: str = "/api"
 
+    AWS_ACCESS_KEY_ID: str = "access"
+    AWS_SECRET_ACCESS_KEY: str = "secret"
+    AWS_S3_BUCKET_NAME: str = "test"
+    AWS_S3_ENDPOINT_URL: str = "s3.amazonaws.com"
+    AWS_DEFAULT_ACL: str = "public-read"
+    AWS_S3_USE_SSL: bool = True
+
     @property
     def DATABASE_URL(self) -> PostgresDsn:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"  # noqa

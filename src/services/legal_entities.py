@@ -2,7 +2,7 @@ from typing import Optional
 
 import src.schemas.legalentity as schemas
 from src.repositories.legal_entities import LegalEntitiesRepository
-from src.services.abstract import BaseService
+from src.services.base import BaseService
 
 
 class LegalEntitiesService(

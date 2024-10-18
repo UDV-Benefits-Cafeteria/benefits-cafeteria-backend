@@ -2,7 +2,7 @@ from typing import Optional
 
 import src.schemas.position as schemas
 from src.repositories.positions import PositionsRepository
-from src.services.abstract import BaseService
+from src.services.base import BaseService
 
 
 class PositionsService(
