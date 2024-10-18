@@ -70,8 +70,12 @@ class UserBase(BaseModel):
 
     @field_validator("firstname", "middlename", "lastname")
     @classmethod
-    def check_only_letters(cls, name: str, info: ValidationInfo) -> str:
+    def check_only_letters(
+        cls, name: Optional[str], info: ValidationInfo
+    ) -> Optional[str]:
         """Validate that names contain only letters and specific characters."""
+        if name is None:
+            return None
         if isinstance(name, str):
             pattern = r"^[A-Za-zА-Яа-яЁё]+([\-'][A-Za-zА-Яа-яЁё]+)*(\s[A-Za-zА-Яа-яЁё]+([\-'][A-Za-zА-Яа-яЁё]+)*)*$"
             if not re.fullmatch(pattern, name):
@@ -146,6 +150,8 @@ class UserCreate(UserBase):
 
     is_verified: bool = Field(default=False, exclude=True)
     is_active: bool = Field(default=True, exclude=True)
+
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
 class UsersCreate(BaseModel):
@@ -236,6 +242,13 @@ class UserUploadResponse(BaseModel):
     """Model for the response after uploading users."""
 
     created_users: list[UserRead]
+    errors: list[UserUploadError]
+
+
+class UserValidationResponse(BaseModel):
+    """Model for the response after validating users."""
+
+    valid_users: list[UserCreate]
     errors: list[UserUploadError]
 
 

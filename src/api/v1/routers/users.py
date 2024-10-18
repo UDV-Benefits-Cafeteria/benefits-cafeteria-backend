@@ -10,6 +10,7 @@ from src.api.v1.dependencies import (
     PositionsServiceDependency,
     UsersServiceDependency,
     get_active_user,
+    get_hr_user,
 )
 from src.services.exceptions import (
     EntityCreateError,
@@ -163,21 +164,21 @@ async def get_user(
 
 @router.post(
     "/upload",
-    response_model=schemas.UserUploadResponse,
-    status_code=status.HTTP_201_CREATED,
+    response_model=schemas.UserValidationResponse,
     responses={
-        201: {"description": "Users uploaded successfully"},
+        200: {"description": "Users validated successfully"},
         400: {"description": "Invalid file type or error reading Excel file"},
     },
 )
 async def upload_users(
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
     service: UsersServiceDependency,
     positions_service: PositionsServiceDependency,
     legal_entities_service: LegalEntitiesServiceDependency,
     file: UploadFile = File(...),
 ):
     """
-    Upload users from an Excel file.
+    Upload users from an Excel file for validation.
 
     - **file**: The Excel file containing user data.
 
@@ -186,7 +187,7 @@ async def upload_users(
         - 400: If the file type is invalid or there are errors reading the file.
 
     Returns:
-    - **schemas.UserUploadResponse**: Information about created users and errors.
+    - **schemas.UserValidationResponse**: Information about users that can be created and errors.
     """
     if (
         file.content_type
@@ -202,7 +203,7 @@ async def upload_users(
         df = pd.read_excel(BytesIO(contents))
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Error reading Excel file."
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error reading Excel file"
         )
 
     required_columns = [
@@ -224,42 +225,117 @@ async def upload_users(
             detail=f"Missing columns: {', '.join(missing_columns)}",
         )
 
-    created_users = []
+    valid_users = []
     errors = []
 
     for idx, (_, row) in enumerate(df.iterrows(), start=2):
         try:
-            role = map_role(row["роль"])
+            role = map_role(str(row["роль"]))
 
-            position = await positions_service.get_by_name(row["должность"])
+            position_name = str(row["должность"])
+            position = await positions_service.read_by_name(position_name)
             if not position:
-                raise ValueError(f"Position '{row['должность']}' not found.")
+                raise ValueError(f"Position '{position_name}' not found.")
             position_id = position.id
 
-            legal_entity = await legal_entities_service.get_by_name(row["юр. лицо"])
+            legal_entity_name = str(row["юр. лицо"])
+            legal_entity = await legal_entities_service.read_by_name(legal_entity_name)
             if not legal_entity:
-                raise ValueError(f"Legal entity '{row['юр. лицо']}' not found.")
+                raise ValueError(f"Legal entity '{legal_entity_name}' not found.")
             legal_entity_id = legal_entity.id
 
+            is_adapted = str(row["адаптационный период"]).strip().lower()
+            if is_adapted in ["true", "1", "yes", "да"]:
+                is_adapted = True
+            elif is_adapted in ["false", "0", "no", "нет"]:
+                is_adapted = False
+            else:
+                raise ValueError(
+                    f"Invalid value for 'адаптационный период': '{row['адаптационный период']}'"
+                )
+
+            try:
+                hired_at = pd.to_datetime(row["дата найма"], dayfirst=True).date()
+            except Exception:
+                raise ValueError(
+                    f"Invalid date format for 'дата найма': '{row['дата найма']}'."
+                )
+
             user_data = schemas.UserCreate(
-                email=row["email"],
-                firstname=row["имя"],
-                lastname=row["фамилия"],
-                middlename=row.get("отчество"),
+                email=str(row["email"]).strip(),
+                firstname=str(row["имя"]).strip(),
+                lastname=str(row["фамилия"]).strip(),
+                middlename=str(row["отчество"]).strip()
+                if pd.notna(row["отчество"])
+                else None,
                 role=role,
-                hired_at=row["дата найма"],
-                is_adapted=row["адаптационный период"],
-                coins=row["ю-коины"],
+                hired_at=hired_at,
+                is_adapted=is_adapted,
+                coins=int(row["ю-коины"]) if pd.notna(row["ю-коины"]) else 0,
                 position_id=position_id,
                 legal_entity_id=legal_entity_id,
             )
 
-            created_user = await service.create(user_data)
-            created_users.append(created_user)
+            user_data = schemas.UserCreate.model_validate(user_data)
+
+            try:
+                await service.read_by_email(user_data.email)
+                raise ValueError(f"User with email '{user_data.email}' already exists.")
+            except EntityNotFoundError:
+                pass
+            except EntityReadError as e:
+                raise ValueError(f"Error reading user data: {str(e)}")
+
+            valid_users.append(user_data)
         except ValueError as ve:
             errors.append({"row": idx, "error": f"Value Error: {str(ve)}"})
         except Exception as e:
             errors.append({"row": idx, "error": f"Error: {str(e)}"})
+
+    return schemas.UserValidationResponse(valid_users=valid_users, errors=errors)
+
+
+@router.post(
+    "/bulk_create",
+    response_model=schemas.UserUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        201: {"description": "Users created successfully"},
+        400: {"description": "Failed to create users"},
+    },
+)
+async def bulk_create_users(
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
+    users_data: list[schemas.UserCreate],
+    service: UsersServiceDependency,
+):
+    """
+    Create multiple users from the provided list.
+
+    - **users_data**: The list of user data to create.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If user creation fails.
+
+    Returns:
+    - **schemas.UserUploadResponse**: Information about created users and errors.
+    """
+    created_users = []
+    errors = []
+
+    for idx, user_data in enumerate(users_data, start=1):
+        try:
+            user_data = schemas.UserCreate.model_validate(user_data)
+
+            created_user = await service.create(user_data)
+            created_users.append(created_user)
+        except EntityCreateError as e:
+            errors.append({"row": idx, "error": f"Creation Error: {str(e)}"})
+        except Exception as e:
+            errors.append({"row": idx, "error": f"Unexpected Error: {str(e)}"})
+
     for user in created_users:
         await service.send_email_registration(user)
+
     return schemas.UserUploadResponse(created_users=created_users, errors=errors)

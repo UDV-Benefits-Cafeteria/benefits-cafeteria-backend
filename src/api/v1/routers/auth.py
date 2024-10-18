@@ -253,6 +253,7 @@ async def logout(
     Returns:
     - **dict**: A dictionary indicating success of the logout operation.
     """
+
     session_id = request.cookies.get(settings.SESSION_COOKIE_NAME)
 
     if not session_id:
@@ -262,6 +263,7 @@ async def logout(
 
     try:
         # Delete the session from the service
+
         await sessions_service.delete_session(session_id)
     # Session already does not exist
     except EntityNotFoundError:
