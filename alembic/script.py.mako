@@ -7,9 +7,9 @@ Create Date: ${create_date}
 """
 from typing import Sequence, Union
 
-import fastapi_storages
 import sqlalchemy as sa
 
+import src
 from alembic import op
 
 ${imports if imports else ""}

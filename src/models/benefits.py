@@ -1,14 +1,13 @@
 import enum
 from typing import TYPE_CHECKING, List, Optional
 
-from fastapi_storages.integrations.sqlalchemy import FileType
 from sqlalchemy import Boolean, DateTime
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import ForeignKey, Integer, Numeric, String, Text, and_
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
 from src.models.base import Base
-from src.utils.s3 import storage
+from src.models.custom_types import FileType
 
 if TYPE_CHECKING:
     from src.models import Position, Question, User
@@ -38,9 +37,7 @@ class BenefitImage(Base):
     benefit_id: Mapped[int] = mapped_column(
         ForeignKey("benefits.id", ondelete="CASCADE"), nullable=False
     )
-    image_url: Mapped[FileType] = mapped_column(
-        FileType(storage=storage), nullable=False
-    )
+    image_url: Mapped[FileType] = mapped_column(FileType(), nullable=False)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
 
