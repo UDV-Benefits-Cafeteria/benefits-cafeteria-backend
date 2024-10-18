@@ -5,7 +5,7 @@ from src.api.v1.dependencies import (
     SessionsServiceDependency,
     UsersServiceDependency,
 )
-from src.config import settings
+from src.config import get_settings
 from src.schemas.user import UserLogin, UserRegister, UserVerified, UserVerify
 from src.services.exceptions import (
     EntityCreateError,
@@ -17,6 +17,7 @@ from src.services.exceptions import (
 from src.utils.security import verify_password
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+settings = get_settings()
 
 
 @router.post(

@@ -1,11 +1,8 @@
-import logging
-
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from src.config import logger
 
 
 class CatchServerErrorMiddleware(BaseHTTPMiddleware):

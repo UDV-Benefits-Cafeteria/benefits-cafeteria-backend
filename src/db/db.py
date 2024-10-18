@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import DeclarativeBase, declared_attr
 from sqlalchemy.pool import NullPool
 
-from src.config import settings
+from src.config import get_settings
 
 
 class Base(DeclarativeBase):
@@ -88,6 +88,7 @@ class Base(DeclarativeBase):
         return f"<{self.__class__.__name__}({cols_str})>"
 
 
+settings = get_settings()
 # Create a SQLAlchemy engine for asynchronous operations.
 if settings.DEBUG:
     engine = create_async_engine(

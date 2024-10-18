@@ -1,9 +1,9 @@
-import logging
 from abc import ABC, abstractmethod
 from typing import Generic, List, Optional, Type, TypeVar, Union
 
 from sqlalchemy import delete, select, update
 
+from src.config import logger
 from src.db.db import async_session_factory
 from src.repositories.exceptions import (
     EntityCreateError,
@@ -11,9 +11,6 @@ from src.repositories.exceptions import (
     EntityReadError,
     EntityUpdateError,
 )
-
-logging.basicConfig(level=logging.ERROR)
-logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 

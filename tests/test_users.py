@@ -2,6 +2,8 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.utils.email import fm
+
 # Test data
 user_data = {
     "email": "test@example.com",
@@ -27,12 +29,14 @@ update_data = {
 # Test case for creating a user
 @pytest.mark.asyncio
 async def test_create_user(async_client: AsyncClient):
-    response = await async_client.post("/users/", json=user_data)
-    assert response.status_code == status.HTTP_201_CREATED
-    created_user = response.json()
-    assert created_user["email"] == user_data["email"]
-    assert created_user["firstname"] == user_data["firstname"]
-    assert created_user["lastname"] == user_data["lastname"]
+    fm.config.SUPPRESS_SEND = 1
+    with fm.record_messages():
+        response = await async_client.post("/users/", json=user_data)
+        assert response.status_code == status.HTTP_201_CREATED
+        created_user = response.json()
+        assert created_user["email"] == user_data["email"]
+        assert created_user["firstname"] == user_data["firstname"]
+        assert created_user["lastname"] == user_data["lastname"]
 
 
 # Test case for creating a user with missing required fields
