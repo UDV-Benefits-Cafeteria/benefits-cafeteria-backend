@@ -39,7 +39,7 @@ class BenefitImage(Base):
         ForeignKey("benefits.id", ondelete="CASCADE"), nullable=False
     )
     image_url: Mapped[FileType] = mapped_column(
-        FileType(storage=storage), nullable=False
+        FileType(), nullable=False
     )
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
