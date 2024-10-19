@@ -154,6 +154,13 @@ class UserCreate(UserBase):
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
+class UserCreateExcel(UserBase):
+    position_name: Optional[str] = None
+    legal_entity_name: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+
+
 class UsersCreate(BaseModel):
     """Model for creating multiple users."""
 

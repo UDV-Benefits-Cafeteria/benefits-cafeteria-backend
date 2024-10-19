@@ -1,7 +1,5 @@
-from io import BytesIO
 from typing import Annotated
 
-import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 import src.schemas.user as schemas
@@ -18,7 +16,6 @@ from src.services.exceptions import (
     EntityReadError,
     EntityUpdateError,
 )
-from src.utils.role_mapper import map_role
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -171,7 +168,6 @@ async def get_user(
     },
 )
 async def upload_users(
-    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
     service: UsersServiceDependency,
     positions_service: PositionsServiceDependency,
     legal_entities_service: LegalEntitiesServiceDependency,
@@ -200,97 +196,25 @@ async def upload_users(
 
     try:
         contents = await file.read()
-        df = pd.read_excel(BytesIO(contents))
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Error reading Excel file"
-        )
-
-    required_columns = [
-        "email",
-        "имя",
-        "фамилия",
-        "отчество",
-        "роль",
-        "дата найма",
-        "адаптационный период",
-        "ю-коины",
-        "должность",
-        "юр. лицо",
-    ]
-    missing_columns = set(required_columns) - set(df.columns)
-    if missing_columns:
-        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Missing columns: {', '.join(missing_columns)}",
+            detail="Error reading file",
         )
 
-    valid_users = []
-    errors = []
-
-    for idx, (_, row) in enumerate(df.iterrows(), start=2):
-        try:
-            role = map_role(str(row["роль"]))
-
-            position_name = str(row["должность"])
-            position = await positions_service.read_by_name(position_name)
-            if not position:
-                raise ValueError(f"Position '{position_name}' not found.")
-            position_id = position.id
-
-            legal_entity_name = str(row["юр. лицо"])
-            legal_entity = await legal_entities_service.read_by_name(legal_entity_name)
-            if not legal_entity:
-                raise ValueError(f"Legal entity '{legal_entity_name}' not found.")
-            legal_entity_id = legal_entity.id
-
-            is_adapted = str(row["адаптационный период"]).strip().lower()
-            if is_adapted in ["true", "1", "yes", "да"]:
-                is_adapted = True
-            elif is_adapted in ["false", "0", "no", "нет"]:
-                is_adapted = False
-            else:
-                raise ValueError(
-                    f"Invalid value for 'адаптационный период': '{row['адаптационный период']}'"
-                )
-
-            try:
-                hired_at = pd.to_datetime(row["дата найма"], dayfirst=True).date()
-            except Exception:
-                raise ValueError(
-                    f"Invalid date format for 'дата найма': '{row['дата найма']}'."
-                )
-
-            user_data = schemas.UserCreate(
-                email=str(row["email"]).strip(),
-                firstname=str(row["имя"]).strip(),
-                lastname=str(row["фамилия"]).strip(),
-                middlename=str(row["отчество"]).strip()
-                if pd.notna(row["отчество"])
-                else None,
-                role=role,
-                hired_at=hired_at,
-                is_adapted=is_adapted,
-                coins=int(row["ю-коины"]) if pd.notna(row["ю-коины"]) else 0,
-                position_id=position_id,
-                legal_entity_id=legal_entity_id,
-            )
-
-            user_data = schemas.UserCreate.model_validate(user_data)
-
-            try:
-                await service.read_by_email(user_data.email)
-                raise ValueError(f"User with email '{user_data.email}' already exists.")
-            except EntityNotFoundError:
-                pass
-            except EntityReadError as e:
-                raise ValueError(f"Error reading user data: {str(e)}")
-
-            valid_users.append(user_data)
-        except ValueError as ve:
-            errors.append({"row": idx, "error": f"Value Error: {str(ve)}"})
-        except Exception as e:
-            errors.append({"row": idx, "error": f"Error: {str(e)}"})
+    try:
+        valid_users, errors = await service.parse_users_from_excel(
+            contents,
+            positions_service=positions_service,
+            legal_entities_service=legal_entities_service,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while parsing the Excel file",
+        )
 
     return schemas.UserValidationResponse(valid_users=valid_users, errors=errors)
 
