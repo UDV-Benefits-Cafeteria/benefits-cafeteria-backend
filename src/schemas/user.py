@@ -8,7 +8,6 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
-    SecretStr,
     computed_field,
     field_validator,
     model_validator,
@@ -20,8 +19,7 @@ from src.schemas.position import PositionRead
 
 
 class UserRole(str, Enum):
-    """E
-    numeration for user roles within the application.
+    """Enumeration for user roles within the application.
 
     Attributes:
         EMPLOYEE: Base user.
@@ -128,13 +126,6 @@ class UserVerify(BaseModel):
     email: Annotated[EmailStr, Field(max_length=255)]
 
 
-class UserTokens(BaseModel):
-    """Model for user authentication tokens."""
-
-    secret: SecretStr
-    refresh: SecretStr
-
-
 class UserVerified(BaseModel):
     """Model to indicate a verified user."""
 
@@ -188,12 +179,6 @@ class UserUpdate(UserBase):
     hired_at: Optional[date] = None
     is_active: Optional[bool] = None
     is_adapted: Optional[bool] = None
-
-
-class UserPasswordUpdate(BaseModel):
-    """Model for updating the user's password."""
-
-    password: Annotated[str, Field(min_length=8, max_length=255)]
 
 
 class UserRead(UserBase):

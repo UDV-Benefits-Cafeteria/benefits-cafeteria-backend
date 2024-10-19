@@ -221,6 +221,7 @@ async def upload_users(
 
 @router.post(
     "/bulk_create",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.UserUploadResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -229,7 +230,6 @@ async def upload_users(
     },
 )
 async def bulk_create_users(
-    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
     users_data: list[schemas.UserCreate],
     service: UsersServiceDependency,
 ):

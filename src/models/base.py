@@ -28,14 +28,6 @@ class Base(DeclarativeBase):
 
     @declared_attr
     def created_at(cls):
-        """
-        The UTC timestamp when a record is created.
-
-        This column is automatically populated with the current UTC time
-        when a record is inserted.
-
-        :return: A DateTime column with timezone support.
-        """
         return Column(
             DateTime(timezone=True),
             server_default=text("TIMEZONE('utc', NOW())"),
@@ -44,14 +36,6 @@ class Base(DeclarativeBase):
 
     @declared_attr
     def updated_at(cls):
-        """
-        The UTC timestamp when a record is last updated.
-
-        This column is automatically updated with the current UTC time whenever
-        the record is modified.
-
-        :return: A DateTime column with timezone support.
-        """
         return Column(
             DateTime(timezone=True),
             server_default=text("TIMEZONE('utc', NOW())"),
