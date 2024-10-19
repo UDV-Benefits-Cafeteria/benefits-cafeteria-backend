@@ -7,7 +7,7 @@ import src.services.exceptions as service_exceptions
 from src.celery.tasks import background_send_mail
 from src.config import get_settings, logger
 from src.repositories.users import UsersRepository
-from src.services.abstract import BaseService
+from src.services.base import BaseService
 
 settings = get_settings()
 
@@ -86,7 +86,7 @@ class UsersService(
                 "body": {
                     "name": user.firstname,
                     "product": settings.APP_TITLE,
-                    "register_url": f"https://{settings.DOMAIN}/register?{user.email}",
+                    "register_url": f"https://{settings.DOMAIN}/register?email={user.email}",
                 },
             }
         )

@@ -6,7 +6,8 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import ForeignKey, Integer, Numeric, String, Text, and_
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
-from src.db.db import Base
+from src.models.base import Base
+from src.models.custom_types import FileType
 
 if TYPE_CHECKING:
     from src.models import Position, Question, User
@@ -23,7 +24,7 @@ class BenefitImage(Base):
     Attributes:
         id (int): The unique identifier for the image.
         benefit_id (int): The ID of the associated benefit.
-        image_url (str): The URL of the image.
+        image_url (FileType): The URL of the image.
         is_primary (bool): Indicates if this is the primary image for the benefit.
         description (Optional[str]): A description of the image.
     """
@@ -36,7 +37,7 @@ class BenefitImage(Base):
     benefit_id: Mapped[int] = mapped_column(
         ForeignKey("benefits.id", ondelete="CASCADE"), nullable=False
     )
-    image_url: Mapped[str] = mapped_column(String, nullable=False)
+    image_url: Mapped[FileType] = mapped_column(FileType(), nullable=False)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     description: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
 
@@ -131,16 +132,26 @@ class Benefit(Base):
     )
 
     category: Mapped[Optional["Category"]] = relationship(
-        "Category", back_populates="benefits"
+        "Category",
+        back_populates="benefits",
+        lazy="selectin",
     )
     requests: Mapped[List["BenefitRequest"]] = relationship(
-        "BenefitRequest", back_populates="benefit"
+        "BenefitRequest",
+        back_populates="benefit",
+        lazy="selectin",
     )
     questions: Mapped[List["Question"]] = relationship(
-        "Question", back_populates="benefit", cascade="all, delete-orphan"
+        "Question",
+        back_populates="benefit",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
     positions: Mapped[List["Position"]] = relationship(
-        "Position", secondary="benefit_positions", back_populates="benefits"
+        "Position",
+        secondary="benefit_positions",
+        back_populates="benefits",
+        lazy="selectin",
     )
 
 

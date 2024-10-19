@@ -10,6 +10,7 @@ from src.schemas.position import PositionRead
 
 class BenefitImageBase(BaseModel):
     image_url: str
+    benefit_id: int
     is_primary: bool = False
     description: Optional[str] = None
 
@@ -50,14 +51,13 @@ class BenefitBase(BaseModel):
 
 
 class BenefitCreate(BenefitBase):
-    images: Optional[List[BenefitImageCreate]] = None
+    pass
 
 
 class BenefitUpdate(BenefitBase):
     name: Annotated[Optional[str], Field(max_length=100)] = None
     coins_cost: Annotated[Optional[int], Field(ge=0)] = None
     min_level_cost: Annotated[Optional[int], Field(ge=0)] = None
-    images: Optional[List[BenefitImageCreate]] = None
 
 
 class BenefitRead(BenefitBase):

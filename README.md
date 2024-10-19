@@ -19,25 +19,38 @@ cd benefits-cafeteria-backend
 Create a ``.env`` file in the root of your project and define your environment variables. Here is an example:
 
 ```dotenv
-DEBUG=debugpy
+DEBUG=True
+
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=postgres
 POSTGRES_PORT=5432
 POSTGRES_HOST=db
+
 SECRET_KEY=some_secret_key
+
 FLOWER_LOGIN=admin
 FLOWER_PASSWORD=admin
 CELERY_BROKER_URL=amqp://guest:guest@rabbitmq//
 CELERY_RESULT_BACKEND=rpc://
+
 SENTRY_DSN=emptyurl
 SENTRY_ENVIRONMENT=development
+
 DOMAIN=example.site
+
 MAIL_USERNAME=username
 MAIL_PASSWORD=passwd
 MAIL_FROM=test@email.com
 MAIL_PORT=465
 MAIL_SERVER=mailserver
+
+AWS_ACCESS_KEY_ID=access
+AWS_SECRET_ACCESS_KEY=secret
+AWS_S3_BUCKET_NAME=test
+AWS_S3_ENDPOINT_URL=s3.amazonaws.com
+AWS_DEFAULT_ACL=public-read
+AWS_S3_USE_SSL=True
 ```
 
 ### 3. Set up Docker

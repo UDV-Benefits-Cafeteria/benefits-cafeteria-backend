@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 
+import src
 from alembic import op
 
 ${imports if imports else ""}

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.db.db import Base
+from src.models.base import Base
 
 if TYPE_CHECKING:
     from src.models import Benefit, User
