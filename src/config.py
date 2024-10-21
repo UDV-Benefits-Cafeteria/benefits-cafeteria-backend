@@ -23,7 +23,9 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "postgres"
 
-    ELASTICSEARCH_HOST: str = "http://localhost:9200"
+    ELASTIC_PASSWORD: str = "elasticpass"
+    ELASTIC_HOST: str = "elasticsearch"
+    ELASTIC_PORT: int = 9200
 
     SECRET_KEY: SecretStr = (
         "unsecured2*t@t3b#6g$^w@zsdz57^x-g^o05@e5aztfn=)r#ijaly1-cy0"
@@ -68,6 +70,10 @@ class Settings(BaseSettings):
     @property
     def DATABASE_URL(self) -> PostgresDsn:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"  # noqa
+
+    @property
+    def ELASTIC_URL(self) -> str:
+        return f"http://{self.ELASTIC_HOST}:{self.ELASTIC_PORT}"
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parents[1] / ".env", extra="ignore"
