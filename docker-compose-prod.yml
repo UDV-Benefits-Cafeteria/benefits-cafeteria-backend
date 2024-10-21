@@ -20,6 +20,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     restart: unless-stopped
 
   db:
@@ -83,3 +85,21 @@ services:
       - app
     ports:
       - "5555:5555"
+
+  elasticsearch:
+    image: elasticsearch
+    volumes:
+      - ./elastic_config.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - ./elastic_data:/usr/share/elasticsearch/data
+    environment:
+      - ES_JAVA_OPTS=-Xmx512m -Xms512m
+      - ELASTIC_PASSWORD
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: curl -s http://elasticsearch:9200 >/dev/null || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 5

@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
@@ -10,10 +12,16 @@ from src.middlewares.csrf_middleware import CSRFMiddleware
 from src.middlewares.server_error_middleware import CatchServerErrorMiddleware
 from src.middlewares.session_middleware import SessionMiddleware
 from src.services.sessions import SessionsService
+from src.utils.elastic_index import SearchService
 
 
 def get_application() -> FastAPI:
     settings = get_settings()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        await SearchService().create_index()
+        yield
 
     if not settings.DEBUG:
         sentry_sdk.init(
@@ -28,6 +36,7 @@ def get_application() -> FastAPI:
         title=settings.APP_TITLE,
         description=settings.APP_DESCRIPTION,
         version=settings.APP_VERSION,
+        lifespan=lifespan,
     )
 
     sessions_service = SessionsService()

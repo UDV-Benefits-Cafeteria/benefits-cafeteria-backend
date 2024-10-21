@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import UploadFile
 
 import src.repositories.exceptions as repo_exceptions
@@ -17,8 +19,33 @@ class BenefitsService(
     read_schema = schemas.BenefitRead
     update_schema = schemas.BenefitUpdate
 
-    @staticmethod
-    async def add_images(images: list[UploadFile], benefit_id: int):
+    async def search_benefits(
+        self,
+        query: str,
+        filters: Optional[dict] = None,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        limit: int = 10,
+        offset: int = 0,
+    ) -> list[schemas.BenefitReadShort]:
+        try:
+            search_results = await self.repo.search_benefits(
+                query=query,
+                filters=filters,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                limit=limit,
+                offset=offset,
+            )
+            benefits = [
+                schemas.BenefitReadShort.model_validate(data) for data in search_results
+            ]
+            return benefits
+        except service_exceptions.EntityReadError as e:
+            logger.error(f"Error searching benefits: {e}")
+            raise service_exceptions.EntityReadError("Benefit", "", str(e))
+
+    async def add_images(self, images: list[UploadFile], benefit_id: int):
         """
         Add images to a specific benefit.
 
@@ -30,15 +57,28 @@ class BenefitsService(
         - service_exceptions.EntityCreateError: If an error occurs while creating one of the images in the repository.
         """
         for image_data in images:
-            image = {"benefit_id": benefit_id, "image_url": image_data}
+            image = {
+                "benefit_id": benefit_id,
+                "image_url": image_data,
+                "is_primary": True,
+            }
+
             try:
                 await BenefitImagesRepository().create(data=image)
+                benefit = await self.repo.read_by_id(benefit_id)
+                await self.repo.index_benefit(benefit)
             except repo_exceptions.EntityCreateError as e:
                 logger.error(f"Failed to create image {image_data.filename}: {str(e)}")
                 raise service_exceptions.EntityCreateError(image_data.filename, str(e))
+            except repo_exceptions.EntityUpdateError as e:
+                logger.error(
+                    f"Failed to update benefit when creating image {image_data.filename}: {str(e)}"
+                )
+                raise service_exceptions.EntityUpdateError(
+                    image_data.filename, benefit_id, str(e)
+                )
 
-    @staticmethod
-    async def remove_images(images: list[int]):
+    async def remove_images(self, images: list[int]):
         """
         Remove images by their IDs.
 
@@ -53,7 +93,11 @@ class BenefitsService(
         """
         for image_id in images:
             try:
+                image = await BenefitImagesRepository().read_by_id(image_id)
+                benefit_id = image.benefit_id
                 await BenefitImagesRepository().delete_by_id(image_id)
+                benefit = await self.repo.read_by_id(benefit_id)
+                await self.repo.index_benefit(benefit)
             except repo_exceptions.EntityDeleteError as e:
                 logger.error(f"Failed to delete image {image_id}: {str(e)}")
                 raise service_exceptions.EntityDeletionError(

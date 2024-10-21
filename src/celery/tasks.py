@@ -2,6 +2,7 @@ import asyncio
 from typing import Any
 
 from celery import shared_task
+from src.services.sessions import SessionsService
 from src.utils.email import send_mail
 
 
@@ -17,3 +18,15 @@ def background_send_mail(
 ) -> None:
     result = asyncio.run(send_mail(email, subject, template))
     return result
+
+
+@shared_task(
+    name="sessions:cleanup_expired_sessions",
+)
+def cleanup_expired_sessions_task(self):
+    async def run_cleanup():
+        service = SessionsService()
+        deleted_count = await service.cleanup_expired_sessions()
+        return deleted_count
+
+    return asyncio.run(run_cleanup())

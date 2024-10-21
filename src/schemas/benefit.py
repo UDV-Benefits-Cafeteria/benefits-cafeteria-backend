@@ -1,11 +1,26 @@
+import enum
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, List, Optional
+from typing import Annotated, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.category import CategoryRead
 from src.schemas.position import PositionRead
+
+
+class BenefitSortFields(str, enum.Enum):
+    COINS_COST = "coins_cost"
+    MIN_LEVEL_COST = "min_level_cost"
+    AMOUNT = "amount"
+    REAL_CURRENCY_COT = "real_currency_cost"
+    AVAILABLE_FROM = "available_from"
+    AVAILABLE_BY = "available_from"
+
+
+class SortOrderField(str, enum.Enum):
+    ASCENDING = "asc"
+    DESCENDING = "desc"
 
 
 class BenefitImageBase(BaseModel):
@@ -58,13 +73,27 @@ class BenefitUpdate(BenefitBase):
     name: Annotated[Optional[str], Field(max_length=100)] = None
     coins_cost: Annotated[Optional[int], Field(ge=0)] = None
     min_level_cost: Annotated[Optional[int], Field(ge=0)] = None
+    adaptation_required: Optional[bool] = None
+    is_fixed_period: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+
+class BenefitReadShort(BaseModel):
+    id: int
+    name: str
+    coins_cost: int
+    min_level_cost: int
+    amount: Optional[int]
+    primary_image_url: Optional[str]
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BenefitRead(BenefitBase):
     id: int
-    images: Optional[List[BenefitImageRead]] = None
+    images: Optional[list[BenefitImageRead]] = None
     category: Optional[CategoryRead] = None
-    positions: Optional[List[PositionRead]] = None
+    positions: Optional[list[PositionRead]] = None
     category_id: Optional[int] = Field(None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True)
