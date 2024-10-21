@@ -65,15 +65,6 @@ class Settings(BaseSettings):
     AWS_DEFAULT_ACL: str = "public-read"
     AWS_S3_USE_SSL: bool = True
 
-    BENEFIT_VALID_SORT_FIELDS: list[str] = [
-        "coins_cost",
-        "min_level_cost",
-        "amount",
-        "real_currency_cost",
-        "available_from",
-        "available_by",
-    ]
-
     @property
     def DATABASE_URL(self) -> PostgresDsn:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"  # noqa

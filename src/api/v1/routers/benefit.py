@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from src.api.v1.dependencies import BenefitsServiceDependency
 from src.config import get_settings
+from src.models.benefits import BenefitSortFields
 from src.repositories.exceptions import EntityDeleteError
 from src.schemas import benefit as schemas
 from src.services.exceptions import (
@@ -27,7 +28,7 @@ settings = get_settings()
         400: {"description": "Failed to search benefits"},
     },
 )
-async def search_benefits(
+async def get_benefits(
     service: BenefitsServiceDependency,
     query: Annotated[
         Optional[str], Query(description="Search query for benefit name")
@@ -60,16 +61,11 @@ async def search_benefits(
             description='Filter for available_by, for example: "gte:2024-01-01,lte:2024-12-31"'
         ),
     ] = None,
-    sort_by: Annotated[Optional[str], Query()] = None,
+    sort_by: Annotated[Optional[BenefitSortFields], Query()] = None,
     sort_order: Annotated[str, Query(pattern="^(asc|desc)$")] = "asc",
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
-    if sort_by and sort_by not in settings.BENEFIT_VALID_SORT_FIELDS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid sort field: {sort_by}. Valid fields are: {', '.join(settings.BENEFIT_VALID_SORT_FIELDS)}",
-        )
     try:
         filters: dict[str, Any] = {}
         if is_active is not None:

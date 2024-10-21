@@ -3,6 +3,8 @@ from functools import lru_cache
 
 from kombu import Queue
 
+from celery.schedules import crontab
+
 
 def route_task(name, args, kwargs, options, task=None, **kw):
     """
@@ -46,6 +48,14 @@ class BaseConfig:
 
     # Specify how tasks are routed to queues
     CELERY_TASK_ROUTES = (route_task,)
+
+    CELERY_BEAT_SCHEDULE = {
+        "cleanup-expired-sessions": {
+            "task": "sessions:cleanup_expired_sessions",
+            "schedule": crontab(minute=0, hour=0),  # Execute daily at midnight
+            "options": {"queue": "celery"},
+        },
+    }
 
 
 class DevelopmentConfig(BaseConfig):
