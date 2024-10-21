@@ -1,3 +1,4 @@
+import enum
 from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Optional
@@ -6,6 +7,20 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.category import CategoryRead
 from src.schemas.position import PositionRead
+
+
+class BenefitSortFields(str, enum.Enum):
+    COINS_COST = "coins_cost"
+    MIN_LEVEL_COST = "min_level_cost"
+    AMOUNT = "amount"
+    REAL_CURRENCY_COT = "real_currency_cost"
+    AVAILABLE_FROM = "available_from"
+    AVAILABLE_BY = "available_from"
+
+
+class SortOrderField(str, enum.Enum):
+    ASCENDING = "asc"
+    DESCENDING = "desc"
 
 
 class BenefitImageBase(BaseModel):

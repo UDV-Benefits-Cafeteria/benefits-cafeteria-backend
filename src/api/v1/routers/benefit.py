@@ -4,9 +4,9 @@ from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from src.api.v1.dependencies import BenefitsServiceDependency
 from src.config import get_settings
-from src.models.benefits import BenefitSortFields
 from src.repositories.exceptions import EntityDeleteError
 from src.schemas import benefit as schemas
+from src.schemas.benefit import BenefitSortFields, SortOrderField
 from src.services.exceptions import (
     EntityCreateError,
     EntityNotFoundError,
@@ -62,42 +62,32 @@ async def get_benefits(
         ),
     ] = None,
     sort_by: Annotated[Optional[BenefitSortFields], Query()] = None,
-    sort_order: Annotated[str, Query(pattern="^(asc|desc)$")] = "asc",
+    sort_order: Annotated[SortOrderField, Query()] = "asc",
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
     try:
-        filters: dict[str, Any] = {}
-        if is_active is not None:
-            filters["is_active"] = is_active
-        if adaptation_required is not None:
-            filters["adaptation_required"] = adaptation_required
-
-        coins_cost_filter = benefit_range_filter_parser(coins_cost, "coins_cost")
-        if coins_cost_filter:
-            filters["coins_cost"] = coins_cost_filter
-
-        real_currency_cost_filter = benefit_range_filter_parser(
-            real_currency_cost, "real_currency_cost"
-        )
-        if real_currency_cost_filter:
-            filters["real_currency_cost"] = real_currency_cost_filter
-
-        min_level_cost_filter = benefit_range_filter_parser(
-            min_level_cost, "min_level_cost"
-        )
-        if min_level_cost_filter:
-            filters["min_level_cost"] = min_level_cost_filter
-
-        available_from_filter = benefit_range_filter_parser(
-            available_from, "available_from"
-        )
-        if available_from_filter:
-            filters["available_from"] = available_from_filter
-
-        available_by_filter = benefit_range_filter_parser(available_by, "available_by")
-        if available_by_filter:
-            filters["available_by"] = available_by_filter
+        filters: dict[str, Any] = {
+            key: value
+            for key, value in {
+                "is_active": is_active,
+                "adaptation_required": adaptation_required,
+                "coins_cost": benefit_range_filter_parser(coins_cost, "coins_cost"),
+                "real_currency_cost": benefit_range_filter_parser(
+                    real_currency_cost, "real_currency_cost"
+                ),
+                "min_level_cost": benefit_range_filter_parser(
+                    min_level_cost, "min_level_cost"
+                ),
+                "available_from": benefit_range_filter_parser(
+                    available_from, "available_from"
+                ),
+                "available_by": benefit_range_filter_parser(
+                    available_by, "available_by"
+                ),
+            }.items()
+            if value is not None
+        }
 
         benefits = await service.search_benefits(
             query=query,

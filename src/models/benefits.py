@@ -13,15 +13,6 @@ if TYPE_CHECKING:
     from src.models import Position, Question, User
 
 
-class BenefitSortFields(str, enum.Enum):
-    COINS_COST = "coins_cost"
-    MIN_LEVEL_COST = "min_level_cost"
-    AMOUNT = "amount"
-    REAL_CURRENCY_COT = "real_currency_cost"
-    AVAILABLE_FROM = "available_from"
-    AVAILABLE_BY = "available_from"
-
-
 class BenefitImage(Base):
     """
     Represents an image associated with a benefit.
