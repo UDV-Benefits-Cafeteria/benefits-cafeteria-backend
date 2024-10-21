@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "postgres"
 
+    ELASTICSEARCH_HOST: str = "http://localhost:9200"
+
     SECRET_KEY: SecretStr = (
         "unsecured2*t@t3b#6g$^w@zsdz57^x-g^o05@e5aztfn=)r#ijaly1-cy0"
     )
@@ -62,6 +64,15 @@ class Settings(BaseSettings):
     AWS_S3_ENDPOINT_URL: str = "s3.amazonaws.com"
     AWS_DEFAULT_ACL: str = "public-read"
     AWS_S3_USE_SSL: bool = True
+
+    BENEFIT_VALID_SORT_FIELDS: list[str] = [
+        "coins_cost",
+        "min_level_cost",
+        "amount",
+        "real_currency_cost",
+        "available_from",
+        "available_by",
+    ]
 
     @property
     def DATABASE_URL(self) -> PostgresDsn:

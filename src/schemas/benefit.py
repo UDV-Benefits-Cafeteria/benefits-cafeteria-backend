@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, List, Optional
+from enum import Enum
+from typing import Annotated, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -60,11 +61,22 @@ class BenefitUpdate(BenefitBase):
     min_level_cost: Annotated[Optional[int], Field(ge=0)] = None
 
 
+class BenefitReadShort(BaseModel):
+    id: int
+    name: str
+    coins_cost: int
+    min_level_cost: int
+    amount: Optional[int]
+    primary_image_url: Optional[str]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class BenefitRead(BenefitBase):
     id: int
-    images: Optional[List[BenefitImageRead]] = None
+    images: Optional[list[BenefitImageRead]] = None
     category: Optional[CategoryRead] = None
-    positions: Optional[List[PositionRead]] = None
+    positions: Optional[list[PositionRead]] = None
     category_id: Optional[int] = Field(None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True)

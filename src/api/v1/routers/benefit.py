@@ -1,6 +1,9 @@
-from fastapi import APIRouter, HTTPException, UploadFile, status
+from typing import Annotated, Any, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
 from src.api.v1.dependencies import BenefitsServiceDependency
+from src.config import get_settings
 from src.repositories.exceptions import EntityDeleteError
 from src.schemas import benefit as schemas
 from src.services.exceptions import (
@@ -9,8 +12,116 @@ from src.services.exceptions import (
     EntityReadError,
     EntityUpdateError,
 )
+from src.utils.filter_parsers import benefit_range_filter_parser
 
 router = APIRouter(prefix="/benefits", tags=["Benefits"])
+
+settings = get_settings()
+
+
+@router.get(
+    "/",
+    response_model=list[schemas.BenefitReadShort],
+    responses={
+        200: {"description": "Benefits successfully retrieved"},
+        400: {"description": "Failed to search benefits"},
+    },
+)
+async def search_benefits(
+    service: BenefitsServiceDependency,
+    query: Annotated[
+        Optional[str], Query(description="Search query for benefit name")
+    ] = None,
+    is_active: Annotated[Optional[bool], Query()] = None,
+    adaptation_required: Annotated[Optional[bool], Query()] = None,
+    coins_cost: Annotated[
+        Optional[str],
+        Query(description='Filter for coins cost, for example: "gte:100,lte:500"'),
+    ] = None,
+    real_currency_cost: Annotated[
+        Optional[str],
+        Query(
+            description='Filter for real_currency_cost, for example: "gte:100,lte:500"'
+        ),
+    ] = None,
+    min_level_cost: Annotated[
+        Optional[str],
+        Query(description='Filter for min_level_cost, for example: "gte:1,lte:3"'),
+    ] = None,
+    available_from: Annotated[
+        Optional[str],
+        Query(
+            description='Filter for available_from, for example: "gte:2024-01-01,lte:2024-12-31"'
+        ),
+    ] = None,
+    available_by: Annotated[
+        Optional[str],
+        Query(
+            description='Filter for available_by, for example: "gte:2024-01-01,lte:2024-12-31"'
+        ),
+    ] = None,
+    sort_by: Annotated[Optional[str], Query()] = None,
+    sort_order: Annotated[str, Query(pattern="^(asc|desc)$")] = "asc",
+    limit: Annotated[int, Query(ge=1, le=100)] = 10,
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
+    if sort_by and sort_by not in settings.BENEFIT_VALID_SORT_FIELDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid sort field: {sort_by}. Valid fields are: {', '.join(settings.BENEFIT_VALID_SORT_FIELDS)}",
+        )
+    try:
+        filters: dict[str, Any] = {}
+        if is_active is not None:
+            filters["is_active"] = is_active
+        if adaptation_required is not None:
+            filters["adaptation_required"] = adaptation_required
+
+        coins_cost_filter = benefit_range_filter_parser(coins_cost, "coins_cost")
+        if coins_cost_filter:
+            filters["coins_cost"] = coins_cost_filter
+
+        real_currency_cost_filter = benefit_range_filter_parser(
+            real_currency_cost, "real_currency_cost"
+        )
+        if real_currency_cost_filter:
+            filters["real_currency_cost"] = real_currency_cost_filter
+
+        min_level_cost_filter = benefit_range_filter_parser(
+            min_level_cost, "min_level_cost"
+        )
+        if min_level_cost_filter:
+            filters["min_level_cost"] = min_level_cost_filter
+
+        available_from_filter = benefit_range_filter_parser(
+            available_from, "available_from"
+        )
+        if available_from_filter:
+            filters["available_from"] = available_from_filter
+
+        available_by_filter = benefit_range_filter_parser(available_by, "available_by")
+        if available_by_filter:
+            filters["available_by"] = available_by_filter
+
+        benefits = await service.search_benefits(
+            query=query,
+            filters=filters,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            limit=limit,
+            offset=offset,
+        )
+        return benefits
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except EntityReadError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to search benefits: {str(e)}",
+        )
 
 
 @router.get(
@@ -157,37 +268,6 @@ async def delete_benefit(benefit_id: int, service: BenefitsServiceDependency):
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
-        )
-
-
-@router.get(
-    "/",
-    response_model=list[schemas.BenefitRead],
-    responses={
-        200: {"description": "Benefits successfully retrieved"},
-        400: {"description": "Failed to retrieve benefits"},
-    },
-)
-async def get_benefits(service: BenefitsServiceDependency):
-    """
-    Retrieve all benefits.
-
-    Args:
-    - **service (BenefitServiceDependency)**: The service handling the logic.
-
-    Returns:
-    - **list[BenefitRead]**: List of all benefits.
-
-    Raises:
-    - **HTTPException**:
-        - 400: If there is an error retrieving the benefits.
-    """
-    try:
-        benefits = await service.read_all()
-        return benefits
-    except EntityReadError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to read benefits"
         )
 
 

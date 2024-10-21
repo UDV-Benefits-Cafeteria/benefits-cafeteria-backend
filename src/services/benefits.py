@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import UploadFile
 
 import src.repositories.exceptions as repo_exceptions
@@ -16,6 +18,32 @@ class BenefitsService(
     create_schema = schemas.BenefitCreate
     read_schema = schemas.BenefitRead
     update_schema = schemas.BenefitUpdate
+
+    async def search_benefits(
+        self,
+        query: str,
+        filters: Optional[dict] = None,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        limit: int = 10,
+        offset: int = 0,
+    ) -> list[schemas.BenefitReadShort]:
+        try:
+            search_results = await self.repo.search_benefits(
+                query=query,
+                filters=filters,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                limit=limit,
+                offset=offset,
+            )
+            benefits = [
+                schemas.BenefitReadShort.model_validate(data) for data in search_results
+            ]
+            return benefits
+        except service_exceptions.EntityReadError as e:
+            logger.error(f"Error searching benefits: {e}")
+            raise service_exceptions.EntityReadError("Benefit", "", str(e))
 
     @staticmethod
     async def add_images(images: list[UploadFile], benefit_id: int):
