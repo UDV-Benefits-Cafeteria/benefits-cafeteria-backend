@@ -73,6 +73,9 @@ class BenefitUpdate(BenefitBase):
     name: Annotated[Optional[str], Field(max_length=100)] = None
     coins_cost: Annotated[Optional[int], Field(ge=0)] = None
     min_level_cost: Annotated[Optional[int], Field(ge=0)] = None
+    adaptation_required: Optional[bool] = None
+    is_fixed_period: Optional[bool] = None
+    is_active: Optional[bool] = None
 
 
 class BenefitReadShort(BaseModel):
