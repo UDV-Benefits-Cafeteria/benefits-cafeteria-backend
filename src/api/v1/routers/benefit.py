@@ -1,6 +1,6 @@
 from typing import Annotated, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from src.api.v1.dependencies import BenefitsServiceDependency
 from src.config import get_settings
