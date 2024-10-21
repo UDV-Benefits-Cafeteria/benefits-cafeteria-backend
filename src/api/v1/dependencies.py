@@ -44,8 +44,8 @@ async def get_current_user(
     user = await users_service.read_by_id(session.user_id)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not authenticated",
         )
 
     return user
@@ -65,10 +65,7 @@ async def get_active_user(
 async def get_hr_user(
     current_user: Annotated[UserRead, Depends(get_active_user)],
 ) -> UserRead:
-    if (
-        current_user.role != UserRole.HR.value
-        or current_user.role != UserRole.ADMIN.value
-    ):
+    if current_user.role not in [UserRole.HR.value, UserRole.ADMIN.value]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: at least HR role required",
