@@ -8,7 +8,6 @@ from pydantic import (
     ConfigDict,
     EmailStr,
     Field,
-    SecretStr,
     computed_field,
     field_validator,
     model_validator,
@@ -20,8 +19,7 @@ from src.schemas.position import PositionRead
 
 
 class UserRole(str, Enum):
-    """E
-    numeration for user roles within the application.
+    """Enumeration for user roles within the application.
 
     Attributes:
         EMPLOYEE: Base user.
@@ -70,8 +68,12 @@ class UserBase(BaseModel):
 
     @field_validator("firstname", "middlename", "lastname")
     @classmethod
-    def check_only_letters(cls, name: str, info: ValidationInfo) -> str:
+    def check_only_letters(
+        cls, name: Optional[str], info: ValidationInfo
+    ) -> Optional[str]:
         """Validate that names contain only letters and specific characters."""
+        if name is None:
+            return None
         if isinstance(name, str):
             pattern = r"^[A-Za-zА-Яа-яЁё]+([\-'][A-Za-zА-Яа-яЁё]+)*(\s[A-Za-zА-Яа-яЁё]+([\-'][A-Za-zА-Яа-яЁё]+)*)*$"
             if not re.fullmatch(pattern, name):
@@ -124,13 +126,6 @@ class UserVerify(BaseModel):
     email: Annotated[EmailStr, Field(max_length=255)]
 
 
-class UserTokens(BaseModel):
-    """Model for user authentication tokens."""
-
-    secret: SecretStr
-    refresh: SecretStr
-
-
 class UserVerified(BaseModel):
     """Model to indicate a verified user."""
 
@@ -146,6 +141,15 @@ class UserCreate(UserBase):
 
     is_verified: bool = Field(default=False, exclude=True)
     is_active: bool = Field(default=True, exclude=True)
+
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+
+
+class UserCreateExcel(UserBase):
+    position_name: Optional[str] = None
+    legal_entity_name: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
 class UsersCreate(BaseModel):
@@ -175,12 +179,6 @@ class UserUpdate(UserBase):
     hired_at: Optional[date] = None
     is_active: Optional[bool] = None
     is_adapted: Optional[bool] = None
-
-
-class UserPasswordUpdate(BaseModel):
-    """Model for updating the user's password."""
-
-    password: Annotated[str, Field(min_length=8, max_length=255)]
 
 
 class UserRead(UserBase):
@@ -236,6 +234,13 @@ class UserUploadResponse(BaseModel):
     """Model for the response after uploading users."""
 
     created_users: list[UserRead]
+    errors: list[UserUploadError]
+
+
+class UserValidationResponse(BaseModel):
+    """Model for the response after validating users."""
+
+    valid_users: list[UserCreate]
     errors: list[UserUploadError]
 
 

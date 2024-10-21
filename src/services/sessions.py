@@ -57,7 +57,7 @@ class SessionsService:
         try:
             session = await self.repo.read_by_id(session_id)
             if not session or session.expires_at <= datetime.now(timezone.utc):
-                raise service_exceptions.EntityNotFoundError("Session", session_id)
+                return None
             return SessionRead.model_validate(session)
         except repo_exceptions.EntityReadError as e:
             raise service_exceptions.EntityReadError("Session", session_id, str(e))

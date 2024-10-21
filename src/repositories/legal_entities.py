@@ -13,18 +13,6 @@ class LegalEntitiesRepository(SQLAlchemyRepository[LegalEntity]):
     model = LegalEntity
 
     async def read_by_name(self, name: str) -> Optional[LegalEntity]:
-        """
-        Retrieve a LegalEntity by its name.
-
-        This method queries the database for a LegalEntity with the
-        specified name. If found, it returns the LegalEntity instance;
-        otherwise, it returns None.
-
-        :param name: The name of the legal entity to retrieve.
-        :return: An instance of LegalEntity if found, None otherwise.
-        :raises EntityReadError: Raised when an error occurs during
-        the read operation.
-        """
         async with async_session_factory() as session:
             try:
                 result = await session.execute(

@@ -13,18 +13,6 @@ class PositionsRepository(SQLAlchemyRepository[Position]):
     model = Position
 
     async def read_by_name(self, name: str) -> Optional[Position]:
-        """
-        Retrieve a Position by its name.
-
-        This method queries the database for a Position with the
-        specified name. If found, it returns the Position instance;
-        otherwise, it returns None.
-
-        :param name: The name of the position to retrieve.
-        :return: An instance of Position if found, None otherwise.
-        :raises EntityReadError: Raised when an error occurs during
-        the read operation.
-        """
         async with async_session_factory() as session:
             try:
                 result = await session.execute(
