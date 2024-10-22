@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.api.v1.dependencies import BenefitRequestServiceDependency, get_active_user
+from src.api.v1.dependencies import BenefitRequestsServiceDependency, get_active_user
 from src.schemas import request as schemas
 from src.services.exceptions import (
     EntityCreateError,
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/benefit-requests", tags=["Requests"])
 )
 async def create_benefit_request(
     benefit_request: schemas.BenefitRequestCreate,
-    service: BenefitRequestServiceDependency,
+    service: BenefitRequestsServiceDependency,
 ):
     """
     Create a new benefit request.
@@ -58,7 +58,7 @@ async def create_benefit_request(
     },
 )
 async def get_benefit_requests_by_user(
-    user_id: int, service: BenefitRequestServiceDependency
+    user_id: int, service: BenefitsRequestServiceDependency
 ):
     """
     Get all benefit requests for a specific user by user ID.
@@ -94,7 +94,7 @@ async def get_benefit_requests_by_user(
 )
 async def get_benefit_requests_of_current_user(
     current_user: Annotated[schemas.UserRead, Depends(get_active_user)],
-    service: BenefitRequestServiceDependency,
+    service: BenefitRequestsServiceDependency,
 ):
     """
     Get benefit requests for the current authenticated user.
@@ -128,7 +128,7 @@ async def get_benefit_requests_of_current_user(
     },
 )
 async def get_benefit_request(
-    request_id: int, service: BenefitRequestServiceDependency
+    request_id: int, service: BenefitRequestsServiceDependency
 ):
     """
     Get a benefit request by ID.
@@ -165,7 +165,7 @@ async def get_benefit_request(
         400: {"description": "Failed to read benefit requests"},
     },
 )
-async def get_benefit_requests(service: BenefitRequestServiceDependency):
+async def get_benefit_requests(service: BenefitRequestsServiceDependency):
     """
     Get a list of all benefit requests.
 
@@ -198,7 +198,7 @@ async def get_benefit_requests(service: BenefitRequestServiceDependency):
 async def update_benefit_request(
     request_id: int,
     benefit_request_update: schemas.BenefitRequestUpdate,
-    service: BenefitRequestServiceDependency,
+    service: BenefitRequestsServiceDependency,
 ):
     """
     Update a benefit request by ID.
@@ -238,7 +238,7 @@ async def update_benefit_request(
     },
 )
 async def delete_benefit_request(
-    request_id: int, service: BenefitRequestServiceDependency
+    request_id: int, service: BenefitRequestsServiceDependency
 ):
     """
     Delete a benefit request by ID.
