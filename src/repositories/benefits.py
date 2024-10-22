@@ -43,11 +43,8 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             "real_currency_cost": benefit.real_currency_cost
             if benefit.real_currency_cost
             else None,
-            "available_from": benefit.available_from.isoformat()
-            if benefit.available_from
-            else None,
-            "available_by": benefit.available_by.isoformat()
-            if benefit.available_by
+            "created_at": benefit.created_at.isoformat()
+            if benefit.created_at
             else None,
         }
 
@@ -109,7 +106,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             for field, value in filters.items():
                 if field in ["coins_cost", "real_currency_cost", "min_level_cost"]:
                     bool_query["bool"]["filter"].append({"range": {field: value}})
-                elif field in ["available_from", "available_by"]:
+                elif field in ["created_at"]:
                     bool_query["bool"]["filter"].append({"range": {field: value}})
                 elif field in ["is_active", "adaptation_required"]:
                     bool_query["bool"]["filter"].append({"term": {field: value}})

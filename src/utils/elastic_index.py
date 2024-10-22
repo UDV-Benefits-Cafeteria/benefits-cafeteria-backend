@@ -5,7 +5,6 @@ from src.config import get_settings
 settings = get_settings()
 es = AsyncElasticsearch(
     hosts=(settings.ELASTIC_URL,),
-    basic_auth=("elastic", settings.ELASTIC_PASSWORD),
 )
 
 
@@ -54,8 +53,7 @@ class SearchService:
                     "is_active": {"type": "boolean"},
                     "adaptation_required": {"type": "boolean"},
                     "real_currency_cost": {"type": "float"},
-                    "available_from": {"type": "date"},
-                    "available_by": {"type": "date"},
+                    "created_at": {"type": "date"},
                 }
             },
         }

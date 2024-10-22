@@ -13,9 +13,8 @@ class BenefitSortFields(str, enum.Enum):
     COINS_COST = "coins_cost"
     MIN_LEVEL_COST = "min_level_cost"
     AMOUNT = "amount"
-    REAL_CURRENCY_COT = "real_currency_cost"
-    AVAILABLE_FROM = "available_from"
-    AVAILABLE_BY = "available_from"
+    REAL_CURRENCY_COST = "real_currency_cost"
+    CREATED_AT = "created_at"
 
 
 class SortOrderField(str, enum.Enum):

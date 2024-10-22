@@ -49,16 +49,10 @@ async def get_benefits(
         Optional[str],
         Query(description='Filter for min_level_cost, for example: "gte:1,lte:3"'),
     ] = None,
-    available_from: Annotated[
+    created_at: Annotated[
         Optional[str],
         Query(
-            description='Filter for available_from, for example: "gte:2024-01-01,lte:2024-12-31"'
-        ),
-    ] = None,
-    available_by: Annotated[
-        Optional[str],
-        Query(
-            description='Filter for available_by, for example: "gte:2024-01-01,lte:2024-12-31"'
+            description='Filter for created_at, for example: "gte:2024-01-01,lte:2024-12-31" '
         ),
     ] = None,
     sort_by: Annotated[Optional[BenefitSortFields], Query()] = None,
@@ -79,12 +73,7 @@ async def get_benefits(
                 "min_level_cost": benefit_range_filter_parser(
                     min_level_cost, "min_level_cost"
                 ),
-                "available_from": benefit_range_filter_parser(
-                    available_from, "available_from"
-                ),
-                "available_by": benefit_range_filter_parser(
-                    available_by, "available_by"
-                ),
+                "created_at": benefit_range_filter_parser(created_at, "created_at"),
             }.items()
             if value is not None
         }
