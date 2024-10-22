@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class LegalEntityBase(BaseModel):
-    name: Annotated[str, Field(max_length=255)]
+    name: Annotated[str, Field(min_length=2, max_length=255)]
 
 
 class LegalEntityCreate(LegalEntityBase):
@@ -12,7 +12,7 @@ class LegalEntityCreate(LegalEntityBase):
 
 
 class LegalEntityUpdate(LegalEntityBase):
-    name: Annotated[Optional[str], Field(max_length=255)] = None
+    name: Annotated[Optional[str], Field(min_length=2, max_length=255)] = None
 
 
 class LegalEntityRead(LegalEntityBase):

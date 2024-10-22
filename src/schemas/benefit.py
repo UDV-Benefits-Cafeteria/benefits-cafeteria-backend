@@ -46,7 +46,7 @@ class BenefitImageRead(BenefitImageBase):
 
 
 class BenefitBase(BaseModel):
-    name: Annotated[str, Field(max_length=100)]
+    name: Annotated[str, Field(min_length=2, max_length=100)]
     category_id: Optional[int] = None
     is_active: bool = True
     description: Optional[str] = None
@@ -70,7 +70,7 @@ class BenefitCreate(BenefitBase):
 
 
 class BenefitUpdate(BenefitBase):
-    name: Annotated[Optional[str], Field(max_length=100)] = None
+    name: Annotated[Optional[str], Field(min_length=2, max_length=100)] = None
     coins_cost: Annotated[Optional[int], Field(ge=0)] = None
     min_level_cost: Annotated[Optional[int], Field(ge=0)] = None
     adaptation_required: Optional[bool] = None
