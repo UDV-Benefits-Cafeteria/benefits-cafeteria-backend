@@ -58,7 +58,7 @@ async def create_benefit_request(
     },
 )
 async def get_benefit_requests_by_user(
-    user_id: int, service: BenefitsRequestServiceDependency
+    user_id: int, service: BenefitRequestsServiceDependency
 ):
     """
     Get all benefit requests for a specific user by user ID.
