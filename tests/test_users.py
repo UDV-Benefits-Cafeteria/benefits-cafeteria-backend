@@ -93,7 +93,7 @@ async def test_get_user(async_client: AsyncClient):
     assert response.status_code == status.HTTP_200_OK
     user = response.json()
     assert user["id"] == user_id
-    assert user["email"] == "test@example.com"
+    assert user["firstname"] == "Jane"
 
 
 # Test case for handling non-existent user

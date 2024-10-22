@@ -22,7 +22,8 @@ class BenefitRequestBase(BaseModel):
 
 
 class BenefitRequestCreate(BenefitRequestBase):
-    pass
+    benefit_id: int
+    user_id: int
 
 
 class BenefitRequestUpdate(BenefitRequestBase):
