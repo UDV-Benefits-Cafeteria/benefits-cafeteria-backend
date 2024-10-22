@@ -92,7 +92,7 @@ async def get_benefit_requests_by_user(
         400: {"description": "Failed to read benefit requests for current user"},
     },
 )
-async def get_benefit_requests_by_current_user(
+async def get_benefit_requests_of_current_user(
     current_user: Annotated[schemas.UserRead, Depends(get_active_user)],
     service: BenefitRequestServiceDependency,
 ):

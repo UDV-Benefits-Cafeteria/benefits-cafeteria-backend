@@ -5,7 +5,7 @@ from src.repositories.benefit_requests import BenefitRequestsRepository
 from src.services.base import BaseService
 
 
-class BenefitRequestService(
+class BenefitRequestsService(
     BaseService[
         schemas.BenefitRequestCreate,
         schemas.BenefitRequestRead,
