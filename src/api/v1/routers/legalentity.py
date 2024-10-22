@@ -1,11 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from src.api.v1.dependencies import LegalEntitiesServiceDependency
-from src.schemas.legalentity import (
-    LegalEntityCreate,
-    LegalEntityRead,
-    LegalEntityUpdate,
-)
+from src.schemas import legalentity as schemas
 from src.services.exceptions import (
     EntityCreateError,
     EntityNotFoundError,
@@ -18,7 +14,7 @@ router = APIRouter(prefix="/legal-entities", tags=["Legal Entities"])
 
 @router.get(
     "/{entity_id}",
-    response_model=LegalEntityRead,
+    response_model=schemas.LegalEntityRead,
     responses={
         200: {"description": "Legal entity retrieved successfully"},
         404: {"description": "Legal entity not found"},
@@ -55,7 +51,7 @@ async def get_legal_entity(entity_id: int, service: LegalEntitiesServiceDependen
 
 @router.post(
     "/",
-    response_model=LegalEntityRead,
+    response_model=schemas.LegalEntityRead,
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"description": "Legal entity created successfully"},
@@ -63,7 +59,7 @@ async def get_legal_entity(entity_id: int, service: LegalEntitiesServiceDependen
     },
 )
 async def create_legal_entity(
-    legal_entity: LegalEntityCreate, service: LegalEntitiesServiceDependency
+    legal_entity: schemas.LegalEntityCreate, service: LegalEntitiesServiceDependency
 ):
     """
     Create a new legal entity.
@@ -89,7 +85,7 @@ async def create_legal_entity(
 
 @router.patch(
     "/{entity_id}",
-    response_model=LegalEntityRead,
+    response_model=schemas.LegalEntityRead,
     responses={
         200: {"description": "Legal entity updated successfully"},
         404: {"description": "Legal entity not found"},
@@ -98,7 +94,7 @@ async def create_legal_entity(
 )
 async def update_legal_entity(
     entity_id: int,
-    legal_entity_update: LegalEntityUpdate,
+    legal_entity_update: schemas.LegalEntityUpdate,
     service: LegalEntitiesServiceDependency,
 ):
     """
@@ -162,7 +158,7 @@ async def delete_legal_entity(entity_id: int, service: LegalEntitiesServiceDepen
 
 @router.get(
     "/",
-    response_model=list[LegalEntityRead],
+    response_model=list[schemas.LegalEntityRead],
     responses={
         200: {"description": "List of legal entities retrieved successfully"},
         400: {"description": "Failed to retrieve legal entities"},
