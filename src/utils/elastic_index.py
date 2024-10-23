@@ -55,6 +55,7 @@ class SearchService:
                     "adaptation_required": {"type": "boolean"},
                     "real_currency_cost": {"type": "float"},
                     "created_at": {"type": "date"},
+                    "category_id": {"type": "integer"},
                 }
             },
         }

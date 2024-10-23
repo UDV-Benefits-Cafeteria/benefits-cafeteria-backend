@@ -56,6 +56,7 @@ async def get_benefits(
             description='Filter for created_at, for example: "gte:2024-01-01,lte:2024-12-31" '
         ),
     ] = None,
+    categories: Annotated[Optional[list[int]], Query()] = None,
     sort_by: Annotated[Optional[BenefitSortFields], Query()] = None,
     sort_order: Annotated[SortOrderField, Query()] = "asc",
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
@@ -63,8 +64,8 @@ async def get_benefits(
 ):
     try:
         filters: dict[str, Any] = {
-            key: value
-            for key, value in {
+            field: value
+            for field, value in {
                 "is_active": is_active,
                 "adaptation_required": adaptation_required,
                 "coins_cost": benefit_range_filter_parser(coins_cost, "coins_cost"),
@@ -75,6 +76,7 @@ async def get_benefits(
                     min_level_cost, "min_level_cost"
                 ),
                 "created_at": benefit_range_filter_parser(created_at, "created_at"),
+                "category_id": categories,
             }.items()
             if value is not None
         }
