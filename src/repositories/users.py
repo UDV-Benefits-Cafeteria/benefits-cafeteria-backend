@@ -100,13 +100,6 @@ class UsersRepository(SQLAlchemyRepository[User]):
             for field, value in filters.items():
                 if field == "hired_at":
                     bool_query["bool"]["filter"].append({"range": {field: value}})
-                elif field == "role":
-                    if isinstance(value, list):
-                        bool_query["bool"]["filter"].append({"terms": {field: value}})
-                    else:
-                        bool_query["bool"]["filter"].append({"term": {field: value}})
-                elif field == "legal_entity_id":
-                    bool_query["bool"]["filter"].append({"term": {field: value}})
                 else:
                     bool_query["bool"]["filter"].append({"term": {field: value}})
             es_query["query"] = bool_query
