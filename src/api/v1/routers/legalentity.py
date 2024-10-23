@@ -5,6 +5,7 @@ from src.api.v1.dependencies import LegalEntitiesServiceDependency
 from src.schemas import legalentity as schemas
 from src.services.exceptions import (
     EntityCreateError,
+    EntityDeletionError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
@@ -132,6 +133,7 @@ async def update_legal_entity(
     "/{entity_id}",
     responses={
         200: {"description": "Legal entity deleted successfully"},
+        400: {"description": "Failed to delete legal entity"},
         404: {"description": "Legal entity not found"},
     },
 )
@@ -154,6 +156,11 @@ async def delete_legal_entity(entity_id: int, service: LegalEntitiesServiceDepen
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Legal entity not found"
+        )
+    except EntityDeletionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to delete legal entity",
         )
 
 

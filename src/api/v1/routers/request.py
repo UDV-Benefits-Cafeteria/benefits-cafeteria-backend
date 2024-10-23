@@ -7,6 +7,7 @@ from src.api.v1.dependencies import BenefitRequestsServiceDependency, get_active
 from src.schemas import request as schemas
 from src.services.exceptions import (
     EntityCreateError,
+    EntityDeletionError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
@@ -242,6 +243,7 @@ async def update_benefit_request(
     "/{request_id}",
     responses={
         200: {"description": "Benefit request deleted successfully"},
+        400: {"description": "Failed to delete benefit request"},
         404: {"description": "Benefit request not found"},
     },
 )
@@ -266,4 +268,9 @@ async def delete_benefit_request(
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit request not found"
+        )
+    except EntityDeletionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to delete benefit request",
         )

@@ -6,6 +6,7 @@ import src.repositories.exceptions as repo_exceptions
 import src.services.exceptions as service_exceptions
 from src.config import logger
 from src.repositories.abstract import AbstractRepository
+from src.repositories.exceptions import EntityDeleteError
 
 TCreate = TypeVar("TCreate", bound=BaseModel)
 TRead = TypeVar("TRead", bound=BaseModel)
@@ -216,7 +217,15 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         :raises service_exceptions.EntityNotFoundError: Raised when the entity to be deleted is not found.
         :raises service_exceptions.EntityDeletionError: Raised when the entity deletion fails.
         """
-        is_deleted: bool = await self.repo.delete_by_id(entity_id)
+        try:
+            is_deleted: bool = await self.repo.delete_by_id(entity_id)
+        except EntityDeleteError as e:
+            logger.error(
+                f"Failed to delete {self.read_schema.__name__} with ID {entity_id}: {str(e)}"
+            )
+            raise service_exceptions.EntityDeletionError(
+                self.read_schema.__name__, e.read_param, str(e)
+            )
         if not is_deleted:
             logger.warning(
                 f"{self.read_schema.__name__} with ID {entity_id} not found for deletion."

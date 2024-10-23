@@ -9,6 +9,7 @@ from src.schemas import benefit as schemas
 from src.schemas.benefit import BenefitSortFields, SortOrderField
 from src.services.exceptions import (
     EntityCreateError,
+    EntityDeletionError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
@@ -219,6 +220,7 @@ async def update_benefit(
     "/{benefit_id}",
     responses={
         200: {"description": True},
+        400: {"description": "Failed to delete benefit"},
         404: {"description": "Benefit not found"},
     },
 )
@@ -243,6 +245,10 @@ async def delete_benefit(benefit_id: int, service: BenefitsServiceDependency):
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
+        )
+    except EntityDeletionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete benefit"
         )
 
 

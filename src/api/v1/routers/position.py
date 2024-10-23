@@ -5,6 +5,7 @@ from src.api.v1.dependencies import PositionsServiceDependency
 from src.schemas import position as schemas
 from src.services.exceptions import (
     EntityCreateError,
+    EntityDeletionError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
@@ -127,6 +128,7 @@ async def update_position(
     "/{position_id}",
     responses={
         200: {"description": "Position deleted successfully"},
+        400: {"description": "Failed to delete position"},
         404: {"description": "Position not found"},
     },
 )
@@ -149,6 +151,10 @@ async def delete_position(position_id: int, service: PositionsServiceDependency)
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Position not found"
+        )
+    except EntityDeletionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete position"
         )
 
 
