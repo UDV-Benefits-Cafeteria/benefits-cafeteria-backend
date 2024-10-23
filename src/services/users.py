@@ -29,6 +29,43 @@ class UsersService(
     read_schema = schemas.UserRead
     update_schema = schemas.UserUpdate
 
+    async def search_users(
+        self,
+        query: Optional[str],
+        filters: dict[str, Any],
+        sort_by: Optional[str],
+        sort_order: str,
+        limit: int,
+        offset: int,
+    ) -> list[schemas.UserRead]:
+        try:
+            search_results = await self.repo.search_users(
+                query=query,
+                filters=filters,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                limit=limit,
+                offset=offset,
+            )
+            for data in search_results:
+                legal_entity_id = data.get("legal_entity_id")
+                if legal_entity_id is not None:
+                    legal_entity_data = await LegalEntitiesService().read_by_id(
+                        legal_entity_id
+                    )
+                    data["legal_entity"] = legal_entity_data
+
+                position_id = data.get("position_id")
+                if position_id is not None:
+                    position_data = await PositionsService().read_by_id(position_id)
+                    data["position"] = position_data
+
+            users = [self.read_schema.model_validate(data) for data in search_results]
+            return users
+        except service_exceptions.EntityReadError as e:
+            logger.error(f"Error searching users: {e}")
+            raise service_exceptions.EntityReadError("User", "", str(e))
+
     async def read_by_email(self, email: str) -> Optional[schemas.UserRead]:
         """
         Retrieve a user by their email address.
