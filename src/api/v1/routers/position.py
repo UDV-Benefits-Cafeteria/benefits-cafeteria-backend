@@ -163,7 +163,7 @@ async def delete_position(position_id: int, service: PositionsServiceDependency)
 async def get_positions(
     service: PositionsServiceDependency,
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1)
+    limit: int = Query(10, ge=1),
 ):
     """
     Get a list of all positions.

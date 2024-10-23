@@ -163,7 +163,7 @@ async def delete_category(category_id: int, service: CategoriesServiceDependency
 async def get_categories(
     service: CategoriesServiceDependency,
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1)
+    limit: int = Query(10, ge=1),
 ):
     """
     Get a list of all categories with pagination.

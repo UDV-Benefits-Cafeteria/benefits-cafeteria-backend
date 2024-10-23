@@ -168,7 +168,7 @@ async def delete_legal_entity(entity_id: int, service: LegalEntitiesServiceDepen
 async def get_legal_entities(
     service: LegalEntitiesServiceDependency,
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1)
+    limit: int = Query(10, ge=1),
 ):
     """
     Get a list of all legal entities.

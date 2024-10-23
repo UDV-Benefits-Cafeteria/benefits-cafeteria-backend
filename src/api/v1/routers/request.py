@@ -169,7 +169,7 @@ async def get_benefit_request(
 async def get_benefit_requests(
     service: BenefitRequestsServiceDependency,
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1)
+    limit: int = Query(10, ge=1),
 ):
     """
     Get a list of all benefit requests.
