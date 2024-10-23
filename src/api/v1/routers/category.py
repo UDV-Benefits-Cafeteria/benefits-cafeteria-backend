@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
+from fastapi.params import Query
 
 from src.api.v1.dependencies import CategoriesServiceDependency
 from src.schemas import category as schemas
@@ -159,9 +160,16 @@ async def delete_category(category_id: int, service: CategoriesServiceDependency
         400: {"description": "Failed to read categories"},
     },
 )
-async def get_categories(service: CategoriesServiceDependency):
+async def get_categories(
+    service: CategoriesServiceDependency,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1)
+):
     """
-    Get a list of all categories.
+    Get a list of all categories with pagination.
+
+    - **page**: The page number to retrieve (default is 1).
+    - **limit**: The number of items per page (default is 10).
 
     Raises:
     - **HTTPException**:
@@ -171,7 +179,7 @@ async def get_categories(service: CategoriesServiceDependency):
     - **list[CategoryRead]**: The list of categories.
     """
     try:
-        categories = await service.read_all()
+        categories = await service.read_all(page=page, limit=limit)
         return categories
     except EntityReadError:
         raise HTTPException(

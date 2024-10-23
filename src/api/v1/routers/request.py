@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.params import Query
 
 from src.api.v1.dependencies import BenefitRequestsServiceDependency, get_active_user
 from src.schemas import request as schemas
@@ -165,9 +166,16 @@ async def get_benefit_request(
         400: {"description": "Failed to read benefit requests"},
     },
 )
-async def get_benefit_requests(service: BenefitRequestsServiceDependency):
+async def get_benefit_requests(
+    service: BenefitRequestsServiceDependency,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1)
+):
     """
     Get a list of all benefit requests.
+
+    - **page**: The page number to retrieve (default is 1).
+    - **limit**: The number of items per page (default is 10).
 
     Raises:
     - **HTTPException**:
@@ -177,7 +185,7 @@ async def get_benefit_requests(service: BenefitRequestsServiceDependency):
     - **list[BenefitRequestRead]**: The list of benefit requests.
     """
     try:
-        benefit_requests = await service.read_all()
+        benefit_requests = await service.read_all(page, limit)
         return benefit_requests
     except EntityReadError:
         raise HTTPException(

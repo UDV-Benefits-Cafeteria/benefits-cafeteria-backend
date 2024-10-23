@@ -112,7 +112,7 @@ class AbstractRepository(ABC, Generic[T]):
         pass
 
     @abstractmethod
-    async def read_all(self) -> List[T]:
+    async def read_all(self, page: int = 1, limit: int = 10) -> List[T]:
         """
         Retrieve all entities from the data store.
 
@@ -295,7 +295,7 @@ class SQLAlchemyRepository(AbstractRepository[T]):
                 )
                 raise EntityReadError(self.model.__name__, entity_id, str(e))
 
-    async def read_all(self) -> List[T]:
+    async def read_all(self, page: int = 1, limit: int = 10) -> List[T]:
         """
         Retrieve all entities from the data store.
 
@@ -307,7 +307,7 @@ class SQLAlchemyRepository(AbstractRepository[T]):
         """
         async with async_session_factory() as session:
             try:
-                query = select(self.model)
+                query = select(self.model).offset((page - 1) * limit).limit(limit)
                 result = await session.execute(query)
                 entities = result.scalars().all()
                 logger.info(f"Retrieved {len(entities)} {self.model.__name__} entities")

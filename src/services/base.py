@@ -150,7 +150,7 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
                 self.read_schema.__name__, entity_id, str(e)
             )
 
-    async def read_all(self) -> List[TRead]:
+    async def read_all(self, page: int = 1, limit: int = 10) -> List[TRead]:
         """
         Retrieve all entities.
 
@@ -158,7 +158,7 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         :raises service_exceptions.EntityReadError: Raised when an error occurs while reading entities.
         """
         try:
-            entities = await self.repo.read_all()
+            entities = await self.repo.read_all(page, limit)
             validated_entities = [self.read_schema.model_validate(e) for e in entities]
             logger.info(
                 f"Successfully retrieved all {self.read_schema.__name__} entities."

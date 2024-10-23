@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
+from fastapi.params import Query
 
 from src.api.v1.dependencies import PositionsServiceDependency
 from src.schemas import position as schemas
@@ -159,9 +160,16 @@ async def delete_position(position_id: int, service: PositionsServiceDependency)
         400: {"description": "Failed to retrieve positions"},
     },
 )
-async def get_positions(service: PositionsServiceDependency):
+async def get_positions(
+    service: PositionsServiceDependency,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1)
+):
     """
     Get a list of all positions.
+
+    - **page**: The page number to retrieve (default is 1).
+    - **limit**: The number of items per page (default is 10).
 
     Raises:
     - **HTTPException**:
@@ -171,7 +179,7 @@ async def get_positions(service: PositionsServiceDependency):
     - **list[PositionRead]**: A list of position data.
     """
     try:
-        positions = await service.read_all()
+        positions = await service.read_all(page, limit)
         return positions
     except EntityReadError:
         raise HTTPException(

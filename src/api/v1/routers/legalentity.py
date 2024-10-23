@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
+from fastapi.params import Query
 
 from src.api.v1.dependencies import LegalEntitiesServiceDependency
 from src.schemas import legalentity as schemas
@@ -164,9 +165,16 @@ async def delete_legal_entity(entity_id: int, service: LegalEntitiesServiceDepen
         400: {"description": "Failed to retrieve legal entities"},
     },
 )
-async def get_legal_entities(service: LegalEntitiesServiceDependency):
+async def get_legal_entities(
+    service: LegalEntitiesServiceDependency,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1)
+):
     """
     Get a list of all legal entities.
+
+    - **page**: The page number to retrieve (default is 1).
+    - **limit**: The number of items per page (default is 10).
 
     Raises:
     - **HTTPException**:
@@ -176,7 +184,7 @@ async def get_legal_entities(service: LegalEntitiesServiceDependency):
     - **list[LegalEntityRead]**: A list of legal entity data.
     """
     try:
-        legal_entities = await service.read_all()
+        legal_entities = await service.read_all(page, limit)
         return legal_entities
     except EntityReadError:
         raise HTTPException(
