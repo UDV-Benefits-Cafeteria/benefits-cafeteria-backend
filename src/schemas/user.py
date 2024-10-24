@@ -18,6 +18,12 @@ from src.schemas.legalentity import LegalEntityRead
 from src.schemas.position import PositionRead
 
 
+class UserSortFields(str, Enum):
+    HIRED_AT = "hired_at"
+    FULLNAME = "fullname"
+    COINS = "coins"
+
+
 class UserRole(str, Enum):
     """Enumeration for user roles within the application.
 

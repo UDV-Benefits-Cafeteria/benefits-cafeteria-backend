@@ -56,14 +56,16 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
 
         try:
             await es.index(
-                index=SearchService.index_name, id=benefit.id, document=benefit_data
+                index=SearchService.benefits_index_name,
+                id=benefit.id,
+                document=benefit_data,
             )
         except Exception as e:
             logger.error(f"Error indexing benefit {benefit.id} in Elasticsearch: {e}")
 
     async def delete_benefit_from_index(self, benefit_id: int):
         try:
-            await es.delete(index=SearchService.index_name, id=benefit_id)
+            await es.delete(index=SearchService.benefits_index_name, id=benefit_id)
         except Exception as e:
             logger.error(f"Error deleting benefit {benefit_id} from Elasticsearch: {e}")
 
@@ -125,7 +127,9 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             es_query["sort"] = [{sort_by: {"order": sort_order}}]
 
         try:
-            response = await es.search(index=SearchService.index_name, body=es_query)
+            response = await es.search(
+                index=SearchService.benefits_index_name, body=es_query
+            )
             hits = response["hits"]["hits"]
             results = [hit["_source"] for hit in hits]
             return results

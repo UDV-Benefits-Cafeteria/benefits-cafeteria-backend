@@ -1,19 +1,21 @@
 from typing import Optional
 
 
-def benefit_range_filter_parser(value: Optional[str], field: str) -> Optional[dict]:
+def range_filter_parser(value: Optional[str], field: str) -> Optional[dict]:
     if value:
         parts = value.split(",")
         range_filter = {}
         for part in parts:
             try:
                 key, val = part.split(":")
+                key = key.strip()
+                val = val.strip()
                 if key not in ["gte", "lte", "gt", "lt"]:
                     raise ValueError(f"Invalid range operator: {key}")
-                if field in ["coins_cost", "real_currency_cost", "min_level_cost"]:
-                    val = float(val)
                 range_filter[key] = val
-            except ValueError:
-                raise ValueError(f"Invalid format for range filter: {value}")
+            except ValueError as ve:
+                raise ValueError(
+                    f"Invalid format for range filter '{field}': {value}"
+                ) from ve
         return range_filter
     return None

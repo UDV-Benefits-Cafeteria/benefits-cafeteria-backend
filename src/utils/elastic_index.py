@@ -10,10 +10,11 @@ es = AsyncElasticsearch(
 
 
 class SearchService:
-    index_name = "benefits"
+    benefits_index_name = "benefits"
+    users_index_name = "users"
 
     @classmethod
-    async def create_index(cls):
+    async def create_benefits_index(cls):
         mapping = {
             "settings": {
                 "analysis": {
@@ -60,6 +61,51 @@ class SearchService:
             },
         }
 
-        index_exists = await es.indices.exists(index=cls.index_name)
-        if not index_exists:
-            await es.indices.create(index=cls.index_name, body=mapping)
+        benefits_index_exists = await es.indices.exists(index=cls.benefits_index_name)
+        if not benefits_index_exists:
+            await es.indices.create(index=cls.benefits_index_name, body=mapping)
+
+    @classmethod
+    async def create_users_index(cls):
+        mapping = {
+            "settings": {
+                "analysis": {
+                    "analyzer": {
+                        "fullname_analyzer": {
+                            "type": "custom",
+                            "tokenizer": "standard",
+                            "filter": [
+                                "lowercase",
+                            ],
+                        }
+                    },
+                }
+            },
+            "mappings": {
+                "properties": {
+                    "id": {"type": "integer"},
+                    "email": {"type": "keyword", "index": False},
+                    "firstname": {"type": "text", "index": False},
+                    "lastname": {"type": "text", "index": False},
+                    "middlename": {"type": "text", "index": False},
+                    "fullname": {
+                        "type": "search_as_you_type",
+                        "analyzer": "fullname_analyzer",
+                        "search_analyzer": "fullname_analyzer",
+                        "fields": {"keyword": {"type": "keyword"}},
+                    },
+                    "is_active": {"type": "boolean"},
+                    "is_adapted": {"type": "boolean"},
+                    "is_verified": {"type": "boolean"},
+                    "role": {"type": "keyword"},
+                    "hired_at": {"type": "date"},
+                    "experience": {"type": "integer", "index": False},
+                    "level": {"type": "integer"},
+                    "legal_entity_id": {"type": "integer"},
+                    "position_id": {"type": "integer", "index": False},
+                }
+            },
+        }
+        users_index_exists = await es.indices.exists(index=cls.users_index_name)
+        if not users_index_exists:
+            await es.indices.create(index=cls.users_index_name, body=mapping)
