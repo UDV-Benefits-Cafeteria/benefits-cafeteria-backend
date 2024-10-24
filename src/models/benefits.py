@@ -207,10 +207,14 @@ class BenefitRequest(Base):
     comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     benefit: Mapped[Optional["Benefit"]] = relationship(
-        "Benefit", back_populates="requests"
+        "Benefit",
+        back_populates="requests",
+        lazy="selectin",
     )
     user: Mapped[Optional["User"]] = relationship(
-        "User", back_populates="benefit_requests"
+        "User",
+        back_populates="benefit_requests",
+        lazy="selectin",
     )
 
 

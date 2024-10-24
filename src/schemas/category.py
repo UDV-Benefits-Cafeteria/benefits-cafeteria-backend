@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class CategoryBase(BaseModel):
-    name: Annotated[str, Field(max_length=255)]
+    name: Annotated[str, Field(min_length=2, max_length=255)]
 
 
 class CategoryCreate(CategoryBase):
@@ -12,7 +12,7 @@ class CategoryCreate(CategoryBase):
 
 
 class CategoryUpdate(CategoryBase):
-    name: Annotated[Optional[str], Field(max_length=255)] = None
+    name: Annotated[Optional[str], Field(min_length=2, max_length=255)] = None
 
 
 class CategoryRead(CategoryBase):

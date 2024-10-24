@@ -43,12 +43,10 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             "real_currency_cost": benefit.real_currency_cost
             if benefit.real_currency_cost
             else None,
-            "available_from": benefit.available_from.isoformat()
-            if benefit.available_from
+            "created_at": benefit.created_at.isoformat()
+            if benefit.created_at
             else None,
-            "available_by": benefit.available_by.isoformat()
-            if benefit.available_by
-            else None,
+            "category_id": benefit.category_id,
         }
 
         if benefit.image_primary and benefit.image_primary.image_url:
@@ -107,13 +105,17 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
                 }
             }
             for field, value in filters.items():
-                if field in ["coins_cost", "real_currency_cost", "min_level_cost"]:
+                if field in [
+                    "coins_cost",
+                    "real_currency_cost",
+                    "min_level_cost",
+                    "created_at",
+                ]:
                     bool_query["bool"]["filter"].append({"range": {field: value}})
-                elif field in ["available_from", "available_by"]:
-                    bool_query["bool"]["filter"].append({"range": {field: value}})
-                elif field in ["is_active", "adaptation_required"]:
-                    bool_query["bool"]["filter"].append({"term": {field: value}})
+                elif field == "category_id":
+                    bool_query["bool"]["filter"].append({"terms": {field: value}})
                 else:
+                    # Bool fields
                     bool_query["bool"]["filter"].append({"term": {field: value}})
             es_query["query"] = bool_query
         else:

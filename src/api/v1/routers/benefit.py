@@ -9,6 +9,7 @@ from src.schemas import benefit as schemas
 from src.schemas.benefit import BenefitSortFields, SortOrderField
 from src.services.exceptions import (
     EntityCreateError,
+    EntityDeletionError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
@@ -49,18 +50,13 @@ async def get_benefits(
         Optional[str],
         Query(description='Filter for min_level_cost, for example: "gte:1,lte:3"'),
     ] = None,
-    available_from: Annotated[
+    created_at: Annotated[
         Optional[str],
         Query(
-            description='Filter for available_from, for example: "gte:2024-01-01,lte:2024-12-31"'
+            description='Filter for created_at, for example: "gte:2024-01-01,lte:2024-12-31" '
         ),
     ] = None,
-    available_by: Annotated[
-        Optional[str],
-        Query(
-            description='Filter for available_by, for example: "gte:2024-01-01,lte:2024-12-31"'
-        ),
-    ] = None,
+    categories: Annotated[Optional[list[int]], Query()] = None,
     sort_by: Annotated[Optional[BenefitSortFields], Query()] = None,
     sort_order: Annotated[SortOrderField, Query()] = "asc",
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
@@ -68,8 +64,8 @@ async def get_benefits(
 ):
     try:
         filters: dict[str, Any] = {
-            key: value
-            for key, value in {
+            field: value
+            for field, value in {
                 "is_active": is_active,
                 "adaptation_required": adaptation_required,
                 "coins_cost": benefit_range_filter_parser(coins_cost, "coins_cost"),
@@ -79,12 +75,8 @@ async def get_benefits(
                 "min_level_cost": benefit_range_filter_parser(
                     min_level_cost, "min_level_cost"
                 ),
-                "available_from": benefit_range_filter_parser(
-                    available_from, "available_from"
-                ),
-                "available_by": benefit_range_filter_parser(
-                    available_by, "available_by"
-                ),
+                "created_at": benefit_range_filter_parser(created_at, "created_at"),
+                "category_id": categories,
             }.items()
             if value is not None
         }
@@ -230,6 +222,7 @@ async def update_benefit(
     "/{benefit_id}",
     responses={
         200: {"description": True},
+        400: {"description": "Failed to delete benefit"},
         404: {"description": "Benefit not found"},
     },
 )
@@ -254,6 +247,10 @@ async def delete_benefit(benefit_id: int, service: BenefitsServiceDependency):
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
+        )
+    except EntityDeletionError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete benefit"
         )
 
 

@@ -6,7 +6,9 @@ from starlette import status
 from src.config import get_settings
 from src.schemas.user import UserRead, UserRole
 from src.services.auth import AuthService
+from src.services.benefit_requests import BenefitRequestsService
 from src.services.benefits import BenefitsService
+from src.services.categories import CategoriesService
 from src.services.legal_entities import LegalEntitiesService
 from src.services.positions import PositionsService
 from src.services.sessions import SessionsService
@@ -18,6 +20,8 @@ BenefitsServiceDependency = Annotated[BenefitsService, Depends()]
 SessionsServiceDependency = Annotated[SessionsService, Depends()]
 PositionsServiceDependency = Annotated[PositionsService, Depends()]
 LegalEntitiesServiceDependency = Annotated[LegalEntitiesService, Depends()]
+BenefitRequestsServiceDependency = Annotated[BenefitRequestsService, Depends()]
+CategoriesServiceDependency = Annotated[CategoriesService, Depends()]
 
 settings = get_settings()
 
