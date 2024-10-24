@@ -20,7 +20,8 @@ def get_application() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        await SearchService().create_index()
+        await SearchService().create_benefits_index()
+        await SearchService().create_users_index()
         yield
 
     if not settings.DEBUG:

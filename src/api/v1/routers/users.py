@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Any, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 import src.schemas.user as schemas
 from src.api.v1.dependencies import (
@@ -10,14 +10,86 @@ from src.api.v1.dependencies import (
     get_active_user,
     get_hr_user,
 )
+from src.schemas.benefit import SortOrderField
 from src.services.exceptions import (
     EntityCreateError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
 )
+from src.utils.filter_parsers import range_filter_parser
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@router.get(
+    "/",
+    response_model=list[schemas.UserRead],
+    responses={
+        200: {"description": "Users retrieved successfully"},
+        400: {"description": "Failed to retrieve users"},
+    },
+)
+async def get_users(
+    service: UsersServiceDependency,
+    query: Annotated[
+        Optional[str],
+        Query(description="Search query for fullname"),
+    ] = None,
+    is_active: Annotated[Optional[bool], Query()] = None,
+    is_adapted: Annotated[Optional[bool], Query()] = None,
+    is_verified: Annotated[Optional[bool], Query()] = None,
+    role: Annotated[Optional[schemas.UserRole], Query()] = None,
+    hired_at: Annotated[
+        Optional[str],
+        Query(
+            description='Filter for hired_at date range, e.g., "gte:2022-01-01,lte:2022-12-31"'
+        ),
+    ] = None,
+    legal_entity_id: Annotated[Optional[int], Query()] = None,
+    sort_by: Annotated[
+        Optional[schemas.UserSortFields],
+        Query(
+            description="Sort by 'hired_at', 'coins' or 'fullname'",
+        ),
+    ] = None,
+    sort_order: Annotated[SortOrderField, Query()] = SortOrderField.ASCENDING,
+    limit: Annotated[int, Query(ge=1, le=100)] = 10,
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
+    try:
+        filters: dict[str, Any] = {
+            field: value
+            for field, value in {
+                "is_active": is_active,
+                "is_adapted": is_adapted,
+                "is_verified": is_verified,
+                "role": role.value if role else None,
+                "hired_at": range_filter_parser(hired_at, "hired_at"),
+                "legal_entity_id": legal_entity_id,
+            }.items()
+            if value is not None
+        }
+
+        users = await service.search_users(
+            query=query,
+            filters=filters,
+            sort_by=sort_by.value if sort_by else None,
+            sort_order=sort_order.value,
+            limit=limit,
+            offset=offset,
+        )
+        return users
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except EntityReadError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to retrieve users: {str(e)}",
+        )
 
 
 @router.post(

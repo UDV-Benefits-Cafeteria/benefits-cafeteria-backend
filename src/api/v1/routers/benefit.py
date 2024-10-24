@@ -14,7 +14,7 @@ from src.services.exceptions import (
     EntityReadError,
     EntityUpdateError,
 )
-from src.utils.filter_parsers import benefit_range_filter_parser
+from src.utils.filter_parsers import range_filter_parser
 
 router = APIRouter(prefix="/benefits", tags=["Benefits"])
 
@@ -58,7 +58,7 @@ async def get_benefits(
     ] = None,
     categories: Annotated[Optional[list[int]], Query()] = None,
     sort_by: Annotated[Optional[BenefitSortFields], Query()] = None,
-    sort_order: Annotated[SortOrderField, Query()] = "asc",
+    sort_order: Annotated[SortOrderField, Query()] = SortOrderField.ASCENDING,
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
@@ -68,14 +68,12 @@ async def get_benefits(
             for field, value in {
                 "is_active": is_active,
                 "adaptation_required": adaptation_required,
-                "coins_cost": benefit_range_filter_parser(coins_cost, "coins_cost"),
-                "real_currency_cost": benefit_range_filter_parser(
+                "coins_cost": range_filter_parser(coins_cost, "coins_cost"),
+                "real_currency_cost": range_filter_parser(
                     real_currency_cost, "real_currency_cost"
                 ),
-                "min_level_cost": benefit_range_filter_parser(
-                    min_level_cost, "min_level_cost"
-                ),
-                "created_at": benefit_range_filter_parser(created_at, "created_at"),
+                "min_level_cost": range_filter_parser(min_level_cost, "min_level_cost"),
+                "created_at": range_filter_parser(created_at, "created_at"),
                 "category_id": categories,
             }.items()
             if value is not None
