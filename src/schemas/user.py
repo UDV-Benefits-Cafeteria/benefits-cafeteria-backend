@@ -257,3 +257,9 @@ class UserAuth(BaseModel):
     is_verified: bool
     password: Annotated[Optional[str], Field(min_length=8, max_length=255)] = None
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserResetForgetPassword(BaseModel):
+    secret_token: str
+    new_password: str
+    confirm_password: str
