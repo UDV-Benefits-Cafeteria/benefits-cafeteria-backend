@@ -7,6 +7,7 @@ from src.celery.tasks import background_send_mail
 from src.config import get_settings
 from src.repositories.users import UsersRepository
 from src.schemas.user import UserAuth, UserResetForgetPassword
+from src.services.exceptions import EntityNotFoundError, EntityReadError
 from src.utils.security import (
     create_reset_password_token,
     decode_reset_password_token,
@@ -37,11 +38,12 @@ class AuthService:
         elif user_id:
             user = await self.users_repo.read_by_id(user_id)
         else:
-            return None
+            raise EntityReadError(self.__repr__(), "", "No user_id or email provided")
 
-        if user:
+        if user is not None:
             return UserAuth.model_validate(user)
-        return None
+        else:
+            raise EntityNotFoundError(self.__repr__(), email if email else user_id)
 
     async def update_password(self, user_id: int, password: str) -> bool:
         """
