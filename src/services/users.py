@@ -1,4 +1,7 @@
 from typing import Any, Optional
+from uuid import uuid4
+
+from fastapi import UploadFile
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.email as email_schemas
@@ -259,3 +262,30 @@ class UsersService(
             f"Регистрация на сайте {settings.APP_TITLE}",
             "register.html",
         )
+
+    async def update_image(self, image: Optional[UploadFile], user_id: int):
+        if image:
+            image.filename = f"user/{user_id}/{uuid4()}_" + image.filename
+        try:
+            is_updated = await self.repo.update_by_id(user_id, {"image_url": image})
+            if not is_updated:
+                logger.warning(
+                    f"{self.read_schema.__name__} with ID {user_id} not found for update."
+                )
+                raise service_exceptions.EntityNotFoundError(
+                    self.read_schema.__name__, user_id
+                )
+            user = await self.repo.read_by_id(user_id)
+            await self.repo.index_user(user)
+
+            logger.info(
+                f"Successfully updated {self.read_schema.__name__} with ID: {user_id}"
+            )
+            return await self.read_by_id(user_id)
+        except repo_exceptions.EntityUpdateError as e:
+            logger.error(
+                f"Failed to update {self.read_schema.__name__} with ID {user_id}: {str(e)}"
+            )
+            raise service_exceptions.EntityUpdateError(
+                self.read_schema.__name__, e.read_param, str(e)
+            )

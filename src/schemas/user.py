@@ -202,7 +202,7 @@ class UserRead(UserBase):
     id: int
     position: Optional["PositionRead"] = None
     legal_entity: Optional["LegalEntityRead"] = None
-
+    image_url: Optional[str] = None
     position_id: Optional[int] = Field(None, exclude=True)
     legal_entity_id: Optional[int] = Field(None, exclude=True)
 

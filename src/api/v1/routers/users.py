@@ -337,3 +337,47 @@ async def bulk_create_users(
         await service.send_email_registration(user)
 
     return schemas.UserUploadResponse(created_users=created_users, errors=errors)
+
+
+@router.post(
+    "/{user_id}/image",
+    responses={
+        200: {"description": "Image successfully uploaded"},
+        400: {"description": "Failed to upload image"},
+    },
+)
+async def upload_image(
+    user_id: int, image: UploadFile, service: UsersServiceDependency
+):
+    try:
+        await service.update_image(image, user_id)
+    except EntityUpdateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to upload image",
+        )
+    except EntityNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+
+@router.delete(
+    "/{user_id}/image",
+    responses={
+        200: {"description": "Image successfully deleted"},
+        400: {"description": "Failed to delete image"},
+    },
+)
+async def delete_image(user_id: int, service: UsersServiceDependency):
+    try:
+        await service.update_image(None, user_id)
+    except EntityUpdateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to delete image",
+        )
+    except EntityNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
