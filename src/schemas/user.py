@@ -158,12 +158,6 @@ class UserCreateExcel(UserBase):
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
-class UsersCreate(BaseModel):
-    """Model for creating multiple users."""
-
-    users: list[UserCreate]
-
-
 class UserUpdate(UserBase):
     """
     Model for updating user information.
