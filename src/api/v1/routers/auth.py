@@ -368,9 +368,10 @@ async def reset_password(
 
     try:
         await auth_service.update_password(user.id, rfp.new_password)
-        return {"is_success": True}
     except EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to update password",
         )
+
+    return {"is_success": True}

@@ -261,5 +261,5 @@ class UserAuth(BaseModel):
 
 class UserResetForgetPassword(BaseModel):
     secret_token: str
-    new_password: str
-    confirm_password: str
+    new_password: Annotated[str, Field(min_length=8, max_length=255)]
+    confirm_password: Annotated[str, Field(min_length=8, max_length=255)]

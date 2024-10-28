@@ -104,7 +104,7 @@ class AuthService:
     @staticmethod
     async def verify_reset_password_data(
         rfp: UserResetForgetPassword,
-    ) -> EmailStr | None:
+    ) -> Optional[EmailStr]:
         """
         Verify the reset password token and password confirmation.
 
