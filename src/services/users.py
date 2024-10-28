@@ -111,8 +111,9 @@ class UsersService(
                 self.read_schema.__name__, email, str(e)
             )
 
+    @staticmethod
     async def resolve_position_id(
-        self, position_name: Optional[str], positions_service: PositionsService
+        position_name: Optional[str], positions_service: PositionsService
     ) -> Optional[int]:
         if position_name:
             position = await positions_service.read_by_name(position_name)
@@ -121,8 +122,8 @@ class UsersService(
             return position.id
         return None
 
+    @staticmethod
     async def resolve_legal_entity_id(
-        self,
         legal_entity_name: Optional[str],
         legal_entities_service: LegalEntitiesService,
     ) -> Optional[int]:

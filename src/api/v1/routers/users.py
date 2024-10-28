@@ -85,10 +85,10 @@ async def get_users(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
-    except EntityReadError as e:
+    except EntityReadError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to retrieve users: {str(e)}",
+            detail="Failed to retrieve users",
         )
 
 
@@ -280,8 +280,10 @@ async def upload_users(
             positions_service=positions_service,
             legal_entities_service=legal_entities_service,
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Error while parsing users"
+        )
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -326,10 +328,10 @@ async def bulk_create_users(
 
             created_user = await service.create(user_data)
             created_users.append(created_user)
-        except EntityCreateError as e:
-            errors.append({"row": idx, "error": f"Creation Error: {str(e)}"})
-        except Exception as e:
-            errors.append({"row": idx, "error": f"Unexpected Error: {str(e)}"})
+        except EntityCreateError:
+            errors.append({"row": idx, "error": "Creation Error"})
+        except Exception:
+            errors.append({"row": idx, "error": "Unexpected Error"})
 
     for user in created_users:
         await service.send_email_registration(user)

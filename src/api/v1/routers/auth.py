@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, Response, status
+from pydantic import EmailStr
 
 from src.api.v1.dependencies import (
     AuthServiceDependency,
@@ -6,7 +7,13 @@ from src.api.v1.dependencies import (
     UsersServiceDependency,
 )
 from src.config import get_settings
-from src.schemas.user import UserLogin, UserRegister, UserVerified, UserVerify
+from src.schemas.user import (
+    UserLogin,
+    UserRegister,
+    UserResetForgetPassword,
+    UserVerified,
+    UserVerify,
+)
 from src.services.exceptions import (
     EntityCreateError,
     EntityDeletionError,
@@ -205,8 +212,8 @@ async def signin(
             value=session_id,
             max_age=settings.SESSION_EXPIRE_TIME,
             httponly=True,
-            samesite="lax",
-            secure=not settings.DEBUG,
+            samesite="none",
+            secure=True,
         )
 
         response.set_cookie(
@@ -215,7 +222,7 @@ async def signin(
             max_age=settings.CSRF_EXPIRE_TIME,
             httponly=False,  # Accessible by JavaScript
             samesite="lax",
-            secure=not settings.DEBUG,
+            secure=True,
         )
 
         return {"is_success": True}
@@ -278,4 +285,93 @@ async def logout(
     response.delete_cookie(settings.SESSION_COOKIE_NAME)
     # Remove the CSRF token cookie from the response
     response.delete_cookie(settings.CSRF_COOKIE_NAME)
+    return {"is_success": True}
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    auth_service: AuthServiceDependency,
+    user_service: UsersServiceDependency,
+    email: EmailStr,
+):
+    """
+    Initiate the password reset process by sending a password reset email.
+
+    - **email**: The email address associated with the user account.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If there is an error retrieving the user.
+        - 404: If no user is found with the specified email.
+
+    Returns:
+    - **dict**: Contains a key `is_success` set to `True` if the email was sent.
+    """
+    try:
+        await user_service.read_by_email(email)
+    except EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to retrieve user",
+        )
+    except EntityNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    await auth_service.send_forget_password_email(email)
+
+    return {"is_success": True}
+
+
+@router.post("/reset-password")
+async def reset_password(
+    auth_service: AuthServiceDependency,
+    user_service: UsersServiceDependency,
+    rfp: UserResetForgetPassword,
+):
+    """
+    Reset the user's password using a token.
+
+    - **rfp**: Contains the token and the new password information.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If the token is invalid or the passwords do not match.
+        - 400: If there is an error retrieving the user.
+        - 404: If no user is found with the specified email.
+        - 400: If there is an error updating the password.
+
+    Returns:
+    - **dict**: Contains a key `is_success` set to `True` if the password was updated.
+    """
+    email = await auth_service.verify_reset_password_data(rfp)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token invalid or passwords not equal",
+        )
+
+    try:
+        user = await user_service.read_by_email(email)
+    except EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to retrieve user",
+        )
+    except EntityNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    try:
+        await auth_service.update_password(user.id, rfp.new_password)
+    except EntityUpdateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to update password",
+        )
+
     return {"is_success": True}
