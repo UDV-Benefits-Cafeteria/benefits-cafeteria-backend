@@ -212,8 +212,8 @@ async def signin(
             value=session_id,
             max_age=settings.SESSION_EXPIRE_TIME,
             httponly=True,
-            samesite="lax",
-            secure=not settings.DEBUG,
+            samesite="none",
+            secure=True,
         )
 
         response.set_cookie(
@@ -222,7 +222,7 @@ async def signin(
             max_age=settings.CSRF_EXPIRE_TIME,
             httponly=False,  # Accessible by JavaScript
             samesite="lax",
-            secure=not settings.DEBUG,
+            secure=True,
         )
 
         return {"is_success": True}

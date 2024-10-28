@@ -43,6 +43,14 @@ def get_application() -> FastAPI:
     sessions_service = SessionsService()
 
     application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.ALLOW_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    application.add_middleware(
         SessionMiddleware,
         sessions_service=sessions_service,
         session_expire_time=settings.SESSION_EXPIRE_TIME,
@@ -51,14 +59,6 @@ def get_application() -> FastAPI:
 
     # Not adding middleware in dev mode and on tests
     if not settings.DEBUG:
-        application.add_middleware(
-            CORSMiddleware,
-            allow_origins=settings.ALLOW_ORIGINS,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
-
         application.add_middleware(
             CSRFMiddleware,
             sessions_service=sessions_service,
