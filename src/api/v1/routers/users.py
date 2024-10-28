@@ -341,16 +341,35 @@ async def bulk_create_users(
 
 @router.post(
     "/{user_id}/image",
+    response_model=schemas.UserRead,
     responses={
         200: {"description": "Image successfully uploaded"},
         400: {"description": "Failed to upload image"},
+        404: {"description": "User not found"},
     },
 )
 async def upload_image(
     user_id: int, image: UploadFile, service: UsersServiceDependency
 ):
+    """
+    Upload an image for a specific user.
+
+    Args:
+    - **user_id (int)**: The ID of the user to upload the image for.
+    - **image (UploadFile)**: The image file to upload.
+    - **service (UsersServiceDependency)**: The service handling the logic.
+
+    Returns:
+    - **User**: Updated user data after image upload.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If there is an error uploading the image.
+        - 404: If the user is not found.
+    """
     try:
-        await service.update_image(image, user_id)
+        updated_user = await service.update_image(image, user_id)
+        return updated_user
     except EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -364,14 +383,32 @@ async def upload_image(
 
 @router.delete(
     "/{user_id}/image",
+    response_model=schemas.UserRead,
     responses={
         200: {"description": "Image successfully deleted"},
         400: {"description": "Failed to delete image"},
+        404: {"description": "User not found"},
     },
 )
 async def delete_image(user_id: int, service: UsersServiceDependency):
+    """
+    Delete the image of a specific user.
+
+    Args:
+    - **user_id (int)**: The ID of the user whose image will be deleted.
+    - **service (UsersServiceDependency)**: The service handling the logic.
+
+    Returns:
+    - **User**: Updated user data after image deletion.
+
+    Raises:
+    - **HTTPException**:
+        - 400: If there is an error deleting the image.
+        - 404: If the user is not found.
+    """
     try:
-        await service.update_image(None, user_id)
+        updated_user = await service.update_image(None, user_id)
+        return updated_user
     except EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

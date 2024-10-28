@@ -264,6 +264,27 @@ class UsersService(
         )
 
     async def update_image(self, image: Optional[UploadFile], user_id: int):
+        """
+        Updates the user's profile image by uploading a new image file, updating the image URL
+        in the database, and re-indexing the user data if the update is successful.
+
+        Args:
+           image (Optional[UploadFile]): The new image file to be uploaded. If provided,
+               the filename is modified to include the user's unique ID and a UUID prefix.
+           user_id (int): The ID of the user whose image is being updated.
+
+        Returns:
+           The updated user data after successfully updating the image URL in the database.
+
+        Raises:
+           EntityNotFoundError: If the user with the given ID is not found in the database.
+           EntityUpdateError: If there is an error while updating the image URL in the database.
+
+        Notes:
+           - If the image is not provided, sets image_url to null.
+           - Logs warnings if the user is not found and errors if the update operation fails.
+           - Calls the `index_user` method to update the search index with the modified user data.
+        """
         if image:
             image.filename = f"user/{user_id}/{uuid4()}_" + image.filename
         try:
