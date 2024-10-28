@@ -339,7 +339,7 @@ async def bulk_create_users(
     return schemas.UserUploadResponse(created_users=created_users, errors=errors)
 
 
-@router.post(
+@router.patch(
     "/{user_id}/image",
     response_model=schemas.UserRead,
     responses={

@@ -263,7 +263,9 @@ class UsersService(
             "register.html",
         )
 
-    async def update_image(self, image: Optional[UploadFile], user_id: int):
+    async def update_image(
+        self, image: Optional[UploadFile], user_id: int
+    ) -> Optional[schemas.UserRead]:
         """
         Updates the user's profile image by uploading a new image file, updating the image URL
         in the database, and re-indexing the user data if the update is successful.
@@ -296,8 +298,6 @@ class UsersService(
                 raise service_exceptions.EntityNotFoundError(
                     self.read_schema.__name__, user_id
                 )
-            user = await self.repo.read_by_id(user_id)
-            await self.repo.index_user(user)
 
             logger.info(
                 f"Successfully updated {self.read_schema.__name__} with ID: {user_id}"
