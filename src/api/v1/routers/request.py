@@ -210,10 +210,10 @@ async def get_benefit_requests(
             limit=limit,
         )
         return benefit_requests
-    except EntityReadError as e:
+    except EntityReadError:
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to read benefit requests: {str(e)}",
+            detail="Failed to read benefit requests.",
         )
 
 
