@@ -349,7 +349,7 @@ async def bulk_create_users(
     },
 )
 async def upload_image(
-    user_id: int, image: UploadFile, service: UsersServiceDependency
+    user_id: int, service: UsersServiceDependency, image: UploadFile = File(...)
 ):
     """
     Upload an image for a specific user.

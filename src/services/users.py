@@ -1,5 +1,5 @@
 from typing import Any, Optional
-from uuid import uuid4
+import os
 
 from fastapi import UploadFile
 
@@ -288,7 +288,8 @@ class UsersService(
            - Calls the `index_user` method to update the search index with the modified user data.
         """
         if image:
-            image.filename = f"user/{user_id}/{uuid4()}_" + image.filename
+            _, extension = os.path.splitext(image.filename)
+            image.filename = f"userdata/{user_id}/user_image" + extension
         try:
             is_updated = await self.repo.update_by_id(user_id, {"image_url": image})
             if not is_updated:
