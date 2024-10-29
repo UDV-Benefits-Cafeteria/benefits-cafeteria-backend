@@ -31,6 +31,8 @@ class BenefitRequestUpdate(BaseModel):
     content: Optional[str] = None
     comment: Optional[str] = None
 
+    model_config = {"extra": "forbid"}
+
 
 class BenefitRequestRead(BenefitRequestBase):
     id: int

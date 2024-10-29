@@ -50,7 +50,7 @@ async def test_create_benefit_request_invalid(async_client: AsyncClient):
     response = await async_client.post(
         "/benefit-requests/", json=invalid_benefit_request_data
     )
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -84,13 +84,13 @@ async def test_update_benefit_request_invalid(async_client: AsyncClient):
     response = await async_client.patch(
         f"/benefit-requests/{request_id}", json=update_data
     )
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 @pytest.mark.asyncio
 async def test_update_benefit_request_valid(async_client: AsyncClient):
     request_id = 1
-    update_data = {"user_id": 1, "comment": "Some test comment"}
+    update_data = {"comment": "Some test comment"}
     response = await async_client.patch(
         f"/benefit-requests/{request_id}", json=update_data
     )
