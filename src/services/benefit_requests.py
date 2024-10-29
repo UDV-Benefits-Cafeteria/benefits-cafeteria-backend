@@ -5,6 +5,7 @@ import src.schemas.request as schemas
 import src.services.exceptions as service_exceptions
 from src.repositories.benefit_requests import BenefitRequestsRepository
 from src.repositories.benefits import BenefitsRepository
+from src.schemas.user import UserRole
 from src.services.base import BaseService
 
 
@@ -22,22 +23,38 @@ class BenefitRequestsService(
 
     async def read_all(
         self,
+        current_user: schemas.UserRead = None,
         status: Optional[schemas.BenefitStatus] = None,
-        sort_by: Optional[str] = None,
+        sort_by: Optional[schemas.BenefitRequestSortFields] = None,
         sort_order: str = "asc",
         page: int = 1,
         limit: int = 10,
     ) -> list[schemas.BenefitRequestRead]:
-        """
-        Read all benefit requests with optional filtering and sorting.
-        """
         try:
+            if current_user.role == UserRole.ADMIN.value:
+                legal_entity_id = None
+            elif current_user.role == UserRole.HR.value:
+                legal_entity_id = current_user.legal_entity_id
+                if legal_entity_id is None:
+                    raise service_exceptions.EntityReadError(
+                        "BenefitRequest",
+                        "legal_entity_id",
+                        "HR user has no legal_entity_id",
+                    )
+            else:
+                raise service_exceptions.EntityReadError(
+                    "BenefitRequest",
+                    "role",
+                    "User does not have access to benefit requests",
+                )
+
             entities = await self.repo.read_all(
                 status=status,
                 sort_by=sort_by,
                 sort_order=sort_order,
                 page=page,
                 limit=limit,
+                legal_entity_id=legal_entity_id,
             )
             validated_entities = [self.read_schema.model_validate(e) for e in entities]
 

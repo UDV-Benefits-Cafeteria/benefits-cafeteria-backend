@@ -18,10 +18,16 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
         sort_order: str = "asc",
         page: int = 1,
         limit: int = 10,
+        legal_entity_id: Optional[int] = None,
     ) -> list[BenefitRequest]:
         async with async_session_factory() as session:
             try:
                 query = select(self.model)
+
+                if legal_entity_id is not None:
+                    query = query.join(self.model.user).where(
+                        self.model.user.has(legal_entity_id=legal_entity_id)
+                    )
 
                 if status:
                     query = query.where(self.model.status == status)

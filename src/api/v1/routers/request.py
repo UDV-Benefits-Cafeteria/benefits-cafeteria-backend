@@ -3,10 +3,15 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.params import Query
 
-from src.api.v1.dependencies import BenefitRequestsServiceDependency, get_active_user
+from src.api.v1.dependencies import (
+    BenefitRequestsServiceDependency,
+    get_active_user,
+    get_hr_user,
+)
 from src.schemas import request as schemas
 from src.schemas.benefit import SortOrderField
 from src.schemas.request import BenefitRequestSortFields
+from src.schemas.user import UserRead
 from src.services.exceptions import (
     EntityCreateError,
     EntityDeletionError,
@@ -179,6 +184,7 @@ async def get_benefit_request(
 )
 async def get_benefit_requests(
     service: BenefitRequestsServiceDependency,
+    current_user: UserRead = Depends(get_hr_user),
     status: Optional[schemas.BenefitStatus] = Query(None),
     sort_by: Annotated[Optional[BenefitRequestSortFields], Query()] = None,
     sort_order: Annotated[SortOrderField, Query()] = SortOrderField.ASCENDING,
@@ -203,6 +209,7 @@ async def get_benefit_requests(
     """
     try:
         benefit_requests = await service.read_all(
+            current_user=current_user,
             status=status,
             sort_by=sort_by,
             sort_order=sort_order,
