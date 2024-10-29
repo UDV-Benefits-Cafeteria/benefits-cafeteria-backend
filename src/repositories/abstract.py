@@ -314,7 +314,7 @@ class SQLAlchemyRepository(AbstractRepository[T]):
                 return entities
             except Exception as e:
                 logger.error(f"Error reading all {self.model.__name__} entities: {e}")
-                raise EntityReadError(self.model.__name__, str(e))
+                raise EntityReadError(self.model.__name__, "", str(e))
 
     async def update_by_id(self, entity_id: Union[int, str], data: dict) -> bool:
         """

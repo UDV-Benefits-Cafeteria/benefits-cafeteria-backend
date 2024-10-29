@@ -158,12 +158,6 @@ class UserCreateExcel(UserBase):
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
-class UsersCreate(BaseModel):
-    """Model for creating multiple users."""
-
-    users: list[UserCreate]
-
-
 class UserUpdate(UserBase):
     """
     Model for updating user information.
@@ -202,7 +196,7 @@ class UserRead(UserBase):
     id: int
     position: Optional["PositionRead"] = None
     legal_entity: Optional["LegalEntityRead"] = None
-
+    image_url: Optional[str] = None
     position_id: Optional[int] = Field(None, exclude=True)
     legal_entity_id: Optional[int] = Field(None, exclude=True)
 

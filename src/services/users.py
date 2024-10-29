@@ -1,4 +1,7 @@
+import os
 from typing import Any, Optional
+
+from fastapi import UploadFile
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.email as email_schemas
@@ -259,3 +262,52 @@ class UsersService(
             f"Регистрация на сайте {settings.APP_TITLE}",
             "register.html",
         )
+
+    async def update_image(
+        self, image: Optional[UploadFile], user_id: int
+    ) -> Optional[schemas.UserRead]:
+        """
+        Updates the user's profile image by uploading a new image file, updating the image URL
+        in the database, and re-indexing the user data if the update is successful.
+
+        Args:
+           image (Optional[UploadFile]): The new image file to be uploaded. If provided,
+               the filename is modified to include the user's unique ID and a UUID prefix.
+           user_id (int): The ID of the user whose image is being updated.
+
+        Returns:
+           The updated user data after successfully updating the image URL in the database.
+
+        Raises:
+           EntityNotFoundError: If the user with the given ID is not found in the database.
+           EntityUpdateError: If there is an error while updating the image URL in the database.
+
+        Notes:
+           - If the image is not provided, sets image_url to null.
+           - Logs warnings if the user is not found and errors if the update operation fails.
+           - Calls the `index_user` method to update the search index with the modified user data.
+        """
+        if image:
+            _, extension = os.path.splitext(image.filename)
+            image.filename = f"userdata/{user_id}/user_image" + extension
+        try:
+            is_updated = await self.repo.update_by_id(user_id, {"image_url": image})
+            if not is_updated:
+                logger.warning(
+                    f"{self.read_schema.__name__} with ID {user_id} not found for update."
+                )
+                raise service_exceptions.EntityNotFoundError(
+                    self.read_schema.__name__, user_id
+                )
+
+            logger.info(
+                f"Successfully updated {self.read_schema.__name__} with ID: {user_id}"
+            )
+            return await self.read_by_id(user_id)
+        except repo_exceptions.EntityUpdateError as e:
+            logger.error(
+                f"Failed to update {self.read_schema.__name__} with ID {user_id}: {str(e)}"
+            )
+            raise service_exceptions.EntityUpdateError(
+                self.read_schema.__name__, e.read_param, str(e)
+            )

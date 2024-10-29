@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional
 
 from fastapi import UploadFile
@@ -57,6 +58,9 @@ class BenefitsService(
         - service_exceptions.EntityCreateError: If an error occurs while creating one of the images in the repository.
         """
         for image_data in images:
+            image_data.filename = (
+                f"benefit/{benefit_id}/{uuid.uuid4()}_" + image_data.filename
+            )
             image = {
                 "benefit_id": benefit_id,
                 "image_url": image_data,

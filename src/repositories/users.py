@@ -51,6 +51,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
             "level": user.level,
             "legal_entity_id": user.legal_entity_id,
             "position_id": user.position_id,
+            "image_url": user.image_url,
         }
 
         try:

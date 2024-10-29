@@ -8,6 +8,7 @@ from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base
+from src.models.custom_types import FileType
 
 if TYPE_CHECKING:
     from src.models import (
@@ -103,6 +104,7 @@ class User(Base):
     legal_entity_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("legal_entities.id", ondelete="SET NULL"), nullable=True
     )
+    image_url: Mapped[FileType] = mapped_column(FileType(), nullable=True)
 
     legal_entity: Mapped[Optional["LegalEntity"]] = relationship(
         "LegalEntity",

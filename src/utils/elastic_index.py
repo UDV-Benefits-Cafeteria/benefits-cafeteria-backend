@@ -100,9 +100,10 @@ class SearchService:
                     "role": {"type": "keyword"},
                     "hired_at": {"type": "date"},
                     "experience": {"type": "integer", "index": False},
-                    "level": {"type": "integer"},
+                    "level": {"type": "integer", "index": False},
                     "legal_entity_id": {"type": "integer"},
                     "position_id": {"type": "integer", "index": False},
+                    "image_url": {"type": "keyword", "index": False},
                 }
             },
         }

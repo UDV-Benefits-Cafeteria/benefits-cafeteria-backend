@@ -29,14 +29,6 @@ class BenefitImageBase(BaseModel):
     description: Optional[str] = None
 
 
-class BenefitImageCreate(BenefitImageBase):
-    pass
-
-
-class BenefitImageUpdate(BenefitImageBase):
-    image_url: Optional[str] = None
-
-
 class BenefitImageRead(BenefitImageBase):
     id: int
     benefit_id: int
