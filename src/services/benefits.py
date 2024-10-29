@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional
+from typing import Optional, Union
 
 from fastapi import UploadFile
 
@@ -9,6 +9,7 @@ import src.services.exceptions as service_exceptions
 from src.config import logger
 from src.repositories.benefit_images import BenefitImagesRepository
 from src.repositories.benefits import BenefitsRepository
+from src.schemas.user import UserRead, UserRole
 from src.services.base import BaseService
 
 
@@ -22,13 +23,14 @@ class BenefitsService(
 
     async def search_benefits(
         self,
-        query: str,
+        current_user: UserRead,
+        query: Optional[str],
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
         sort_order: str = "asc",
         limit: int = 10,
         offset: int = 0,
-    ) -> list[schemas.BenefitReadShort]:
+    ) -> list[Union[schemas.BenefitReadShortPublic, schemas.BenefitReadShortPrivate]]:
         try:
             search_results = await self.repo.search_benefits(
                 query=query,
@@ -38,11 +40,15 @@ class BenefitsService(
                 limit=limit,
                 offset=offset,
             )
-            benefits = [
-                schemas.BenefitReadShort.model_validate(data) for data in search_results
-            ]
+            benefits = []
+            for data in search_results:
+                if current_user.role in [UserRole.HR.value, UserRole.ADMIN.value]:
+                    benefit = schemas.BenefitReadShortPrivate.model_validate(data)
+                else:
+                    benefit = schemas.BenefitReadShortPublic.model_validate(data)
+                benefits.append(benefit)
             return benefits
-        except service_exceptions.EntityReadError as e:
+        except repo_exceptions.EntityReadError as e:
             logger.error(f"Error searching benefits: {e}")
             raise service_exceptions.EntityReadError("Benefit", "", str(e))
 

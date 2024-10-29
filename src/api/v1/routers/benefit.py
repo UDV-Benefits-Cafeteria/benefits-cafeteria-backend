@@ -1,12 +1,13 @@
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any, Optional, Union
 
-from fastapi import APIRouter, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
-from src.api.v1.dependencies import BenefitsServiceDependency
+from src.api.v1.dependencies import BenefitsServiceDependency, get_active_user
 from src.config import get_settings
 from src.repositories.exceptions import EntityDeleteError
 from src.schemas import benefit as schemas
 from src.schemas.benefit import BenefitSortFields, SortOrderField
+from src.schemas.user import UserRead
 from src.services.exceptions import (
     EntityCreateError,
     EntityDeletionError,
@@ -23,13 +24,16 @@ settings = get_settings()
 
 @router.get(
     "/",
-    response_model=list[schemas.BenefitReadShort],
+    response_model=list[
+        Union[schemas.BenefitReadShortPublic, schemas.BenefitReadShortPrivate]
+    ],
     responses={
         200: {"description": "Benefits successfully retrieved"},
         400: {"description": "Failed to search benefits"},
     },
 )
 async def get_benefits(
+    current_user: Annotated[UserRead, Depends(get_active_user)],
     service: BenefitsServiceDependency,
     query: Annotated[
         Optional[str], Query(description="Search query for benefit name")
@@ -80,6 +84,7 @@ async def get_benefits(
         }
 
         benefits = await service.search_benefits(
+            current_user=current_user,
             query=query,
             filters=filters,
             sort_by=sort_by,

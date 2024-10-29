@@ -69,13 +69,21 @@ class BenefitUpdate(BenefitBase):
     is_active: Optional[bool] = None
 
 
-class BenefitReadShort(BaseModel):
+class BenefitReadShortPublic(BaseModel):
     id: int
-    name: str
-    coins_cost: int
-    min_level_cost: int
-    amount: Optional[int]
+    name: Annotated[str, Field(min_length=2, max_length=100)]
+    coins_cost: Annotated[int, Field(ge=0)]
+    min_level_cost: Annotated[int, Field(ge=0)]
+    amount: Annotated[Optional[int], Field(ge=0)] = None
     primary_image_url: Optional[str]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BenefitReadShortPrivate(BenefitReadShortPublic):
+    real_currency_cost: Annotated[
+        Optional[Decimal], Field(ge=0, decimal_places=2, max_digits=10)
+    ] = None
 
     model_config = ConfigDict(from_attributes=True)
 

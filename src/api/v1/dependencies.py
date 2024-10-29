@@ -14,14 +14,14 @@ from src.services.positions import PositionsService
 from src.services.sessions import SessionsService
 from src.services.users import UsersService
 
-UsersServiceDependency = Annotated[UsersService, Depends()]
 AuthServiceDependency = Annotated[AuthService, Depends()]
+UsersServiceDependency = Annotated[UsersService, Depends()]
 BenefitsServiceDependency = Annotated[BenefitsService, Depends()]
 SessionsServiceDependency = Annotated[SessionsService, Depends()]
 PositionsServiceDependency = Annotated[PositionsService, Depends()]
+CategoriesServiceDependency = Annotated[CategoriesService, Depends()]
 LegalEntitiesServiceDependency = Annotated[LegalEntitiesService, Depends()]
 BenefitRequestsServiceDependency = Annotated[BenefitRequestsService, Depends()]
-CategoriesServiceDependency = Annotated[CategoriesService, Depends()]
 
 settings = get_settings()
 
