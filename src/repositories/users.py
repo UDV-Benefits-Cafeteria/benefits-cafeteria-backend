@@ -33,7 +33,6 @@ class UsersRepository(SQLAlchemyRepository[User]):
         return success
 
     async def index_user(self, user: User):
-        print(user)
         user_data = {
             "id": user.id,
             "email": user.email,

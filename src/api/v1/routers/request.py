@@ -49,6 +49,14 @@ async def create_benefit_request(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create benefit request",
         )
+    except EntityNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
+        )
+    except EntityUpdateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Amount cannot be negative"
+        )
 
 
 @router.get(

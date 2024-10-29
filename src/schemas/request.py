@@ -26,8 +26,10 @@ class BenefitRequestCreate(BenefitRequestBase):
     user_id: int
 
 
-class BenefitRequestUpdate(BenefitRequestBase):
+class BenefitRequestUpdate(BaseModel):
     status: Optional[BenefitStatus] = None
+    content: Optional[str] = None
+    comment: Optional[str] = None
 
 
 class BenefitRequestRead(BenefitRequestBase):
