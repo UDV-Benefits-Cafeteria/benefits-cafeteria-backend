@@ -1,3 +1,4 @@
+import datetime
 from enum import Enum
 from typing import Optional
 
@@ -11,6 +12,10 @@ class BenefitStatus(str, Enum):
     PENDING = "pending"  # В ожидании
     APPROVED = "approved"  # Одобрен
     DECLINED = "declined"  # Отклонен
+
+
+class BenefitRequestSortFields(str, Enum):
+    CREATED_AT = "created_at"
 
 
 class BenefitRequestBase(BaseModel):
@@ -36,6 +41,7 @@ class BenefitRequestUpdate(BaseModel):
 
 class BenefitRequestRead(BenefitRequestBase):
     id: int
+    created_at: datetime.datetime
     benefit: Optional["BenefitRead"] = None
     user: Optional["UserRead"] = None
     benefit_id: Optional[int] = Field(None, exclude=True)

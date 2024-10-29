@@ -20,6 +20,33 @@ class BenefitRequestsService(
     read_schema = schemas.BenefitRequestRead
     update_schema = schemas.BenefitRequestUpdate
 
+    async def read_all(
+        self,
+        status: Optional[schemas.BenefitStatus] = None,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        page: int = 1,
+        limit: int = 10,
+    ) -> list[schemas.BenefitRequestRead]:
+        """
+        Read all benefit requests with optional filtering and sorting.
+        """
+        try:
+            entities = await self.repo.read_all(
+                status=status,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                page=page,
+                limit=limit,
+            )
+            validated_entities = [self.read_schema.model_validate(e) for e in entities]
+
+            return validated_entities
+        except repo_exceptions.EntityReadError as e:
+            raise service_exceptions.EntityReadError(
+                self.read_schema.__name__, e.read_param, str(e)
+            )
+
     async def create(
         self, create_schema: schemas.BenefitRequestCreate
     ) -> schemas.BenefitRequestRead:
