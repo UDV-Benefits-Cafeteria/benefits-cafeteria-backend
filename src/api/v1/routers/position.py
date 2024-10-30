@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.params import Query
 
-from src.api.v1.dependencies import PositionsServiceDependency
+from src.api.v1.dependencies import (
+    PositionsServiceDependency,
+    get_active_user,
+    get_hr_user,
+)
 from src.schemas import position as schemas
 from src.services.exceptions import (
     EntityCreateError,
@@ -16,6 +20,7 @@ router = APIRouter(prefix="/positions", tags=["Positions"])
 
 @router.get(
     "/{position_id}",
+    dependencies=[Depends(get_active_user)],
     response_model=schemas.PositionRead,
     responses={
         200: {"description": "Position retrieved successfully"},
@@ -52,6 +57,7 @@ async def get_position(position_id: int, service: PositionsServiceDependency):
 
 @router.post(
     "/",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.PositionRead,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -85,6 +91,7 @@ async def create_position(
 
 @router.patch(
     "/{position_id}",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.PositionRead,
     responses={
         200: {"description": "Position updated successfully"},
@@ -126,6 +133,7 @@ async def update_position(
 
 @router.delete(
     "/{position_id}",
+    dependencies=[Depends(get_hr_user)],
     responses={
         200: {"description": "Position deleted successfully"},
         400: {"description": "Failed to delete position"},
@@ -160,6 +168,7 @@ async def delete_position(position_id: int, service: PositionsServiceDependency)
 
 @router.get(
     "/",
+    dependencies=[Depends(get_active_user)],
     response_model=list[schemas.PositionRead],
     responses={
         200: {"description": "List of positions retrieved successfully"},

@@ -16,6 +16,7 @@ from src.services.exceptions import (
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
+    PermissionDeniedError,
 )
 from src.utils.filter_parsers import range_filter_parser
 
@@ -31,6 +32,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
     },
 )
 async def get_users(
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
     service: UsersServiceDependency,
     query: Annotated[
         Optional[str],
@@ -71,6 +73,9 @@ async def get_users(
             if value is not None
         }
 
+        if current_user.role == schemas.UserRole.HR:
+            filters["legal_entity_id"] = current_user.legal_entity_id
+
         users = await service.search_users(
             query=query,
             filters=filters,
@@ -102,6 +107,7 @@ async def get_users(
     },
 )
 async def create_user(
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
     user: schemas.UserCreate,
     service: UsersServiceDependency,
 ):
@@ -118,7 +124,9 @@ async def create_user(
     - **schemas.UserRead**: The created user information.
     """
     try:
-        created_user = await service.create(user)
+        created_user = await service.create(
+            create_schema=user, current_user=current_user
+        )
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create user"
@@ -161,6 +169,7 @@ async def get_current_user(
     },
 )
 async def update_user(
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
     user_id: int,
     user_update: schemas.UserUpdate,
     service: UsersServiceDependency,
@@ -180,7 +189,9 @@ async def update_user(
     - **schemas.UserRead**: The updated user information.
     """
     try:
-        updated_user = await service.update_by_id(user_id, user_update)
+        updated_user = await service.update_by_id(
+            entity_id=user_id, update_schema=user_update, current_user=current_user
+        )
         return updated_user
     except EntityNotFoundError:
         raise HTTPException(
@@ -194,6 +205,7 @@ async def update_user(
 
 @router.get(
     "/{user_id}",
+    dependencies=[Depends(get_active_user)],
     response_model=schemas.UserRead,
     responses={
         200: {"description": "User retrieved successfully"},
@@ -233,6 +245,7 @@ async def get_user(
 
 @router.post(
     "/upload",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.UserValidationResponse,
     responses={
         200: {"description": "Users validated successfully"},
@@ -295,7 +308,6 @@ async def upload_users(
 
 @router.post(
     "/bulk_create",
-    dependencies=[Depends(get_hr_user)],
     response_model=schemas.UserUploadResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -304,6 +316,7 @@ async def upload_users(
     },
 )
 async def bulk_create_users(
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
     users_data: list[schemas.UserCreate],
     service: UsersServiceDependency,
 ):
@@ -326,10 +339,16 @@ async def bulk_create_users(
         try:
             user_data = schemas.UserCreate.model_validate(user_data)
 
-            created_user = await service.create(user_data)
+            created_user = await service.create(
+                create_schema=user_data, current_user=current_user
+            )
             created_users.append(created_user)
         except EntityCreateError:
             errors.append({"row": idx, "error": "Creation Error"})
+        except PermissionDeniedError:
+            errors.append(
+                {"row": idx, "error": "Permission Error. Check legal entity."}
+            )
         except Exception:
             errors.append({"row": idx, "error": "Unexpected Error"})
 
@@ -349,7 +368,10 @@ async def bulk_create_users(
     },
 )
 async def upload_image(
-    user_id: int, service: UsersServiceDependency, image: UploadFile = File(...)
+    current_user: Annotated[schemas.UserRead, Depends(get_active_user)],
+    user_id: int,
+    service: UsersServiceDependency,
+    image: UploadFile = File(...),
 ):
     """
     Upload an image for a specific user.
@@ -367,6 +389,12 @@ async def upload_image(
         - 400: If there is an error uploading the image.
         - 404: If the user is not found.
     """
+    if current_user.role not in [schemas.UserRole.ADMIN, schemas.UserRole.HR]:
+        if current_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot upload images to other users",
+            )
     try:
         updated_user = await service.update_image(image, user_id)
         return updated_user
@@ -383,6 +411,7 @@ async def upload_image(
 
 @router.delete(
     "/{user_id}/image",
+    dependencies=[Depends(get_active_user)],
     response_model=schemas.UserRead,
     responses={
         200: {"description": "Image successfully deleted"},
@@ -390,7 +419,11 @@ async def upload_image(
         404: {"description": "User not found"},
     },
 )
-async def delete_image(user_id: int, service: UsersServiceDependency):
+async def delete_image(
+    current_user: Annotated[schemas.UserRead, Depends(get_active_user)],
+    user_id: int,
+    service: UsersServiceDependency,
+):
     """
     Delete the image of a specific user.
 
@@ -406,6 +439,12 @@ async def delete_image(user_id: int, service: UsersServiceDependency):
         - 400: If there is an error deleting the image.
         - 404: If the user is not found.
     """
+    if current_user.role not in [schemas.UserRole.ADMIN, schemas.UserRole.HR]:
+        if current_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot delete images from other users",
+            )
     try:
         updated_user = await service.update_image(None, user_id)
         return updated_user

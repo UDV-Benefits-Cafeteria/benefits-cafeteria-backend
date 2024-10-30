@@ -69,28 +69,42 @@ class UsersService(
             logger.error(f"Error searching users: {e}")
             raise service_exceptions.EntityReadError("User", "", str(e))
 
+    async def create(
+        self,
+        create_schema: schemas.UserCreate,
+        current_user: schemas.UserRead = None,
+    ) -> schemas.UserRead:
+        if current_user.role == schemas.UserRole.HR:
+            if create_schema.legal_entity_id != current_user.legal_entity_id:
+                raise service_exceptions.PermissionDeniedError(
+                    "HR users cannot create users outside their own legal entity."
+                )
+
+            if create_schema.legal_entity_id is None:
+                create_schema.legal_entity_id = current_user.legal_entity_id
+
+        return await super().create(create_schema)
+
+    async def update_by_id(
+        self,
+        entity_id: int,
+        update_schema: schemas.UserUpdate,
+        current_user: schemas.UserRead = None,
+    ) -> schemas.UserRead:
+        try:
+            user_to_update = await self.read_by_id(entity_id)
+        except service_exceptions.EntityNotFoundError:
+            raise
+
+        if current_user.role == schemas.UserRole.HR:
+            if user_to_update.legal_entity_id != current_user.legal_entity_id:
+                raise service_exceptions.PermissionDeniedError(
+                    "HR users cannot update users outside their own legal entity."
+                )
+
+        return await super().update_by_id(entity_id, update_schema)
+
     async def read_by_email(self, email: str) -> Optional[schemas.UserRead]:
-        """
-        Retrieve a user by their email address.
-
-        This method attempts to find a user entity in the repository
-        using the provided email. If the user is found, the entity is
-        validated and returned. If not found, it raises a
-        `service_exceptions.EntityNotFoundError`.
-
-        Args:
-            email (str): The email address of the user to retrieve.
-
-        Returns:
-            Optional[schemas.UserRead]: The validated user entity if found,
-            None otherwise.
-
-        Raises:
-            service_exceptions.EntityNotFoundError: If no user is found
-            with the provided email.
-            service_exceptions.EntityReadError: If an error occurs
-            while reading from the repository.
-        """
         try:
             entity = await self.repo.read_by_email(email)
             if not entity:

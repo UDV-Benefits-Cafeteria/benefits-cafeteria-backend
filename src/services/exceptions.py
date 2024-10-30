@@ -49,3 +49,10 @@ class EntityDeletionError(ServiceError):
         super().__init__(
             f"Failed to delete {entity_name} with ID {entity_id}. Reason: {reason}"
         )
+
+
+class PermissionDeniedError(ServiceError):
+    """Raised when an action is forbidden for the user."""
+
+    def __init__(self, reason: str):
+        super().__init__(f"Forbidden. Reason: {reason}")

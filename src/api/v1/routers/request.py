@@ -11,7 +11,7 @@ from src.api.v1.dependencies import (
 from src.schemas import request as schemas
 from src.schemas.benefit import SortOrderField
 from src.schemas.request import BenefitRequestSortFields
-from src.schemas.user import UserRead
+from src.schemas.user import UserRead, UserRole
 from src.services.exceptions import (
     EntityCreateError,
     EntityDeletionError,
@@ -19,12 +19,14 @@ from src.services.exceptions import (
     EntityReadError,
     EntityUpdateError,
 )
+from src.services.users import UsersService
 
 router = APIRouter(prefix="/benefit-requests", tags=["Requests"])
 
 
 @router.post(
     "/",
+    dependencies=[Depends(get_active_user)],
     response_model=schemas.BenefitRequestCreate,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -75,7 +77,9 @@ async def create_benefit_request(
     },
 )
 async def get_benefit_requests_by_user(
-    user_id: int, service: BenefitRequestsServiceDependency
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
+    user_id: int,
+    service: BenefitRequestsServiceDependency,
 ):
     """
     Get all benefit requests for a specific user by user ID.
@@ -89,6 +93,20 @@ async def get_benefit_requests_by_user(
     Returns:
     - **list[BenefitRequestRead]**: The list of benefit requests for the user.
     """
+    try:
+        user = await UsersService().read_by_id(user_id)
+    except EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    if current_user.role != UserRole.ADMIN.value:
+        if user.legal_entity_id != current_user.legal_entity_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied. Check legal entity.",
+            )
+
     try:
         benefit_requests = await service.read_by_user_id(user_id)
         return benefit_requests
@@ -145,7 +163,9 @@ async def get_benefit_requests_of_current_user(
     },
 )
 async def get_benefit_request(
-    request_id: int, service: BenefitRequestsServiceDependency
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
+    request_id: int,
+    service: BenefitRequestsServiceDependency,
 ):
     """
     Get a benefit request by ID.
@@ -162,7 +182,6 @@ async def get_benefit_request(
     """
     try:
         benefit_request = await service.read_by_id(request_id)
-        return benefit_request
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit request not found"
@@ -172,6 +191,21 @@ async def get_benefit_request(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read benefit request",
         )
+    if current_user.role != UserRole.ADMIN.value:
+        user = await UsersService().read_by_id(benefit_request.user_id)
+        if user.id != current_user.id:
+            if current_user.role != UserRole.HR.value:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Permission denied. Your role cannot get other users' requests.",
+                )
+            if user.legal_entity_id != current_user.legal_entity_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Permission denied. Check legal entity.",
+                )
+
+    return benefit_request
 
 
 @router.get(
@@ -226,6 +260,7 @@ async def get_benefit_requests(
 
 @router.patch(
     "/{request_id}",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.BenefitRequestUpdate,
     responses={
         200: {"description": "Benefit request updated successfully"},
@@ -270,6 +305,7 @@ async def update_benefit_request(
 
 @router.delete(
     "/{request_id}",
+    dependencies=[Depends(get_hr_user)],
     responses={
         200: {"description": "Benefit request deleted successfully"},
         400: {"description": "Failed to delete benefit request"},
