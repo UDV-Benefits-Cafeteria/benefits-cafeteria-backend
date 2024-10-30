@@ -1,10 +1,17 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.params import Query
 
-from src.api.v1.dependencies import BenefitRequestsServiceDependency, get_active_user
+from src.api.v1.dependencies import (
+    BenefitRequestsServiceDependency,
+    get_active_user,
+    get_hr_user,
+)
 from src.schemas import request as schemas
+from src.schemas.benefit import SortOrderField
+from src.schemas.request import BenefitRequestSortFields
+from src.schemas.user import UserRead
 from src.services.exceptions import (
     EntityCreateError,
     EntityDeletionError,
@@ -48,6 +55,14 @@ async def create_benefit_request(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create benefit request",
+        )
+    except EntityNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
+        )
+    except EntityUpdateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Amount cannot be negative"
         )
 
 
@@ -169,12 +184,19 @@ async def get_benefit_request(
 )
 async def get_benefit_requests(
     service: BenefitRequestsServiceDependency,
+    current_user: UserRead = Depends(get_hr_user),
+    status: Optional[schemas.BenefitStatus] = Query(None),
+    sort_by: Annotated[Optional[BenefitRequestSortFields], Query()] = None,
+    sort_order: Annotated[SortOrderField, Query()] = SortOrderField.ASCENDING,
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1),
 ):
     """
-    Get a list of all benefit requests.
+    Get a list of all benefit requests with optional filtering and sorting.
 
+    - **status**: Filter benefit requests by status.
+    - **sort_by**: Field to sort the benefit requests by.
+    - **sort_order**: Order of sorting ('asc' or 'desc').
     - **page**: The page number to retrieve (default is 1).
     - **limit**: The number of items per page (default is 10).
 
@@ -186,12 +208,19 @@ async def get_benefit_requests(
     - **list[BenefitRequestRead]**: The list of benefit requests.
     """
     try:
-        benefit_requests = await service.read_all(page, limit)
+        benefit_requests = await service.read_all(
+            current_user=current_user,
+            status=status,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            page=page,
+            limit=limit,
+        )
         return benefit_requests
     except EntityReadError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to read benefit requests",
+            status_code=400,
+            detail="Failed to read benefit requests.",
         )
 
 

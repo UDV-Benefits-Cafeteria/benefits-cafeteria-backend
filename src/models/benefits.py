@@ -197,8 +197,13 @@ class BenefitRequest(Base):
     user_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    status: Mapped["BenefitStatus"] = mapped_column(
-        SQLAlchemyEnum(BenefitStatus, native_enum=False, name="benefit_status_enum"),
+    status: Mapped[BenefitStatus] = mapped_column(
+        SQLAlchemyEnum(
+            BenefitStatus,
+            native_enum=False,
+            name="benefit_status_enum",
+            values_callable=lambda enum_class: [member.value for member in enum_class],
+        ),
         default=BenefitStatus.PENDING,
         index=True,
         nullable=False,
