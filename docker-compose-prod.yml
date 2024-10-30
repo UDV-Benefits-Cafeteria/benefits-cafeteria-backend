@@ -85,7 +85,7 @@ services:
       - "5555:5555"
 
   elasticsearch:
-    image: elasticsearch
+    image: elasticsearch:8.15.3
     volumes:
       - ./elastic_config.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
       - ./elastic_data:/usr/share/elasticsearch/data
