@@ -9,7 +9,6 @@ services:
       - "8000:8000"
     volumes:
       - .:/src
-    env_file: .env
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
@@ -26,7 +25,6 @@ services:
 
   db:
     image: postgres:16-alpine
-    env_file: .env
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
