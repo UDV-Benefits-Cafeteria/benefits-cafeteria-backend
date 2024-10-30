@@ -79,7 +79,7 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
     ) as client:
         yield client
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides = {}
 
 
 async def override_get_current_user():
