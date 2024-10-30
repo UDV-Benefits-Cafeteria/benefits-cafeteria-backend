@@ -63,7 +63,11 @@ async def create_benefit_request(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Amount cannot be negative"
         )
-    except [EntityReadError, EntityNotFoundError]:
+    except EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Benefit or user not found"
+        )
+    except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit or user not found"
         )
