@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED 1
 COPY ./poetry.lock /src/poetry.lock
 COPY ./pyproject.toml /src/pyproject.toml
 
-RUN apt update && apt install libmemcached-tools memcached -y
+RUN apk update && apk install libmemcached-tools memcached -y
 
 RUN pip install poetry
 RUN poetry install --with dev
