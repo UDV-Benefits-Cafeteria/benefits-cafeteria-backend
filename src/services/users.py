@@ -96,11 +96,17 @@ class UsersService(
         except service_exceptions.EntityNotFoundError:
             raise
 
-        if current_user.role == schemas.UserRole.HR:
-            if user_to_update.legal_entity_id != current_user.legal_entity_id:
-                raise service_exceptions.PermissionDeniedError(
-                    "HR users cannot update users outside their own legal entity."
-                )
+        if current_user is not None:
+            if current_user.role == schemas.UserRole.HR:
+                if user_to_update.legal_entity_id != current_user.legal_entity_id:
+                    raise service_exceptions.PermissionDeniedError(
+                        "HR users cannot update users outside their own legal entity."
+                    )
+            elif current_user.role == schemas.UserRole.EMPLOYEE:
+                if user_to_update.id != current_user.id:
+                    raise service_exceptions.PermissionDeniedError(
+                        "You can only change yourself"
+                    )
 
         return await super().update_by_id(entity_id, update_schema)
 

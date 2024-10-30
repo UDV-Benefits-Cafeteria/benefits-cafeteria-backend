@@ -32,6 +32,7 @@ router = APIRouter(prefix="/benefit-requests", tags=["Requests"])
     responses={
         201: {"description": "Benefit request created successfully"},
         400: {"description": "Failed to create benefit request"},
+        404: {"description": "Benefit or user not found"},
     },
 )
 async def create_benefit_request(
@@ -56,15 +57,15 @@ async def create_benefit_request(
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to create benefit request",
-        )
-    except EntityNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
+            detail="Failed to create benefit request. Check the benefit coins cost and minimal level required+",
         )
     except EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Amount cannot be negative"
+        )
+    except EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Benefit or user not found"
         )
 
 
@@ -301,11 +302,20 @@ async def update_benefit_request(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to update benefit request",
         )
+    except EntityCreateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to update benefit request. Check the benefit coins cost and minimal level required+",
+        )
+    except EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Benefit or user not found"
+        )
 
 
 @router.delete(
     "/{request_id}",
-    dependencies=[Depends(get_hr_user)],
+    dependencies=[Depends(get_active_user)],
     responses={
         200: {"description": "Benefit request deleted successfully"},
         400: {"description": "Failed to delete benefit request"},
