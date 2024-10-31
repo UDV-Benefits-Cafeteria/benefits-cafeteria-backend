@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime
+from datetime import date
 from enum import Enum
 from typing import Annotated, Optional, Self
 
@@ -67,7 +67,7 @@ class UserBase(BaseModel):
     position_id: Optional[int] = None
     legal_entity_id: Optional[int] = None
     role: UserRole
-    hired_at: date
+    hired_at: date = Field(..., le=date.today())
     is_active: bool = True
     is_verified: bool = False
     is_adapted: bool = False
@@ -87,15 +87,6 @@ class UserBase(BaseModel):
                     f"{info.field_name} contains characters that do not pass validation"
                 )
         return name
-
-    @field_validator("hired_at")
-    @classmethod
-    def check_hired_at(cls, hired_at: date) -> date:
-        hired_at_formatted = datetime.strptime(str(hired_at), "%Y-%m-%d")
-        today_formatted = datetime.strptime(str(date.today()), "%Y-%m-%d")
-        if today_formatted < hired_at_formatted:
-            raise ValueError("Invalid data in hired_at field")
-        return hired_at
 
 
 class UserRegister(BaseModel):
