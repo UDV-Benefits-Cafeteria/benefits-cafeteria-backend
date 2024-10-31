@@ -112,3 +112,78 @@ async def test_upload_users_invalid_file_type(async_client: AsyncClient):
         "/users/upload", files={"file": ("test.txt", b"some content", "text/plain")}
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.parametrize(
+    "user_data",
+    [
+        {
+            "email": "validuser1@example.com",
+            "firstname": "John",
+            "lastname": "Doe",
+            "role": "employee",
+            "coins": 0,
+            "hired_at": "2020-01-01",
+            "is_active": True,
+            "expected_status": status.HTTP_201_CREATED,
+        },
+        {
+            "email": "validuser2@example.com",
+            "firstname": "John123",
+            "lastname": "Doe",
+            "role": "hr",
+            "coins": 10,
+            "hired_at": "2030-01-01",
+            "is_active": False,
+            "expected_status": status.HTTP_422_UNPROCESSABLE_ENTITY,
+        },
+        {
+            "email": "validuser3@example.com",
+            "firstname": "John",
+            "lastname": "Doe",
+            "role": "admin",
+            "coins": -1,
+            "hired_at": "2020-01-01",
+            "is_active": False,
+            "expected_status": status.HTTP_422_UNPROCESSABLE_ENTITY,
+        },
+        {
+            "email": "invalidemail",
+            "firstname": "John",
+            "lastname": "Doe",
+            "role": "employee",
+            "coins": 10,
+            "hired_at": "2030-01-01",
+            "is_active": True,
+            "expected_status": status.HTTP_422_UNPROCESSABLE_ENTITY,
+        },
+        {
+            "email": "invalidemail",
+            "firstname": "John123",
+            "lastname": "Doe",
+            "role": "hr",
+            "coins": -1,
+            "hired_at": "2020-01-01",
+            "is_active": True,
+            "expected_status": status.HTTP_422_UNPROCESSABLE_ENTITY,
+        },
+        {
+            "email": "invalidemail",
+            "firstname": "John",
+            "lastname": "Doe",
+            "role": "admin",
+            "coins": 0,
+            "hired_at": "2030-01-01",
+            "is_active": False,
+            "expected_status": status.HTTP_422_UNPROCESSABLE_ENTITY,
+        },
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_user_pairwise(async_client: AsyncClient, user_data):
+    response = await async_client.post("/users/", json=user_data)
+    assert response.status_code == user_data["expected_status"]
+    if response.status_code == status.HTTP_201_CREATED:
+        created_user = response.json()
+        assert created_user["email"] == user_data["email"]
+        assert created_user["firstname"] == user_data["firstname"]
