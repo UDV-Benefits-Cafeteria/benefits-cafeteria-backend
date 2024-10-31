@@ -137,7 +137,7 @@ async def test_create_benefit_request_pairwise_1(async_client: AsyncClient):
     user_data = {
         "email": "user_test1@example.com",
         "firstname": "User",
-        "lastname": "Test1",
+        "lastname": "Test",
         "role": "employee",
         "coins": 10,
         "hired_at": "2023-01-01",
@@ -182,7 +182,7 @@ async def test_create_benefit_request_pairwise_2(async_client: AsyncClient):
     user_data = {
         "email": "user_test2@example.com",
         "firstname": "User",
-        "lastname": "Test2",
+        "lastname": "Test",
         "role": "employee",
         "coins": 5,
         "hired_at": "2023-10-01",
@@ -283,10 +283,10 @@ async def test_create_benefit_request_pairwise_5(async_client: AsyncClient):
     user_data = {
         "email": "user_test5@example.com",
         "firstname": "User",
-        "lastname": "Test5",
+        "lastname": "Test",
         "role": "employee",
         "coins": 20,
-        "hired_at": "2023-10-01",
+        "hired_at": "2022-01-01",
         "is_adapted": True,
     }
     user_response = await async_client.post("/users/", json=user_data)
@@ -318,7 +318,7 @@ async def test_create_benefit_request_pairwise_6(async_client: AsyncClient):
     user_data = {
         "email": "user_test6@example.com",
         "firstname": "User",
-        "lastname": "Test6",
+        "lastname": "Test",
         "role": "employee",
         "coins": 5,
         "hired_at": "2020-01-01",
