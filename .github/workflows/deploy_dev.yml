@@ -1,0 +1,43 @@
+name: Dev Deploy
+on:
+  push:
+    branches:
+      - dev
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: UDV-Benefits-Cafeteria/benefits-cafeteria-backend/.github/workflows/tests.yml@dev
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dev deploy cafeteria
+        uses: D3rHase/ssh-command-action@v0.2.2
+        with:
+          host: ${{secrets.DEV_HOST}}
+          user: "udv"
+          private_key: ${{secrets.DEV_PRIVATE_KEY}}
+          command: |
+            echo '--- START WORK ON REMOTE SERVER ---';
+            set -e;
+            
+            echo '--- CD ---';
+            cd /home/src/benefits-cafeteria-backend;
+            
+            echo '--- CHECKOUT ON BRANCH ---';
+            git checkout dev;
+            
+            echo '--- Upgrade repo ---';
+            git pull;
+            
+            echo '--- Turning off service ---';
+            docker compose -f docker-compose-prod.yml down;
+            
+            echo '--- Updating and turning on service ---';
+            docker compose -f docker-compose-prod.yml up -d --build;
+
+            echo '--- Success! ---';

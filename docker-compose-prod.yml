@@ -88,7 +88,7 @@ services:
     image: elasticsearch:8.15.3
     volumes:
       - ./elastic_config.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
-      - ./elastic_data:/usr/share/elasticsearch/data
+      - esdata:/usr/share/elasticsearch/data
     environment:
       - ES_JAVA_OPTS=-Xmx512m -Xms512m
       - ELASTIC_PASSWORD
@@ -101,3 +101,6 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+
+volumes:
+    esdata:

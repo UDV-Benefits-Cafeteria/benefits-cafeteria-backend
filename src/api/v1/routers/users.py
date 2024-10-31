@@ -131,7 +131,7 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create user"
         )
-    await service.send_email_registration(user)
+    # await service.send_email_registration(user)
     return created_user
 
 

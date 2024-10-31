@@ -2,13 +2,13 @@ from contextlib import asynccontextmanager
 
 import sentry_sdk
 from fastapi import FastAPI
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.cors import CORSMiddleware
 
 from src.api.v1 import router as api_v1_router
 from src.config import get_settings
-from src.middlewares.csrf_middleware import CSRFMiddleware
+
+# from src.middlewares.csrf_middleware import CSRFMiddleware
 from src.middlewares.server_error_middleware import CatchServerErrorMiddleware
 from src.middlewares.session_middleware import SessionMiddleware
 from src.services.sessions import SessionsService
@@ -59,15 +59,11 @@ def get_application() -> FastAPI:
 
     # Not adding middleware in dev mode and on tests
     if not settings.DEBUG:
-        application.add_middleware(
-            CSRFMiddleware,
-            sessions_service=sessions_service,
-            csrf_header_name="X-CSRF-Token",
-        )
-
-        application.add_middleware(
-            HTTPSRedirectMiddleware,
-        )
+        # application.add_middleware(
+        #     CSRFMiddleware,
+        #     sessions_service=sessions_service,
+        #     csrf_header_name="X-CSRF-Token",
+        # )
 
         application.add_middleware(
             TrustedHostMiddleware, allowed_hosts=settings.ALLOW_HOSTS
