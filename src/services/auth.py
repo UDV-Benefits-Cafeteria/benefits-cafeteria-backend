@@ -2,6 +2,7 @@ from typing import Optional
 
 from pydantic import EmailStr
 
+import src.repositories.exceptions as repo_exceptions
 import src.schemas.email as email_schemas
 from src.celery.tasks import background_send_mail
 from src.config import get_settings
@@ -33,17 +34,23 @@ class AuthService:
         Returns:
             Optional[UserAuth]: An instance of UserAuth if found, otherwise None.
         """
-        if email:
-            user = await self.users_repo.read_by_email(email)
-        elif user_id:
-            user = await self.users_repo.read_by_id(user_id)
-        else:
-            raise EntityReadError(self.__repr__(), "", "No user_id or email provided")
+        try:
+            if email:
+                user = await self.users_repo.read_by_email(email)
+            elif user_id:
+                user = await self.users_repo.read_by_id(user_id)
+            else:
+                raise EntityReadError(
+                    self.__repr__(), "", "No user_id or email provided"
+                )
 
-        if user is not None:
-            return UserAuth.model_validate(user)
-        else:
-            raise EntityNotFoundError(self.__repr__(), email if email else user_id)
+            if user is not None:
+                return UserAuth.model_validate(user)
+            else:
+                raise EntityNotFoundError(self.__repr__(), email if email else user_id)
+
+        except repo_exceptions.EntityReadError:
+            raise EntityReadError(self.__repr__(), email or user_id, "Cannot read user")
 
     async def update_password(self, user_id: int, password: str) -> bool:
         """
