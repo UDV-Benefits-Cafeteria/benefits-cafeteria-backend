@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.params import Query
 
-from src.api.v1.dependencies import CategoriesServiceDependency
+from src.api.v1.dependencies import (
+    CategoriesServiceDependency,
+    get_active_user,
+    get_hr_user,
+)
 from src.schemas import category as schemas
 from src.services.exceptions import (
     EntityCreateError,
@@ -16,6 +20,7 @@ router = APIRouter(prefix="/categories", tags=["Categories"])
 
 @router.get(
     "/{category_id}",
+    dependencies=[Depends(get_active_user)],
     response_model=schemas.CategoryRead,
     responses={
         200: {"description": "Category retrieved successfully"},
@@ -52,6 +57,7 @@ async def get_category(category_id: int, service: CategoriesServiceDependency):
 
 @router.post(
     "/",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.CategoryRead,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -85,6 +91,7 @@ async def create_category(
 
 @router.patch(
     "/{category_id}",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.CategoryRead,
     responses={
         200: {"description": "Category updated successfully"},
@@ -126,6 +133,7 @@ async def update_category(
 
 @router.delete(
     "/{category_id}",
+    dependencies=[Depends(get_hr_user)],
     responses={
         200: {"description": "Category deleted successfully"},
         400: {"description": "Failed to delete category"},
@@ -160,6 +168,7 @@ async def delete_category(category_id: int, service: CategoriesServiceDependency
 
 @router.get(
     "/",
+    dependencies=[Depends(get_active_user)],
     response_model=list[schemas.CategoryRead],
     responses={
         200: {"description": "List of categories retrieved successfully"},

@@ -4,9 +4,11 @@ import src.repositories.exceptions as repo_exceptions
 import src.schemas.request as schemas
 import src.services.exceptions as service_exceptions
 from src.repositories.benefit_requests import BenefitRequestsRepository
-from src.repositories.benefits import BenefitsRepository
-from src.schemas.user import UserRole
+from src.schemas.benefit import BenefitUpdate
+from src.schemas.user import UserRole, UserUpdate
 from src.services.base import BaseService
+from src.services.benefits import BenefitsService
+from src.services.users import UsersService
 
 
 class BenefitRequestsService(
@@ -71,10 +73,20 @@ class BenefitRequestsService(
         Create a new benefit request and decrease the amount of the benefit by 1.
         """
         try:
-            await self.change_benefit_amount(-1, create_schema.benefit_id)
+            benefits_service = BenefitsService()
+            users_service = UsersService()
+            await self.change_benefit_amount(
+                -1, create_schema.benefit_id, benefits_service
+            )
+            await self.change_coins(
+                create_schema.benefit_id,
+                create_schema.user_id,
+                True,
+                benefits_service,
+                users_service,
+            )
             created_request = await super().create(create_schema)
             return created_request
-
         except (
             repo_exceptions.EntityReadError,
             repo_exceptions.EntityUpdateError,
@@ -82,6 +94,34 @@ class BenefitRequestsService(
             raise service_exceptions.EntityCreateError(
                 self.create_schema.__name__, str(e)
             )
+
+    async def delete_by_id(self, entity_id: int) -> bool:
+        existing_request = await self.repo.read_by_id(entity_id)
+        if not existing_request:
+            raise service_exceptions.EntityNotFoundError(
+                self.read_schema.__name__, entity_id
+            )
+        try:
+            benefits_service = BenefitsService()
+            users_service = UsersService()
+
+            await self.change_benefit_amount(
+                1, existing_request.benefit_id, benefits_service
+            )
+            await self.change_coins(
+                existing_request.benefit_id,
+                existing_request.user_id,
+                False,
+                benefits_service,
+                users_service,
+            )
+        except Exception:
+            raise service_exceptions.EntityDeletionError(
+                "Benefit Request", entity_id, "Failed to delete request"
+            )
+
+        deleted_request = await super().delete_by_id(entity_id)
+        return deleted_request
 
     async def update_by_id(
         self, entity_id: int, update_schema: schemas.BenefitRequestUpdate
@@ -102,14 +142,30 @@ class BenefitRequestsService(
 
             benefit_id = existing_request.benefit_id
 
+            benefits_service = BenefitsService()
+            users_service = UsersService()
             if old_status.value != "declined" and new_status.value == "declined":
-                await self.change_benefit_amount(1, benefit_id)
+                await self.change_benefit_amount(1, benefit_id, benefits_service)
+                await self.change_coins(
+                    benefit_id,
+                    existing_request.user_id,
+                    False,
+                    benefits_service,
+                    users_service,
+                )
 
             elif old_status.value == "declined" and new_status.value in [
                 "approved",
                 "pending",
             ]:
-                await self.change_benefit_amount(-1, benefit_id)
+                await self.change_benefit_amount(-1, benefit_id, benefits_service)
+                await self.change_coins(
+                    benefit_id,
+                    existing_request.user_id,
+                    True,
+                    benefits_service,
+                    users_service,
+                )
 
             updated_request = await super().update_by_id(entity_id, update_schema)
 
@@ -132,16 +188,51 @@ class BenefitRequestsService(
         return None
 
     @staticmethod
-    async def change_benefit_amount(amount: int, benefit_id: int) -> None:
-        benefits_repo = BenefitsRepository()
-        benefit = await benefits_repo.read_by_id(benefit_id)
-        if not benefit:
-            raise service_exceptions.EntityNotFoundError("Benefit", benefit_id)
+    async def change_benefit_amount(
+        amount: int, benefit_id: int, benefits_service: BenefitsService
+    ) -> None:
+        try:
+            benefit = await benefits_service.read_by_id(benefit_id)
+        except Exception:
+            raise
 
         if benefit.amount is not None:
             if benefit.amount == 0 and amount < 0:
                 raise service_exceptions.EntityUpdateError(
                     "Benefit Request", benefit_id, "Amount cannot be negative"
                 )
-            update_data = {"amount": benefit.amount + amount}
-            await benefits_repo.update_by_id(benefit.id, update_data)
+            update_data = BenefitUpdate.model_validate(
+                {"amount": benefit.amount + amount}
+            )
+            await benefits_service.update_by_id(benefit.id, update_data)
+
+    @staticmethod
+    async def change_coins(
+        benefit_id: int,
+        user_id: int,
+        remove: bool,
+        benefits_service: BenefitsService,
+        users_service: UsersService,
+    ) -> None:
+        try:
+            benefit = await benefits_service.read_by_id(benefit_id)
+        except Exception:
+            raise
+
+        try:
+            user = await users_service.read_by_id(user_id)
+        except Exception:
+            raise
+        if remove:
+            if user.coins < benefit.coins_cost:
+                raise service_exceptions.EntityCreateError(
+                    "Benefit Request", "User does not have enough coins"
+                )
+            if user.level < benefit.min_level_cost:
+                raise service_exceptions.EntityCreateError(
+                    "Benefit Request", "User does not have required level"
+                )
+
+        coins_cost = benefit.coins_cost if remove else -benefit.coins_cost
+        update_data = UserUpdate.model_validate({"coins": user.coins - coins_cost})
+        await users_service.update_by_id(user_id, update_data)

@@ -1,12 +1,17 @@
 import asyncio
+from datetime import date
 from typing import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from src.db.db import engine
+from src.api.v1.dependencies import get_current_user
+from src.db.db import async_session_factory, engine
 from src.main import app
+from src.models import User
 from src.models.base import Base
+from src.models.users import UserRole
+from src.schemas.user import UserRead
 
 pytest_plugins = ["pytest_asyncio"]
 
@@ -28,6 +33,25 @@ async def setup_db():
     """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with async_session_factory() as session:
+        user = User(
+            id=199,
+            email="admin@example.com",
+            firstname="Admin",
+            lastname="User",
+            middlename=None,
+            role=UserRole.ADMIN,
+            is_active=True,
+            is_verified=True,
+            is_adapted=True,
+            hired_at=date.today(),
+            coins=0,
+            legal_entity_id=None,
+            position_id=None,
+            image_url=None,
+            password="qwertyuiop123",
+        )
+        session.add(user)
     await asyncio.sleep(0)  # Ensure async operations complete
     yield
     async with engine.begin() as conn:
@@ -47,8 +71,31 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
         AsyncClient: An instance of AsyncClient for making requests
         to the FastAPI application during tests.
     """
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
     transport = ASGITransport(app)
     async with AsyncClient(
         transport=transport, base_url="http://test/api/v1"
     ) as client:
         yield client
+
+    app.dependency_overrides = {}
+
+
+async def override_get_current_user():
+    return UserRead(
+        id=199,
+        email="admin@example.com",
+        firstname="Admin",
+        lastname="User",
+        middlename=None,
+        role=UserRole.ADMIN,
+        is_active=True,
+        is_verified=True,
+        is_adapted=True,
+        hired_at=date.today(),
+        coins=0,
+        legal_entity_id=None,
+        position_id=None,
+        image_url=None,
+    )

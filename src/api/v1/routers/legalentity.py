@@ -1,7 +1,11 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.params import Query
 
-from src.api.v1.dependencies import LegalEntitiesServiceDependency
+from src.api.v1.dependencies import (
+    LegalEntitiesServiceDependency,
+    get_active_user,
+    get_hr_user,
+)
 from src.schemas import legalentity as schemas
 from src.services.exceptions import (
     EntityCreateError,
@@ -16,6 +20,7 @@ router = APIRouter(prefix="/legal-entities", tags=["Legal Entities"])
 
 @router.get(
     "/{entity_id}",
+    dependencies=[Depends(get_active_user)],
     response_model=schemas.LegalEntityRead,
     responses={
         200: {"description": "Legal entity retrieved successfully"},
@@ -53,6 +58,7 @@ async def get_legal_entity(entity_id: int, service: LegalEntitiesServiceDependen
 
 @router.post(
     "/",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.LegalEntityRead,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -87,6 +93,7 @@ async def create_legal_entity(
 
 @router.patch(
     "/{entity_id}",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.LegalEntityRead,
     responses={
         200: {"description": "Legal entity updated successfully"},
@@ -131,6 +138,7 @@ async def update_legal_entity(
 
 @router.delete(
     "/{entity_id}",
+    dependencies=[Depends(get_hr_user)],
     responses={
         200: {"description": "Legal entity deleted successfully"},
         400: {"description": "Failed to delete legal entity"},
@@ -166,6 +174,7 @@ async def delete_legal_entity(entity_id: int, service: LegalEntitiesServiceDepen
 
 @router.get(
     "/",
+    dependencies=[Depends(get_active_user)],
     response_model=list[schemas.LegalEntityRead],
     responses={
         200: {"description": "List of legal entities retrieved successfully"},

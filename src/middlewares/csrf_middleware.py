@@ -49,7 +49,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         session_id = request.cookies.get(settings.SESSION_COOKIE_NAME)
         if not session_id:
             logger.error("Session ID not found in cookies.")
-            return PlainTextResponse("Not authenticated", status_code=401)
+            response = await call_next(request)
+            return response
 
         csrf_token = await self.sessions_service.get_csrf_token(session_id)
         if not csrf_token:

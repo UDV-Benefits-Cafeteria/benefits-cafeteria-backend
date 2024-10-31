@@ -2,7 +2,11 @@ from typing import Annotated, Any, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
-from src.api.v1.dependencies import BenefitsServiceDependency, get_active_user
+from src.api.v1.dependencies import (
+    BenefitsServiceDependency,
+    get_active_user,
+    get_hr_user,
+)
 from src.config import get_settings
 from src.repositories.exceptions import EntityDeleteError
 from src.schemas import benefit as schemas
@@ -107,6 +111,7 @@ async def get_benefits(
 
 @router.get(
     "/{benefit_id}",
+    dependencies=[Depends(get_active_user)],
     response_model=schemas.BenefitRead,
     responses={
         200: {"description": "Benefit successfully retrieved"},
@@ -145,6 +150,7 @@ async def get_benefit(benefit_id: int, service: BenefitsServiceDependency):
 
 @router.post(
     "/",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.BenefitRead,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -180,6 +186,7 @@ async def create_benefit(
 
 @router.patch(
     "/{benefit_id}",
+    dependencies=[Depends(get_hr_user)],
     response_model=schemas.BenefitRead,
     responses={
         200: {"description": "Benefit successfully updated"},
@@ -223,6 +230,7 @@ async def update_benefit(
 
 @router.delete(
     "/{benefit_id}",
+    dependencies=[Depends(get_hr_user)],
     responses={
         200: {"description": True},
         400: {"description": "Failed to delete benefit"},
@@ -259,6 +267,7 @@ async def delete_benefit(benefit_id: int, service: BenefitsServiceDependency):
 
 @router.post(
     "/{benefit_id}/images",
+    dependencies=[Depends(get_hr_user)],
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"description": "Images successfully uploaded"},
@@ -294,6 +303,7 @@ async def upload_images(
 
 @router.delete(
     "/{benefit_id}/images",
+    dependencies=[Depends(get_hr_user)],
     status_code=status.HTTP_200_OK,
     responses={
         200: {"description": "Images successfully deleted"},
