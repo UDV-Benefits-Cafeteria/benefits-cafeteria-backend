@@ -265,7 +265,7 @@ async def test_create_benefit_request_pairwise_4(async_client: AsyncClient):
         "user_id": user_id,
     }
     response = await async_client.post("/benefit-requests/", json=request_data)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 @pytest.mark.asyncio
