@@ -185,7 +185,7 @@ class BenefitRequestsService(
         entities = await self.repo.read_by_user_id(user_id)
         if entities:
             return [self.read_schema.model_validate(entity) for entity in entities]
-        return None
+        return []
 
     @staticmethod
     async def change_benefit_amount(
