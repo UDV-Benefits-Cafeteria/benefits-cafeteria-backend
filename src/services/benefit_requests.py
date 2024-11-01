@@ -124,7 +124,10 @@ class BenefitRequestsService(
         return deleted_request
 
     async def update_by_id(
-        self, entity_id: int, update_schema: schemas.BenefitRequestUpdate
+        self,
+        entity_id: int,
+        update_schema: schemas.BenefitRequestUpdate,
+        current_user: schemas.UserRead = None,
     ) -> Optional[schemas.BenefitRequestRead]:
         """
         Update an existing benefit request and handle benefit amount accordingly.
@@ -145,26 +148,49 @@ class BenefitRequestsService(
             benefits_service = BenefitsService()
             users_service = UsersService()
             if old_status.value != "declined" and new_status.value == "declined":
-                await self.change_benefit_amount(1, benefit_id, benefits_service)
-                await self.change_coins(
-                    benefit_id,
-                    existing_request.user_id,
-                    False,
-                    benefits_service,
-                    users_service,
-                )
+                if (
+                    current_user.id == existing_request.user_id
+                    or current_user.role in [UserRole.HR.value, UserRole.ADMIN.value]
+                ):
+                    await self.change_benefit_amount(1, benefit_id, benefits_service)
+                    await self.change_coins(
+                        benefit_id,
+                        existing_request.user_id,
+                        False,
+                        benefits_service,
+                        users_service,
+                    )
+                else:
+                    raise service_exceptions.EntityUpdateError(
+                        self.read_schema.__name__,
+                        entity_id,
+                        "You cannot decline benefit request",
+                    )
 
             elif old_status.value == "declined" and new_status.value in [
                 "approved",
                 "pending",
             ]:
-                await self.change_benefit_amount(-1, benefit_id, benefits_service)
-                await self.change_coins(
-                    benefit_id,
-                    existing_request.user_id,
-                    True,
-                    benefits_service,
-                    users_service,
+                if current_user.role in [UserRole.HR.value, UserRole.ADMIN.value]:
+                    await self.change_benefit_amount(-1, benefit_id, benefits_service)
+                    await self.change_coins(
+                        benefit_id,
+                        existing_request.user_id,
+                        True,
+                        benefits_service,
+                        users_service,
+                    )
+                else:
+                    raise service_exceptions.EntityUpdateError(
+                        self.read_schema.__name__,
+                        entity_id,
+                        "You cannot update benefit request",
+                    )
+            else:
+                raise service_exceptions.EntityUpdateError(
+                    self.read_schema.__name__,
+                    entity_id,
+                    "You cannot update benefit request",
                 )
 
             updated_request = await super().update_by_id(entity_id, update_schema)

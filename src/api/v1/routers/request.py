@@ -265,7 +265,6 @@ async def get_benefit_requests(
 
 @router.patch(
     "/{request_id}",
-    dependencies=[Depends(get_hr_user)],
     response_model=schemas.BenefitRequestUpdate,
     responses={
         200: {"description": "Benefit request updated successfully"},
@@ -277,6 +276,7 @@ async def update_benefit_request(
     request_id: int,
     benefit_request_update: schemas.BenefitRequestUpdate,
     service: BenefitRequestsServiceDependency,
+    current_user: UserRead = Depends(get_active_user),
 ):
     """
     Update a benefit request by ID.
@@ -294,7 +294,9 @@ async def update_benefit_request(
     """
     try:
         updated_benefit_request = await service.update_by_id(
-            request_id, benefit_request_update
+            entity_id=request_id,
+            update_schema=benefit_request_update,
+            current_user=current_user,
         )
         return updated_benefit_request
     except EntityNotFoundError:
