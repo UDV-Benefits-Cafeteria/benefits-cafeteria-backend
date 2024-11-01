@@ -186,12 +186,6 @@ class BenefitRequestsService(
                         entity_id,
                         "You cannot update benefit request",
                     )
-            else:
-                raise service_exceptions.EntityUpdateError(
-                    self.read_schema.__name__,
-                    entity_id,
-                    "You cannot update benefit request",
-                )
 
             updated_request = await super().update_by_id(entity_id, update_schema)
 
