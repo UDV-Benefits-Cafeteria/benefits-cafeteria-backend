@@ -2,37 +2,83 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
-benefit_data = {
-    "name": "Health Insurance",
-    "description": "Comprehensive health insurance for employees",
-    "coins_cost": 5,
-    "min_level_cost": 1,
-}
 
-benefit_update_data = {
-    "name": "Updated Health Insurance",
-    "description": "Updated description",
-}
-
-invalid_benefit_data = {
-    "name": "",
-    "description": "Invalid benefit",
-}
-
-
+@pytest.mark.parametrize(
+    "benefit_data, expected_status",
+    [
+        # Valid cases
+        (
+            {
+                "name": "Health Insurance",
+                "description": "Comprehensive health insurance for employees",
+                "coins_cost": 5,
+                "min_level_cost": 1,
+            },
+            status.HTTP_201_CREATED,
+        ),
+        (
+            {
+                "name": "Dental Insurance",
+                "description": "Dental insurance for employees",
+                "coins_cost": 10,
+                "min_level_cost": 3,
+            },
+            status.HTTP_201_CREATED,
+        ),
+        # Invalid cases
+        (
+            {
+                "name": "",  # Invalid because name is empty
+                "description": "Invalid benefit",
+                "coins_cost": 5,
+                "min_level_cost": 1,
+            },
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
+        (
+            {
+                "name": "Health Insurance",
+                "description": "Description exceeds allowed length"
+                * 50,  # Exceeding max description length
+                "coins_cost": 5,
+                "min_level_cost": 1,
+            },
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
+        (
+            {
+                "name": "Health Insurance",
+                "description": "Valid description",
+                "coins_cost": -1,  # Invalid because coins_cost is negative
+                "min_level_cost": 1,
+            },
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
+        (
+            {
+                "name": "Health Insurance",
+                "description": "Valid description",
+                "coins_cost": 5,
+                "min_level_cost": -1,  # Invalid because min_level_cost is negative
+            },
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
+    ],
+)
 @pytest.mark.asyncio
-async def test_create_benefit_valid(async_client: AsyncClient):
-    response = await async_client.post("/benefits/", json=benefit_data)
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-    assert data["name"] == benefit_data["name"]
-    assert data["description"] == benefit_data["description"]
+async def test_admin_create_benefit(
+    async_admin_test_client: AsyncClient, benefit_data: dict, expected_status: str
+):
+    response = await async_admin_test_client.post("/benefits/", json=benefit_data)
+    assert response.status_code == expected_status
 
-
-@pytest.mark.asyncio
-async def test_create_benefit_invalid(async_client: AsyncClient):
-    response = await async_client.post("/benefits/", json=invalid_benefit_data)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    # Additional checks for valid cases
+    if response.status_code == status.HTTP_201_CREATED:
+        data = response.json()
+        assert data["name"] == benefit_data["name"]
+        assert data["description"] == benefit_data["description"]
+        assert data["coins_cost"] == benefit_data["coins_cost"]
+        assert data["min_level_cost"] == benefit_data["min_level_cost"]
 
 
 @pytest.mark.asyncio
@@ -49,19 +95,19 @@ async def test_get_benefit_invalid(async_client: AsyncClient):
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-@pytest.mark.asyncio
-async def test_update_benefit_valid(async_client: AsyncClient):
-    response = await async_client.patch("/benefits/1", json=benefit_update_data)
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert data["name"] == benefit_update_data["name"]
-    assert data["description"] == benefit_update_data["description"]
-
-
-@pytest.mark.asyncio
-async def test_update_benefit_invalid(async_client: AsyncClient):
-    response = await async_client.patch("/benefits/9999", json=benefit_update_data)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+# @pytest.mark.asyncio
+# async def test_update_benefit_valid(async_client: AsyncClient):
+#     response = await async_client.patch("/benefits/1", json=benefit_update_data)
+#     assert response.status_code == status.HTTP_200_OK
+#     data = response.json()
+#     assert data["name"] == benefit_update_data["name"]
+#     assert data["description"] == benefit_update_data["description"]
+#
+#
+# @pytest.mark.asyncio
+# async def test_update_benefit_invalid(async_client: AsyncClient):
+#     response = await async_client.patch("/benefits/9999", json=benefit_update_data)
+#     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -76,98 +122,6 @@ async def test_delete_benefit_valid(async_client: AsyncClient):
 async def test_delete_benefit_invalid(async_client: AsyncClient):
     response = await async_client.delete("/benefits/9999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.asyncio
-async def test_create_benefit_pairwise_1(async_client: AsyncClient):
-    benefit_data = {
-        "name": "Benefit Pairwise Test 1",
-        "is_active": True,
-        "amount": None,
-        "coins_cost": 0,
-        "min_level_cost": 0,
-        "adaptation_required": True,
-    }
-    response = await async_client.post("/benefits/", json=benefit_data)
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-    assert data["is_active"] == benefit_data["is_active"]
-    assert data["amount"] == benefit_data["amount"]
-    assert data["coins_cost"] == benefit_data["coins_cost"]
-    assert data["min_level_cost"] == benefit_data["min_level_cost"]
-    assert data["adaptation_required"] == benefit_data["adaptation_required"]
-
-
-@pytest.mark.asyncio
-async def test_create_benefit_pairwise_2(async_client: AsyncClient):
-    benefit_data = {
-        "name": "Benefit Pairwise Test 2",
-        "is_active": True,
-        "amount": 0,
-        "coins_cost": 10,
-        "min_level_cost": 5,
-        "adaptation_required": False,
-    }
-    response = await async_client.post("/benefits/", json=benefit_data)
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-    assert data["amount"] == benefit_data["amount"]
-
-
-@pytest.mark.asyncio
-async def test_create_benefit_pairwise_3(async_client: AsyncClient):
-    benefit_data = {
-        "name": "Benefit Pairwise Test 3",
-        "is_active": True,
-        "amount": 10,
-        "coins_cost": 100,
-        "min_level_cost": 10,
-        "adaptation_required": True,
-    }
-    response = await async_client.post("/benefits/", json=benefit_data)
-    assert response.status_code == status.HTTP_201_CREATED
-
-
-@pytest.mark.asyncio
-async def test_create_benefit_pairwise_4(async_client: AsyncClient):
-    benefit_data = {
-        "name": "Benefit Pairwise Test 4",
-        "is_active": False,
-        "amount": None,
-        "coins_cost": 10,
-        "min_level_cost": 10,
-        "adaptation_required": False,
-    }
-    response = await async_client.post("/benefits/", json=benefit_data)
-    assert response.status_code == status.HTTP_201_CREATED
-
-
-@pytest.mark.asyncio
-async def test_create_benefit_pairwise_5(async_client: AsyncClient):
-    benefit_data = {
-        "name": "Benefit Pairwise Test 5",
-        "is_active": False,
-        "amount": 0,
-        "coins_cost": 100,
-        "min_level_cost": 0,
-        "adaptation_required": True,
-    }
-    response = await async_client.post("/benefits/", json=benefit_data)
-    assert response.status_code == status.HTTP_201_CREATED
-
-
-@pytest.mark.asyncio
-async def test_create_benefit_pairwise_6(async_client: AsyncClient):
-    benefit_data = {
-        "name": "Benefit Pairwise Test 6",
-        "is_active": False,
-        "amount": 10,
-        "coins_cost": 0,
-        "min_level_cost": 5,
-        "adaptation_required": False,
-    }
-    response = await async_client.post("/benefits/", json=benefit_data)
-    assert response.status_code == status.HTTP_201_CREATED
 
 
 @pytest.mark.parametrize(

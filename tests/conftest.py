@@ -1,4 +1,3 @@
-import asyncio
 from datetime import date
 from typing import AsyncGenerator
 
@@ -6,7 +5,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from src.api.v1.dependencies import get_current_user
-from src.db.db import async_session_factory, engine
+from src.db.db import AsyncSession, async_session_factory, engine
 from src.main import app
 from src.models import User
 from src.models.base import Base
@@ -17,73 +16,33 @@ pytest_plugins = ["pytest_asyncio"]
 
 
 @pytest.fixture(scope="session", autouse=True)
-async def setup_db():
+async def setup_db_schema() -> None:
     """
-    Set up the test database for the entire test session.
-
-    This fixture creates the database schema before any tests run and
-    drops it after all tests are completed. It uses an async context
-    manager to ensure that the database operations are handled properly.
-
-    The database schema is created by running the metadata of the
-    Base model.
-
-    Yields:
-        None: This fixture does not return any value.
+    Creates the test database schema before any tests and drops it afterward.
     """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    async with async_session_factory() as session:
-        user = User(
-            id=199,
-            email="admin@example.com",
-            firstname="Admin",
-            lastname="User",
-            middlename=None,
-            role=UserRole.ADMIN,
-            is_active=True,
-            is_verified=True,
-            is_adapted=True,
-            hired_at=date.today(),
-            coins=0,
-            legal_entity_id=None,
-            position_id=None,
-            image_url=None,
-            password="qwertyuiop123",
-        )
-        session.add(user)
-    await asyncio.sleep(0)  # Ensure async operations complete
     yield
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
 
+@pytest.fixture(scope="function")
+async def db_session() -> AsyncSession:
+    """
+    Provides a transactional database session for tests. Rolls back after each test.
+    """
+    async with async_session_factory() as session:
+        yield session
+        await session.rollback()
+
+
 @pytest.fixture(scope="session")
-async def async_client() -> AsyncGenerator[AsyncClient, None]:
+async def test_admin_user(db_session: AsyncSession) -> User:
     """
-    Create an async HTTP client for testing.
-
-    This fixture sets up an AsyncClient using httpx with ASGITransport
-    to communicate with the FastAPI app. The base URL is set for the
-    API version being tested.
-
-    Yields:
-        AsyncClient: An instance of AsyncClient for making requests
-        to the FastAPI application during tests.
+    Adds a default admin user for testing.
     """
-    app.dependency_overrides[get_current_user] = override_get_current_user
-
-    transport = ASGITransport(app)
-    async with AsyncClient(
-        transport=transport, base_url="http://test/api/v1"
-    ) as client:
-        yield client
-
-    app.dependency_overrides = {}
-
-
-async def override_get_current_user():
-    return UserRead(
+    admin_user = User(
         id=199,
         email="admin@example.com",
         firstname="Admin",
@@ -98,4 +57,83 @@ async def override_get_current_user():
         legal_entity_id=None,
         position_id=None,
         image_url=None,
+        password="qwertyuiop123",
     )
+    db_session.add(admin_user)
+    await db_session.commit()
+    return admin_user
+
+
+@pytest.fixture(scope="session")
+async def test_hr_user(db_session: AsyncSession) -> User:
+    """
+    Adds a default hr user for testing.
+    """
+    hr_user = User(
+        id=199,
+        email="admin@example.com",
+        firstname="HR",
+        lastname="User",
+        middlename=None,
+        role=UserRole.HR,
+        is_active=True,
+        is_verified=True,
+        is_adapted=True,
+        hired_at=date.today(),
+        coins=0,
+        legal_entity_id=None,
+        position_id=None,
+        image_url=None,
+        password="qwertyuiop123",
+    )
+    db_session.add(hr_user)
+    await db_session.commit()
+    return hr_user
+
+
+@pytest.fixture(scope="session")
+async def async_test_admin_client(
+    test_admin_user: User, db_session: AsyncSession
+) -> AsyncGenerator[AsyncClient, None]:
+    """
+    Provides an AsyncClient instance for testing with FastAPI for admin role.
+    Overrides the user dependency for authenticated requests.
+    """
+
+    # Override the `get_current_user` dependency to return `test_admin_user`
+    async def override_get_current_user():
+        return UserRead.model_validate(test_admin_user)
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    async with AsyncClient(
+        transport=ASGITransport(app), base_url="http://test/api/v1"
+    ) as client:
+        yield client
+
+    # Clear the dependency overrides after tests
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="session")
+async def async_test_hr_client(
+    test_hr_user: User, db_session: AsyncSession
+) -> AsyncGenerator[AsyncClient, None]:
+    """
+    Provides an AsyncClient instance for testing with FastAPI for hr role.
+    Overrides the user dependency for authenticated requests.
+    """
+
+    # Override the `get_current_user` dependency to return `test_admin_user`
+    async def override_get_current_user():
+        return UserRead.model_validate(test_hr_user)
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    async with AsyncClient(
+        transport=ASGITransport(app), base_url="http://test/api/v1"
+    ) as client:
+        yield client
+
+    # Clear the dependency overrides after tests
+    app.dependency_overrides.clear()
