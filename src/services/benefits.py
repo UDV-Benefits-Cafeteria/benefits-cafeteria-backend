@@ -75,17 +75,23 @@ class BenefitsService(
 
             try:
                 await BenefitImagesRepository().create(data=image)
-                benefit = await self.repo.read_by_id(benefit_id)
-                await self.repo.index_benefit(benefit)
+
             except repo_exceptions.EntityCreateError as e:
                 logger.error(f"Failed to create image {image_data.filename}: {str(e)}")
                 raise service_exceptions.EntityCreateError(image_data.filename, str(e))
-            except repo_exceptions.EntityUpdateError as e:
-                logger.error(
-                    f"Failed to update benefit when creating image {image_data.filename}: {str(e)}"
-                )
+
+            try:
+                benefit = await self.repo.read_by_id(benefit_id)
+
+            except repo_exceptions.EntityReadError as e:
+                raise service_exceptions.EntityReadError("Benefit", benefit_id, str(e))
+
+            try:
+                await self.repo.index_benefit(benefit)
+
+            except repo_exceptions.EntityCreateError as e:
                 raise service_exceptions.EntityUpdateError(
-                    image_data.filename, benefit_id, str(e)
+                    "Benefit", benefit_id, str(e)
                 )
 
     async def remove_images(self, images: list[int]):

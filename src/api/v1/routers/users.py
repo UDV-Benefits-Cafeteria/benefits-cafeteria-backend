@@ -169,7 +169,7 @@ async def get_current_user(
     },
 )
 async def update_user(
-    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
+    current_user: Annotated[schemas.UserRead, Depends(get_active_user)],
     user_id: int,
     user_update: schemas.UserUpdate,
     service: UsersServiceDependency,

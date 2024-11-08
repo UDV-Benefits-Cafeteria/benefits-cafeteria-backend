@@ -3,7 +3,7 @@ from typing import Any, Optional, Union
 from src.config import get_settings, logger
 from src.models import Benefit
 from src.repositories.abstract import SQLAlchemyRepository
-from src.repositories.exceptions import EntityReadError
+from src.repositories.exceptions import EntityReadError, EntityUpdateError
 from src.utils.elastic_index import SearchService, es
 
 settings = get_settings()
@@ -43,9 +43,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             "real_currency_cost": benefit.real_currency_cost
             if benefit.real_currency_cost
             else None,
-            "created_at": benefit.created_at.isoformat()
-            if benefit.created_at
-            else None,
+            "created_at": benefit.created_at.isoformat(),
             "category_id": benefit.category_id,
         }
 
@@ -62,6 +60,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             )
         except Exception as e:
             logger.error(f"Error indexing benefit {benefit.id} in Elasticsearch: {e}")
+            raise EntityUpdateError("Benefit", benefit.id, str(e))
 
     async def delete_benefit_from_index(self, benefit_id: int):
         try:

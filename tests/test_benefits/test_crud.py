@@ -66,61 +66,16 @@ from httpx import AsyncClient
     ],
 )
 @pytest.mark.asyncio
-async def test_admin_create_benefit(
-    async_admin_test_client: AsyncClient, benefit_data: dict, expected_status: str
-):
-    response = await async_admin_test_client.post("/benefits/", json=benefit_data)
-    assert response.status_code == expected_status
-
-    # Additional checks for valid cases
-    if response.status_code == status.HTTP_201_CREATED:
-        data = response.json()
-        assert data["name"] == benefit_data["name"]
-        assert data["description"] == benefit_data["description"]
-        assert data["coins_cost"] == benefit_data["coins_cost"]
-        assert data["min_level_cost"] == benefit_data["min_level_cost"]
-
-
-@pytest.mark.asyncio
-async def test_get_benefit_valid(async_client: AsyncClient):
-    response = await async_client.get("/benefits/1")
+async def test_get_benefit_valid(admin_client: AsyncClient):
+    response = await admin_client.get("/benefits/1")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["id"] == 1
 
 
 @pytest.mark.asyncio
-async def test_get_benefit_invalid(async_client: AsyncClient):
-    response = await async_client.get("/benefits/9999")
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-# @pytest.mark.asyncio
-# async def test_update_benefit_valid(async_client: AsyncClient):
-#     response = await async_client.patch("/benefits/1", json=benefit_update_data)
-#     assert response.status_code == status.HTTP_200_OK
-#     data = response.json()
-#     assert data["name"] == benefit_update_data["name"]
-#     assert data["description"] == benefit_update_data["description"]
-#
-#
-# @pytest.mark.asyncio
-# async def test_update_benefit_invalid(async_client: AsyncClient):
-#     response = await async_client.patch("/benefits/9999", json=benefit_update_data)
-#     assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.asyncio
-async def test_delete_benefit_valid(async_client: AsyncClient):
-    response = await async_client.delete("/benefits/1")
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert data["is_success"] is True
-
-
-@pytest.mark.asyncio
-async def test_delete_benefit_invalid(async_client: AsyncClient):
-    response = await async_client.delete("/benefits/9999")
+async def test_get_benefit_invalid(admin_client: AsyncClient):
+    response = await admin_client.get("/benefits/9999")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -135,14 +90,14 @@ async def test_delete_benefit_invalid(async_client: AsyncClient):
 )
 @pytest.mark.asyncio
 async def test_create_benefit_coins_cost_boundary(
-    async_client: AsyncClient, coins_cost, expected_status
+    admin_client: AsyncClient, coins_cost, expected_status
 ):
     benefit_data = {
         "name": f"Benefit Coins Cost {coins_cost}",
         "coins_cost": coins_cost,
         "min_level_cost": 0,
     }
-    response = await async_client.post("/benefits/", json=benefit_data)
+    response = await admin_client.post("/benefits/", json=benefit_data)
     assert response.status_code == expected_status
 
 
@@ -157,7 +112,7 @@ async def test_create_benefit_coins_cost_boundary(
 )
 @pytest.mark.asyncio
 async def test_create_benefit_amount_boundary(
-    async_client: AsyncClient, amount, expected_status
+    admin_client: AsyncClient, amount, expected_status
 ):
     benefit_data = {
         "name": f"Benefit Amount {amount}",
@@ -165,7 +120,7 @@ async def test_create_benefit_amount_boundary(
         "min_level_cost": 0,
         "amount": amount,
     }
-    response = await async_client.post("/benefits/", json=benefit_data)
+    response = await admin_client.post("/benefits/", json=benefit_data)
     assert response.status_code == expected_status
 
 
@@ -182,12 +137,87 @@ async def test_create_benefit_amount_boundary(
 )
 @pytest.mark.asyncio
 async def test_create_benefit_name_length(
-    async_client: AsyncClient, name, expected_status
+    admin_client: AsyncClient, name, expected_status
 ):
     benefit_data = {
         "name": name,
         "coins_cost": 10,
         "min_level_cost": 0,
     }
-    response = await async_client.post("/benefits/", json=benefit_data)
+    response = await admin_client.post("/benefits/", json=benefit_data)
     assert response.status_code == expected_status
+
+
+@pytest.mark.asyncio
+async def test_update_benefit(admin_client: AsyncClient, category):
+    benefit_data = {
+        "name": "Original Benefit",
+        "coins_cost": 10,
+        "min_level_cost": 0,
+    }
+    create_response = await admin_client.post("/benefits/", json=benefit_data)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    benefit = create_response.json()
+
+    update_data = {
+        "name": "Updated Benefit",
+        "coins_cost": 20,
+        "category_id": category.id,
+    }
+    update_response = await admin_client.patch(
+        f"/benefits/{benefit['id']}", json=update_data
+    )
+    assert update_response.status_code == status.HTTP_200_OK
+    updated_benefit = update_response.json()
+    assert updated_benefit["name"] == update_data["name"]
+    assert updated_benefit["coins_cost"] == update_data["coins_cost"]
+    assert updated_benefit["category_id"] == update_data["category_id"]
+
+
+@pytest.mark.asyncio
+async def test_update_benefit_invalid(admin_client: AsyncClient):
+    update_data = {
+        "name": "Updated Benefit",
+        "coins_cost": 20,
+    }
+    response = await admin_client.patch("/benefits/9999", json=update_data)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_delete_benefit(admin_client: AsyncClient):
+    benefit_data = {
+        "name": "Benefit to Delete",
+        "coins_cost": 10,
+        "min_level_cost": 0,
+    }
+    create_response = await admin_client.post("/benefits/", json=benefit_data)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    benefit = create_response.json()
+
+    delete_response = await admin_client.delete(f"/benefits/{benefit['id']}")
+    assert delete_response.status_code == status.HTTP_200_OK
+    assert delete_response.json()["is_success"] is True
+
+    get_response = await admin_client.get(f"/benefits/{benefit['id']}")
+    assert get_response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_delete_benefit_invalid(admin_client: AsyncClient):
+    response = await admin_client.delete("/benefits/9999")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_create_benefit_with_extra_fields(admin_client: AsyncClient):
+    benefit_data = {
+        "name": "Benefit with Extra Fields",
+        "coins_cost": 10,
+        "min_level_cost": 0,
+        "unknown_field": "some value",
+    }
+    response = await admin_client.post("/benefits/", json=benefit_data)
+    assert response.status_code == status.HTTP_201_CREATED
+    benefit = response.json()
+    assert benefit.get("unknown_field") is None
