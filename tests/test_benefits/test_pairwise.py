@@ -117,7 +117,7 @@ from httpx import AsyncClient
     ],
 )
 @pytest.mark.asyncio
-async def test_create_benefit_pairwise(
+async def test_create_benefit_valid(
     admin_client: AsyncClient, benefit_data: dict, expected_status: int
 ):
     response = await admin_client.post("/benefits/", json=benefit_data)

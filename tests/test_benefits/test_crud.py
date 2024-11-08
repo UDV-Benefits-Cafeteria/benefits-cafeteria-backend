@@ -3,76 +3,6 @@ from fastapi import status
 from httpx import AsyncClient
 
 
-@pytest.mark.parametrize(
-    "benefit_data, expected_status",
-    [
-        # Valid cases
-        (
-            {
-                "name": "Health Insurance",
-                "description": "Comprehensive health insurance for employees",
-                "coins_cost": 5,
-                "min_level_cost": 1,
-            },
-            status.HTTP_201_CREATED,
-        ),
-        (
-            {
-                "name": "Dental Insurance",
-                "description": "Dental insurance for employees",
-                "coins_cost": 10,
-                "min_level_cost": 3,
-            },
-            status.HTTP_201_CREATED,
-        ),
-        # Invalid cases
-        (
-            {
-                "name": "",  # Invalid because name is empty
-                "description": "Invalid benefit",
-                "coins_cost": 5,
-                "min_level_cost": 1,
-            },
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-        ),
-        (
-            {
-                "name": "Health Insurance",
-                "description": "Description exceeds allowed length"
-                * 50,  # Exceeding max description length
-                "coins_cost": 5,
-                "min_level_cost": 1,
-            },
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-        ),
-        (
-            {
-                "name": "Health Insurance",
-                "description": "Valid description",
-                "coins_cost": -1,  # Invalid because coins_cost is negative
-                "min_level_cost": 1,
-            },
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-        ),
-        (
-            {
-                "name": "Health Insurance",
-                "description": "Valid description",
-                "coins_cost": 5,
-                "min_level_cost": -1,  # Invalid because min_level_cost is negative
-            },
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-        ),
-    ],
-)
-@pytest.mark.asyncio
-async def test_get_benefit_valid(admin_client: AsyncClient):
-    response = await admin_client.get("/benefits/1")
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert data["id"] == 1
-
-
 @pytest.mark.asyncio
 async def test_get_benefit_invalid(admin_client: AsyncClient):
     response = await admin_client.get("/benefits/9999")
@@ -148,6 +78,30 @@ async def test_create_benefit_name_length(
     assert response.status_code == expected_status
 
 
+@pytest.mark.parametrize(
+    "real_currency_cost, expected_status",
+    [
+        (-0.01, status.HTTP_422_UNPROCESSABLE_ENTITY),
+        (0.00, status.HTTP_201_CREATED),
+        (0.01, status.HTTP_201_CREATED),
+        (99999999.99, status.HTTP_201_CREATED),
+        (100000000.00, status.HTTP_422_UNPROCESSABLE_ENTITY),
+    ],
+)
+@pytest.mark.asyncio
+async def test_create_benefit_real_currency_cost_boundary(
+    admin_client: AsyncClient, real_currency_cost, expected_status
+):
+    benefit_data = {
+        "name": f"Benefit Real Currency Cost {real_currency_cost}",
+        "coins_cost": 10,
+        "min_level_cost": 0,
+        "real_currency_cost": real_currency_cost,
+    }
+    response = await admin_client.post("/benefits/", json=benefit_data)
+    assert response.status_code == expected_status
+
+
 @pytest.mark.asyncio
 async def test_update_benefit(admin_client: AsyncClient, category):
     benefit_data = {
@@ -210,9 +164,9 @@ async def test_delete_benefit_invalid(admin_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_create_benefit_with_extra_fields(admin_client: AsyncClient):
+async def test_create_benefit_with_unknown_fields(admin_client: AsyncClient):
     benefit_data = {
-        "name": "Benefit with Extra Fields",
+        "name": "Benefit with Unknown Fields",
         "coins_cost": 10,
         "min_level_cost": 0,
         "unknown_field": "some value",
@@ -220,4 +174,26 @@ async def test_create_benefit_with_extra_fields(admin_client: AsyncClient):
     response = await admin_client.post("/benefits/", json=benefit_data)
     assert response.status_code == status.HTTP_201_CREATED
     benefit = response.json()
-    assert benefit.get("unknown_field") is None
+    assert "unknown_field" not in benefit
+
+
+@pytest.mark.asyncio
+async def test_employee_cannot_create_benefit(employee_client: AsyncClient):
+    benefit_data = {
+        "name": "Employee Attempted Benefit",
+        "coins_cost": 10,
+        "min_level_cost": 0,
+    }
+    response = await employee_client.post("/benefits/", json=benefit_data)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.asyncio
+async def test_hr_create_benefit(hr_client1: AsyncClient):
+    benefit_data = {
+        "name": "HR Created Benefit",
+        "coins_cost": 10,
+        "min_level_cost": 0,
+    }
+    response = await hr_client1.post("/benefits/", json=benefit_data)
+    assert response.status_code == status.HTTP_201_CREATED

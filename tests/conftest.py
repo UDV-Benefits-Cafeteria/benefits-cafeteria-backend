@@ -4,14 +4,18 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from src.api.v1.dependencies import get_current_user
+from src.config import get_settings
 from src.db.db import AsyncSession, async_session_factory, engine
 from src.main import app
 from src.models import Category, LegalEntity, User
 from src.models.base import Base
 from src.models.users import UserRole
 from src.schemas.user import UserRead
+from src.services.sessions import SessionsService
 
 pytest_plugins = ["pytest_asyncio"]
+
+settings = get_settings()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -225,6 +229,14 @@ async def employee_client(employee_user: User):
     app.dependency_overrides = {}
 
 
+@pytest.fixture
+async def auth_client():
+    async with AsyncClient(
+        transport=ASGITransport(app), base_url="http://test/api/v1"
+    ) as client:
+        yield client
+
+
 @pytest.fixture(scope="session")
 async def category(db_session: AsyncSession):
     """Create a category for testing."""
@@ -236,3 +248,21 @@ async def category(db_session: AsyncSession):
     await db_session.commit()
     await db_session.refresh(category)
     return category
+
+
+async def get_employee_client(user_id: int):
+    sessions_service = SessionsService()
+    session_id = await sessions_service.create_session(
+        user_id, settings.SESSION_EXPIRE_TIME
+    )
+    csrf_token = await sessions_service.get_csrf_token(session_id)
+
+    client = AsyncClient(
+        transport=ASGITransport(app),
+        base_url="http://test/api/v1",
+        cookies={
+            settings.SESSION_COOKIE_NAME: session_id,
+            settings.CSRF_COOKIE_NAME: csrf_token,
+        },
+    )
+    return client
