@@ -40,7 +40,7 @@ async def db_session() -> AsyncSession:
         await session.rollback()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def admin_user(db_session: AsyncSession) -> User:
     """Create a default admin user for testing."""
     admin = User(
@@ -62,7 +62,7 @@ async def admin_user(db_session: AsyncSession) -> User:
     return admin
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def legal_entity1a(db_session: AsyncSession):
     """Create the first legal entity for testing."""
     entity = LegalEntity(
@@ -75,7 +75,7 @@ async def legal_entity1a(db_session: AsyncSession):
     return entity
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def legal_entity2b(db_session: AsyncSession):
     """Create the second legal entity for testing."""
     entity = LegalEntity(
@@ -88,7 +88,7 @@ async def legal_entity2b(db_session: AsyncSession):
     return entity
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def hr_user1(db_session: AsyncSession, legal_entity1a) -> User:
     """Create the first HR user with legal_entity_id=1."""
     legal_entity = await legal_entity1a
@@ -113,7 +113,7 @@ async def hr_user1(db_session: AsyncSession, legal_entity1a) -> User:
     return hr1
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def hr_user2(db_session: AsyncSession, legal_entity2b) -> User:
     """Create the second HR user with legal_entity_id=2."""
     legal_entity = await legal_entity2b
@@ -138,7 +138,7 @@ async def hr_user2(db_session: AsyncSession, legal_entity2b) -> User:
     return hr2
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def employee_user(db_session: AsyncSession) -> User:
     """Create a regular employee user with legal_entity_id=1."""
     user = User(
@@ -237,7 +237,7 @@ async def auth_client():
         yield client
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def category(db_session: AsyncSession):
     """Create a category for testing."""
     category = Category(
