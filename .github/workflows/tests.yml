@@ -32,7 +32,7 @@ jobs:
           REDIS_USER: ruser
           REDIS_USER_PASSWORD: ruserpass
         ports:
-          - 6379:6379
+          - 6378:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -58,6 +58,7 @@ jobs:
           echo REDIS_USER=ruser >> .env
           echo REDIS_USER_PASSWORD=ruserpass >> .env
           echo REDIS_HOST=localhost >> .env
+          echo REDIS_PORT=6378 >> .env
 
       - name: Run Redis configuration
         run: |
