@@ -50,6 +50,12 @@ AWS_S3_USE_SSL=True
 ELASTIC_PASSWORD=elasticpass
 ELASTIC_HOST=elasticsearch
 ELASTIC_PORT=9200
+
+REDIS_PASSWORD=my_redis_password
+REDIS_USER=my_user
+REDIS_USER_PASSWORD=my_user_password
+REDIS_HOST=redis
+REDIS_PORT=6379
 ```
 
 ### 3. Set up Docker

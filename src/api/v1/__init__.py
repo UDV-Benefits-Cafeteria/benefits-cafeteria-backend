@@ -1,8 +1,9 @@
 from fastapi import APIRouter
 
 from . import routers
+from .dependencies import BaseLimiter
 
-router = APIRouter(prefix="/v1")
+router = APIRouter(prefix="/v1", dependencies=(BaseLimiter,))
 
 router.include_router(routers.auth)
 router.include_router(routers.benefit)

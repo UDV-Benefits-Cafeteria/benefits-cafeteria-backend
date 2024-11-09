@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 
+import redis.asyncio as redis
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi_limiter import FastAPILimiter
 from starlette.middleware.cors import CORSMiddleware
 
 from src.api.v1 import router as api_v1_router
@@ -22,6 +24,11 @@ def get_application() -> FastAPI:
     async def lifespan(app: FastAPI):
         await SearchService().create_benefits_index()
         await SearchService().create_users_index()
+
+        redis_connection = redis.from_url(
+            settings.REDIS_LIMITER_URL, encoding="utf-8", decode_responses=True
+        )
+        await FastAPILimiter.init(redis_connection)
         yield
 
     if not settings.DEBUG:
