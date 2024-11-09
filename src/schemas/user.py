@@ -146,7 +146,6 @@ class UserCreate(UserBase):
     """
 
     is_verified: bool = Field(default=False, exclude=True)
-    is_active: bool = Field(default=True, exclude=True)
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 

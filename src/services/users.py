@@ -75,6 +75,10 @@ class UsersService(
         current_user: schemas.UserRead = None,
     ) -> schemas.UserRead:
         if current_user.role == schemas.UserRole.HR:
+            if create_schema.role == schemas.UserRole.ADMIN:
+                raise service_exceptions.PermissionDeniedError(
+                    "HR users cannot create admins."
+                )
             if create_schema.legal_entity_id != current_user.legal_entity_id:
                 raise service_exceptions.PermissionDeniedError(
                     "HR users cannot create users outside their own legal entity."
@@ -97,7 +101,7 @@ class UsersService(
             raise
 
         if current_user is not None:
-            if current_user.role == schemas.UserRole.HR:
+            if current_user.role == schemas.UserRole.HR.value:
                 if user_to_update.legal_entity_id != current_user.legal_entity_id:
                     raise service_exceptions.PermissionDeniedError(
                         "HR users cannot update users outside their own legal entity."
@@ -107,7 +111,6 @@ class UsersService(
                     raise service_exceptions.PermissionDeniedError(
                         "You can only change yourself"
                     )
-
         return await super().update_by_id(entity_id, update_schema)
 
     async def read_by_email(self, email: str) -> Optional[schemas.UserRead]:

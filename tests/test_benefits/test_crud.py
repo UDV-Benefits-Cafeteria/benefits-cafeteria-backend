@@ -125,7 +125,7 @@ async def test_update_benefit(admin_client: AsyncClient, category):
     updated_benefit = update_response.json()
     assert updated_benefit["name"] == update_data["name"]
     assert updated_benefit["coins_cost"] == update_data["coins_cost"]
-    assert updated_benefit["category_id"] == update_data["category_id"]
+    assert updated_benefit["category"]["id"] == update_data["category_id"]
 
 
 @pytest.mark.asyncio

@@ -27,7 +27,7 @@ router = APIRouter(prefix="/benefit-requests", tags=["Requests"])
 @router.post(
     "/",
     dependencies=[Depends(get_active_user)],
-    response_model=schemas.BenefitRequestCreate,
+    response_model=schemas.BenefitRequestRead,
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"description": "Benefit request created successfully"},

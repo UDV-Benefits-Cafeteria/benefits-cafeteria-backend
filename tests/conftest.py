@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -30,7 +31,7 @@ async def setup_db_schema() -> None:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 async def db_session() -> AsyncSession:
     """
     Provides a transactional database session for tests. Rolls back after each test.
@@ -40,11 +41,11 @@ async def db_session() -> AsyncSession:
         await session.rollback()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 async def admin_user(db_session: AsyncSession) -> User:
     """Create a default admin user for testing."""
     admin = User(
-        id=1,
+        id=111,
         email="admin@example.com",
         firstname="Admin",
         lastname="User",
@@ -54,7 +55,6 @@ async def admin_user(db_session: AsyncSession) -> User:
         is_adapted=True,
         hired_at=date.today(),
         coins=0,
-        password="qwertyuiop123",
     )
     db_session.add(admin)
     await db_session.commit()
@@ -62,11 +62,11 @@ async def admin_user(db_session: AsyncSession) -> User:
     return admin
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 async def legal_entity1a(db_session: AsyncSession):
     """Create the first legal entity for testing."""
     entity = LegalEntity(
-        id=1,
+        id=111,
         name="Legal Entity 1a",
     )
     db_session.add(entity)
@@ -75,11 +75,11 @@ async def legal_entity1a(db_session: AsyncSession):
     return entity
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 async def legal_entity2b(db_session: AsyncSession):
     """Create the second legal entity for testing."""
     entity = LegalEntity(
-        id=2,
+        id=222,
         name="Legal Entity 2b",
     )
     db_session.add(entity)
@@ -88,15 +88,14 @@ async def legal_entity2b(db_session: AsyncSession):
     return entity
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 async def hr_user1(db_session: AsyncSession, legal_entity1a) -> User:
     """Create the first HR user with legal_entity_id=1."""
-    legal_entity = await legal_entity1a
 
     hr1 = User(
-        id=2,
+        id=222,
         email="hr1@example.com",
-        firstname="HR1",
+        firstname="HRone",
         lastname="User",
         role=UserRole.HR,
         is_active=True,
@@ -104,8 +103,7 @@ async def hr_user1(db_session: AsyncSession, legal_entity1a) -> User:
         is_adapted=True,
         hired_at=date.today(),
         coins=0,
-        password="qwertyuiop123",
-        legal_entity_id=legal_entity.id,
+        legal_entity_id=111,
     )
     db_session.add(hr1)
     await db_session.commit()
@@ -113,15 +111,14 @@ async def hr_user1(db_session: AsyncSession, legal_entity1a) -> User:
     return hr1
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 async def hr_user2(db_session: AsyncSession, legal_entity2b) -> User:
     """Create the second HR user with legal_entity_id=2."""
-    legal_entity = await legal_entity2b
 
     hr2 = User(
-        id=3,
+        id=333,
         email="hr2@example.com",
-        firstname="HR2",
+        firstname="HRtwo",
         lastname="User",
         role=UserRole.HR,
         is_active=True,
@@ -129,8 +126,7 @@ async def hr_user2(db_session: AsyncSession, legal_entity2b) -> User:
         is_adapted=True,
         hired_at=date.today(),
         coins=0,
-        password="qwertyuiop123",
-        legal_entity_id=legal_entity.id,
+        legal_entity_id=222,
     )
     db_session.add(hr2)
     await db_session.commit()
@@ -138,11 +134,11 @@ async def hr_user2(db_session: AsyncSession, legal_entity2b) -> User:
     return hr2
 
 
-@pytest.fixture(scope="function")
-async def employee_user(db_session: AsyncSession) -> User:
+@pytest.fixture(scope="session")
+async def employee_user(db_session: AsyncSession, legal_entity1a) -> User:
     """Create a regular employee user with legal_entity_id=1."""
     user = User(
-        id=4,
+        id=444,
         email="user@example.com",
         firstname="Employee",
         lastname="User",
@@ -152,8 +148,7 @@ async def employee_user(db_session: AsyncSession) -> User:
         is_adapted=True,
         hired_at=date.today(),
         coins=200,
-        password="qwertyuiop123",
-        legal_entity_id=1,
+        legal_entity_id=111,
     )
     db_session.add(user)
     await db_session.commit()
@@ -229,7 +224,7 @@ async def employee_client(employee_user: User):
     app.dependency_overrides = {}
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 async def auth_client():
     async with AsyncClient(
         transport=ASGITransport(app), base_url="http://test/api/v1"
@@ -237,11 +232,11 @@ async def auth_client():
         yield client
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 async def category(db_session: AsyncSession):
     """Create a category for testing."""
     category = Category(
-        id=1,
+        id=111,
         name="Test Category",
     )
     db_session.add(category)
@@ -266,3 +261,19 @@ async def get_employee_client(user_id: int):
         },
     )
     return client
+
+
+@pytest.fixture(autouse=True)
+def mock_elasticsearch_benefits():
+    with patch("src.repositories.benefits.es") as benefits_mock_es:
+        benefits_mock_es.index = AsyncMock()
+        benefits_mock_es.delete = AsyncMock()
+        yield benefits_mock_es
+
+
+@pytest.fixture(autouse=True)
+def mock_elasticsearch_users():
+    with patch("src.repositories.users.es") as users_mock_es:
+        users_mock_es.index = AsyncMock()
+        users_mock_es.delete = AsyncMock()
+        yield users_mock_es

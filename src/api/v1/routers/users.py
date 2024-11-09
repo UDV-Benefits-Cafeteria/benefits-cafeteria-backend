@@ -131,6 +131,10 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create user"
         )
+    except PermissionDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+        )
     # await service.send_email_registration(user)
     return created_user
 
@@ -200,6 +204,10 @@ async def update_user(
     except EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update user"
+        )
+    except PermissionDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
         )
 
 
