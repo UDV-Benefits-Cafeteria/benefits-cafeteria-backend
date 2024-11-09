@@ -24,11 +24,6 @@ def get_application() -> FastAPI:
     async def lifespan(app: FastAPI):
         await SearchService().create_benefits_index()
         await SearchService().create_users_index()
-
-        redis_connection = redis.from_url(
-            settings.REDIS_LIMITER_URL, encoding="utf-8", decode_responses=True
-        )
-        await FastAPILimiter.init(redis_connection)
         yield
 
     if not settings.DEBUG:
@@ -38,6 +33,10 @@ def get_application() -> FastAPI:
             profiles_sample_rate=settings.SENTRY_SAMPLE_PROFILER_RATE,
             environment=settings.SENTRY_ENVIRONMENT,
         )
+        redis_connection = redis.from_url(
+            settings.REDIS_LIMITER_URL, encoding="utf-8", decode_responses=True
+        )
+        FastAPILimiter.init(redis_connection)
 
     application = FastAPI(
         debug=settings.DEBUG,
