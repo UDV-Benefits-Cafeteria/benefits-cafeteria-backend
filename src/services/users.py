@@ -277,6 +277,7 @@ class UsersService(
             }
         )
         logger.info(f"Sending registration email with data: {email.model_dump()}")
+
         background_tasks.add_task(
             send_mail,
             email.model_dump(),
