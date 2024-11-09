@@ -4,7 +4,6 @@ from pydantic import EmailStr
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.email as email_schemas
-from src.celery.tasks import background_send_mail
 from src.config import get_settings
 from src.repositories.users import UsersRepository
 from src.schemas.user import UserAuth, UserResetForgetPassword

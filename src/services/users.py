@@ -1,18 +1,18 @@
 import os
 from typing import Any, Optional
 
-from fastapi import UploadFile
+from fastapi import BackgroundTasks, UploadFile
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.email as email_schemas
 import src.schemas.user as schemas
 import src.services.exceptions as service_exceptions
-from src.celery.tasks import background_send_mail
 from src.config import get_settings, logger
 from src.repositories.users import UsersRepository
 from src.services.base import BaseService
 from src.services.legal_entities import LegalEntitiesService
 from src.services.positions import PositionsService
+from src.utils.email import send_mail
 from src.utils.excel_parser import ExcelParser
 from src.utils.field_parsers import (
     parse_coins,
@@ -252,11 +252,12 @@ class UsersService(
 
     @staticmethod
     async def send_email_registration(
-        user: schemas.UserCreate | schemas.UserRead,
+        user: schemas.UserCreate | schemas.UserRead, background_tasks: BackgroundTasks
     ) -> None:
         """
         Asynchronously sends a registration email to the user.
 
+        :param background_tasks:
         :param user: The user for whom the registration email is being sent. This can be either a
                      UserCreate or UserRead schema, containing information like the user's email and
                      first name.
@@ -276,8 +277,8 @@ class UsersService(
             }
         )
         logger.info(f"Sending registration email with data: {email.model_dump()}")
-
-        background_send_mail.delay(
+        background_tasks.add_task(
+            send_mail,
             email.model_dump(),
             f"Регистрация на сайте {settings.APP_TITLE}",
             "register.html",
