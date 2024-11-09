@@ -1,5 +1,7 @@
 from fastapi import APIRouter
+
 from src.config import get_settings
+
 from . import routers
 from .dependencies import BaseLimiter
 
