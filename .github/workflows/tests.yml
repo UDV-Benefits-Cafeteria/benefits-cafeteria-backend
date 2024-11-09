@@ -61,6 +61,10 @@ jobs:
 
       - name: Run Redis configuration
         run: |
+          until docker exec $(docker ps -qf "ancestor=redis") redis-cli ping; do
+            echo "Waiting for Redis to be ready..."
+            sleep 5
+          done
           docker exec redis sh -c '
             mkdir -p /usr/local/etc/redis &&
             echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
