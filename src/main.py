@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+
 import redis.asyncio as redis
 import sentry_sdk
 from fastapi import FastAPI
@@ -28,8 +29,6 @@ def get_application() -> FastAPI:
             settings.REDIS_LIMITER_URL, encoding="utf-8", decode_responses=True
         )
         await FastAPILimiter.init(redis_connection_limiter)
-
-        FastAPICache.init(RedisBackend("redis://localhost:6379"))
         yield
 
     if not settings.DEBUG:
