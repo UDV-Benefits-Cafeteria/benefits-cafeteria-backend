@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     REDIS_USER: str = "user"
     REDIS_USER_PASSWORD: str = "pass"
     REDIS_HOST: str = "redis"
-    REDIS_PORT: str = 6379
+    REDIS_PORT: int = 6379
 
     @property
     def DATABASE_URL(self) -> PostgresDsn:
