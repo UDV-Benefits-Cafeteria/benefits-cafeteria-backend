@@ -25,26 +25,17 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
-      redis:
-        image: redis
-        env:
-          REDIS_PASSWORD: rpass
-          REDIS_USER: ruser
-          REDIS_USER_PASSWORD: ruserpass
-        ports:
-          - 6378:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v3
 
       - uses: actions/setup-python@v4
         with:
           python-version: 3.12
+
+      - name: Setup Redis with password
+        uses: getong/redis-action@v1
+        with:
+          redis password: 'rpass'
 
       - name: Create env file
         run: |
@@ -55,27 +46,10 @@ jobs:
           echo POSTGRES_DB=postgres >> .env
           echo POSTGRES_HOST=localhost >> .env
           echo REDIS_PASSWORD=rpass >> .env
-          echo REDIS_USER=ruser >> .env
-          echo REDIS_USER_PASSWORD=ruserpass >> .env
+          echo REDIS_USER=requirepass >> .env
+          echo REDIS_USER_PASSWORD=rpass >> .env
           echo REDIS_HOST=localhost >> .env
           echo REDIS_PORT=6378 >> .env
-
-      - name: Run Redis configuration
-        run: |
-          until docker exec $(docker ps -qf "ancestor=redis") redis-cli ping; do
-            echo "Waiting for Redis to be ready..."
-            sleep 5
-          done
-          docker exec $(docker ps -qf "ancestor=redis") sh -c '
-            mkdir -p /usr/local/etc/redis &&
-            echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
-            echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
-            echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
-            echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
-            echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
-            echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
-            redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
-          '
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
