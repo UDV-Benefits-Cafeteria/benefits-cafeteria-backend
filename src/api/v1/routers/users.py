@@ -183,6 +183,7 @@ async def update_user(
     user_id: int,
     user_update: schemas.UserUpdate,
     service: UsersServiceDependency,
+    background_tasks: BackgroundTasks,
 ):
     """
     Update an existing user by ID.
@@ -200,7 +201,10 @@ async def update_user(
     """
     try:
         updated_user = await service.update_by_id(
-            entity_id=user_id, update_schema=user_update, current_user=current_user
+            entity_id=user_id,
+            update_schema=user_update,
+            current_user=current_user,
+            background_tasks=background_tasks,
         )
         return updated_user
     except EntityNotFoundError:

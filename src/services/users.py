@@ -90,6 +90,7 @@ class UsersService(
         entity_id: int,
         update_schema: schemas.UserUpdate,
         current_user: schemas.UserRead = None,
+        background_tasks: BackgroundTasks = None,
     ) -> schemas.UserRead:
         try:
             user_to_update = await self.read_by_id(entity_id)
@@ -108,7 +109,56 @@ class UsersService(
                         "You can only change yourself"
                     )
 
+        if update_schema.coins and current_user:
+            if user_to_update.coins > update_schema.coins:
+                await self.send_email_coins(
+                    current_user,
+                    "balance-changes.html",
+                    f"Списание с баланса на {settings.APP_TITLE}",
+                    {
+                        "operation_type": "decrease",
+                        "name": current_user.firstname,
+                        "amount_change": user_to_update.coins - update_schema.coins,
+                        "current_balance": update_schema.coins,
+                        "home_url": f"https://{settings.DOMAIN}/main/account",
+                    },
+                    background_tasks,
+                )
+            elif user_to_update.coins < update_schema.coins:
+                await self.send_email_coins(
+                    current_user,
+                    "balance-changes.html",
+                    f"Пополнение баланса на {settings.APP_TITLE}",
+                    {
+                        "operation_type": "increase",
+                        "name": current_user.firstname,
+                        "amount_change": update_schema.coins - user_to_update.coins,
+                        "current_balance": update_schema.coins,
+                        "home_url": f"https://{settings.DOMAIN}/main/account",
+                    },
+                    background_tasks,
+                )
+
         return await super().update_by_id(entity_id, update_schema)
+
+    @staticmethod
+    async def send_email_coins(
+        user: schemas.UserRead,
+        email_template: str,
+        email_title: str,
+        email_body: dict[str, Any],
+        background_tasks: BackgroundTasks,
+    ) -> None:
+        email = email_schemas.EmailSchema.model_validate(
+            {"email": [user.email], "body": email_body}
+        )
+
+        background_tasks.add_task(
+            send_mail,
+            email.model_dump(),
+            email_title,
+            email_template,
+        )
 
     async def read_by_email(self, email: str) -> Optional[schemas.UserRead]:
         try:

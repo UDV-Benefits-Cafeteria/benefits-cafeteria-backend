@@ -50,8 +50,8 @@ class Settings(BaseSettings):
     MAIL_FROM: EmailStr = "test@email.com"
     MAIL_PORT: int = 587
     MAIL_SERVER: str = "mailserver"
-    MAIL_STARTTLS: bool = True
-    MAIL_SSL_TLS: bool = False
+    MAIL_STARTTLS: bool = False
+    MAIL_SSL_TLS: bool = True
     MAIL_USE_CREDENTIALS: bool = True
     MAIL_VALIDATE_CERTS: bool = False
 

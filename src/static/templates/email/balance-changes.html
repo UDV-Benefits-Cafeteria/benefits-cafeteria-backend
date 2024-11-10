@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Уведомление о смене баланса</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; color: #333; margin: 0; padding: 0;">
+    <div style="width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px; text-align: center;">
+        <div style="margin: 20px 0;">
+            <img src="https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/logo.png" alt="Логотип компании" style="max-width: 150px;">
+        </div>
+
+        {% if operation_type == 'increase' %}
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #00C08B;">Начисление на ваш баланс</div>
+            <div style="padding: 20px; line-height: 1.6;">
+                <p style="margin: 10px 0;">Здравствуйте, {{ name }}!</p>
+                <p style="margin: 10px 0;">На ваш баланс было начислено:</p>
+                <div style="font-size: 22px; font-weight: bold; margin: 20px 0;">
+                    <span style="color: #00C08B;">+{{ amount_change }}</span>
+                </div>
+            </div>
+        {% else %}
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #D9534F;">Списание с вашего баланса</div>
+            <div style="padding: 20px; line-height: 1.6;">
+                <p style="margin: 10px 0;">Здравствуйте, {{ name }}!</p>
+                <p style="margin: 10px 0;">С вашего баланса было списано:</p>
+                <div style="font-size: 22px; font-weight: bold; margin: 20px 0;">
+                    <span style="color: #D9534F;">-{{ amount_change }}</span>
+                </div>
+            </div>
+        {% endif %}
+
+        <div style="font-size: 18px; font-weight: bold; color: #333; margin-top: 20px;">
+            Текущий баланс: <span>{{ current_balance }}</span>
+        </div>
+
+        <a href="{{ home_url }}" style="display: inline-block; padding: 10px 20px; background-color: #00C08B; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 20px; margin-bottom: 20px; transition: background-color 0.3s ease;">Перейти в личный кабинет</a>
+    </div>
+</body>
+</html>
