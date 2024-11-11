@@ -139,6 +139,7 @@ async def admin_client(admin_user: User):
     """Provide an AsyncClient with admin user authentication."""
     fm.config.SUPPRESS_SEND = 1
     with fm.record_messages():
+
         async def override_get_current_user():
             return UserRead.model_validate(admin_user)
 
@@ -157,6 +158,7 @@ async def hr_client(hr_user: User):
     """Provide an AsyncClient with hr_user authentication."""
     fm.config.SUPPRESS_SEND = 1
     with fm.record_messages():
+
         async def override_get_current_user():
             return UserRead.model_validate(hr_user)
 
@@ -175,6 +177,7 @@ async def employee_client(employee_user: User):
     """Provide an AsyncClient with regular employee user authentication."""
     fm.config.SUPPRESS_SEND = 1
     with fm.record_messages():
+
         async def override_get_current_user():
             return UserRead.model_validate(employee_user)
 
