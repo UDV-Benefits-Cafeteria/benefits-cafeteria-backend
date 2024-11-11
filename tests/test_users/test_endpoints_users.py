@@ -22,7 +22,7 @@ from src.services.users import UsersService
 )
 @pytest.mark.asyncio
 async def test_create_user_required_fields(
-    hr_client1: AsyncClient, field_name: str, field_value: str, expected_status: int
+    hr_client: AsyncClient, field_name: str, field_value: str, expected_status: int
 ):
     user_data = {
         "email": "testuser@example.com",
@@ -34,7 +34,7 @@ async def test_create_user_required_fields(
     }
     user_data[field_name] = field_value
 
-    response = await hr_client1.post("/users/", json=user_data)
+    response = await hr_client.post("/users/", json=user_data)
     assert response.status_code == expected_status
 
 
@@ -53,7 +53,7 @@ async def test_create_user_required_fields(
 )
 @pytest.mark.asyncio
 async def test_create_user_hired_at(
-    hr_client1: AsyncClient, hired_at: str, expected_status: int
+    hr_client: AsyncClient, hired_at: str, expected_status: int
 ):
     user_data = {
         "email": "testuser@example.com",
@@ -63,13 +63,13 @@ async def test_create_user_hired_at(
         "hired_at": hired_at,
         "legal_entity_id": 111,
     }
-    response = await hr_client1.post("/users/", json=user_data)
+    response = await hr_client.post("/users/", json=user_data)
     assert response.status_code == expected_status
 
 
 @pytest.mark.asyncio
 async def test_hr_cannot_update_user_outside_legal_entity(
-    hr_client1: AsyncClient, legal_entity2b, admin_user: User
+    hr_client: AsyncClient, legal_entity2b, admin_user: User
 ):
     # Create a user in a different legal_entity
     user_data = {
@@ -93,14 +93,14 @@ async def test_hr_cannot_update_user_outside_legal_entity(
     update_data = {
         "firstname": "UpdatedName",
     }
-    update_response = await hr_client1.patch(
+    update_response = await hr_client.patch(
         f"/users/{created_user_data['id']}", json=update_data
     )
     assert update_response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.asyncio
-async def test_hr_can_update_user_in_legal_entity(hr_client1: AsyncClient):
+async def test_hr_can_update_user_in_legal_entity(hr_client: AsyncClient):
     # HR creates a user in their legal_entity
     user_data = {
         "email": "sameentityuser@example.com",
@@ -110,21 +110,21 @@ async def test_hr_can_update_user_in_legal_entity(hr_client1: AsyncClient):
         "legal_entity_id": 111,
         "hired_at": date.today().isoformat(),
     }
-    response = await hr_client1.post("/users/", json=user_data)
+    response = await hr_client.post("/users/", json=user_data)
     assert response.status_code == status.HTTP_201_CREATED
     user = response.json()
 
     update_data = {
         "firstname": "UpdatedName",
     }
-    update_response = await hr_client1.patch(f"/users/{user['id']}", json=update_data)
+    update_response = await hr_client.patch(f"/users/{user['id']}", json=update_data)
     assert update_response.status_code == status.HTTP_200_OK
     updated_user = update_response.json()
     assert updated_user["firstname"] == "UpdatedName"
 
 
 @pytest.mark.asyncio
-async def test_hr_cannot_create_admin(hr_client1: AsyncClient):
+async def test_hr_cannot_create_admin(hr_client: AsyncClient):
     user_data = {
         "email": "adminuser321@example.com",
         "firstname": "Admin",
@@ -133,7 +133,7 @@ async def test_hr_cannot_create_admin(hr_client1: AsyncClient):
         "legal_entity_id": 111,
         "hired_at": date.today().isoformat(),
     }
-    response = await hr_client1.post("/users/", json=user_data)
+    response = await hr_client.post("/users/", json=user_data)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -152,11 +152,11 @@ async def test_employee_cannot_create_user(employee_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_create_user_with_position(hr_client1: AsyncClient):
+async def test_create_user_with_position(hr_client: AsyncClient):
     position_data = {
         "name": "Data Analyst",
     }
-    position_response = await hr_client1.post("/positions/", json=position_data)
+    position_response = await hr_client.post("/positions/", json=position_data)
     assert position_response.status_code == status.HTTP_201_CREATED
     position = position_response.json()
 
@@ -169,7 +169,7 @@ async def test_create_user_with_position(hr_client1: AsyncClient):
         "legal_entity_id": 111,
         "hired_at": date.today().isoformat(),
     }
-    response = await hr_client1.post("/users/", json=user_data)
+    response = await hr_client.post("/users/", json=user_data)
     assert response.status_code == status.HTTP_201_CREATED
     user = response.json()
     assert user["position"]["id"] == position["id"]

@@ -151,7 +151,7 @@ async def test_create_benefit_request_invalid_data(
 )
 @pytest.mark.asyncio
 async def test_create_benefit_request_pairwise(
-    benefit_data, user_data, admin_client: AsyncClient, hr_client1: AsyncClient
+    benefit_data, user_data, admin_client: AsyncClient, hr_client: AsyncClient
 ):
     # Create benefit
     benefit_response = await admin_client.post("/benefits/", json=benefit_data)
@@ -160,7 +160,7 @@ async def test_create_benefit_request_pairwise(
     benefit_id = benefit["id"]
 
     # Create user
-    user_response = await hr_client1.post("/users/", json=user_data)
+    user_response = await hr_client.post("/users/", json=user_data)
     assert user_response.status_code == status.HTTP_201_CREATED
     user = user_response.json()
     user_id = user["id"]

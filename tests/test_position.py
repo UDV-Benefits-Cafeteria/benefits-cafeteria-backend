@@ -11,11 +11,11 @@ async def test_get_position_not_found(employee_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_create_position_valid(hr_client1: AsyncClient):
+async def test_create_position_valid(hr_client: AsyncClient):
     valid_position_data = {
         "name": "Software Engineer",
     }
-    response = await hr_client1.post("/positions/", json=valid_position_data)
+    response = await hr_client.post("/positions/", json=valid_position_data)
     assert response.status_code == status.HTTP_201_CREATED
     position = response.json()
     assert "id" in position
@@ -23,30 +23,30 @@ async def test_create_position_valid(hr_client1: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_create_position_invalid(hr_client1: AsyncClient):
+async def test_create_position_invalid(hr_client: AsyncClient):
     invalid_position_data = {
         "name": "",
     }
-    response = await hr_client1.post("/positions/", json=invalid_position_data)
+    response = await hr_client.post("/positions/", json=invalid_position_data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 @pytest.mark.asyncio
-async def test_update_position_not_found(hr_client1: AsyncClient):
+async def test_update_position_not_found(hr_client: AsyncClient):
     position_id = 9999
     update_data = {
         "name": "Updated Position",
     }
-    response = await hr_client1.patch(f"/positions/{position_id}", json=update_data)
+    response = await hr_client.patch(f"/positions/{position_id}", json=update_data)
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.asyncio
-async def test_update_position_valid(hr_client1: AsyncClient):
+async def test_update_position_valid(hr_client: AsyncClient):
     position_data = {
         "name": "Original Position",
     }
-    create_response = await hr_client1.post("/positions/", json=position_data)
+    create_response = await hr_client.post("/positions/", json=position_data)
     assert create_response.status_code == status.HTTP_201_CREATED
     position = create_response.json()
     position_id = position["id"]
@@ -54,7 +54,7 @@ async def test_update_position_valid(hr_client1: AsyncClient):
     update_data = {
         "name": "Updated Position",
     }
-    update_response = await hr_client1.patch(
+    update_response = await hr_client.patch(
         f"/positions/{position_id}", json=update_data
     )
     assert update_response.status_code == status.HTTP_200_OK
@@ -63,11 +63,11 @@ async def test_update_position_valid(hr_client1: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_update_position_invalid(hr_client1: AsyncClient):
+async def test_update_position_invalid(hr_client: AsyncClient):
     position_data = {
         "name": "Position to Update",
     }
-    create_response = await hr_client1.post("/positions/", json=position_data)
+    create_response = await hr_client.post("/positions/", json=position_data)
     assert create_response.status_code == status.HTTP_201_CREATED
     position = create_response.json()
     position_id = position["id"]
@@ -75,7 +75,7 @@ async def test_update_position_invalid(hr_client1: AsyncClient):
     update_data = {
         "name": "",
     }
-    response = await hr_client1.patch(f"/positions/{position_id}", json=update_data)
+    response = await hr_client.patch(f"/positions/{position_id}", json=update_data)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -88,27 +88,27 @@ async def test_get_positions(employee_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_delete_position_not_found(hr_client1: AsyncClient):
+async def test_delete_position_not_found(hr_client: AsyncClient):
     position_id = 9999
-    response = await hr_client1.delete(f"/positions/{position_id}")
+    response = await hr_client.delete(f"/positions/{position_id}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.asyncio
-async def test_delete_position(hr_client1: AsyncClient):
+async def test_delete_position(hr_client: AsyncClient):
     position_data = {
         "name": "Position to Delete",
     }
-    create_response = await hr_client1.post("/positions/", json=position_data)
+    create_response = await hr_client.post("/positions/", json=position_data)
     assert create_response.status_code == status.HTTP_201_CREATED
     position = create_response.json()
     position_id = position["id"]
 
-    delete_response = await hr_client1.delete(f"/positions/{position_id}")
+    delete_response = await hr_client.delete(f"/positions/{position_id}")
     assert delete_response.status_code == status.HTTP_200_OK
     assert delete_response.json()["is_success"] is True
 
-    get_response = await hr_client1.get(f"/positions/{position_id}")
+    get_response = await hr_client.get(f"/positions/{position_id}")
     assert get_response.status_code == status.HTTP_404_NOT_FOUND
 
 

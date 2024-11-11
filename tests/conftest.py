@@ -89,8 +89,8 @@ async def legal_entity2b(db_session: AsyncSession):
 
 
 @pytest.fixture(scope="session")
-async def hr_user1(db_session: AsyncSession, legal_entity1a) -> User:
-    """Create the first HR user with legal_entity_id=1."""
+async def hr_user(db_session: AsyncSession, legal_entity1a) -> User:
+    """Create the first HR user with legal_entity_id=111."""
 
     hr1 = User(
         id=222,
@@ -109,29 +109,6 @@ async def hr_user1(db_session: AsyncSession, legal_entity1a) -> User:
     await db_session.commit()
     await db_session.refresh(hr1)
     return hr1
-
-
-@pytest.fixture(scope="session")
-async def hr_user2(db_session: AsyncSession, legal_entity2b) -> User:
-    """Create the second HR user with legal_entity_id=2."""
-
-    hr2 = User(
-        id=333,
-        email="hr2@example.com",
-        firstname="HRtwo",
-        lastname="User",
-        role=UserRole.HR,
-        is_active=True,
-        is_verified=True,
-        is_adapted=True,
-        hired_at=date.today(),
-        coins=0,
-        legal_entity_id=222,
-    )
-    db_session.add(hr2)
-    await db_session.commit()
-    await db_session.refresh(hr2)
-    return hr2
 
 
 @pytest.fixture(scope="session")
@@ -174,28 +151,11 @@ async def admin_client(admin_user: User):
 
 
 @pytest.fixture
-async def hr_client1(hr_user1: User):
-    """Provide an AsyncClient with hr_user1 authentication."""
+async def hr_client(hr_user: User):
+    """Provide an AsyncClient with hr_user authentication."""
 
     async def override_get_current_user():
-        return UserRead.model_validate(hr_user1)
-
-    app.dependency_overrides[get_current_user] = override_get_current_user
-
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test/api/v1"
-    ) as client:
-        yield client
-
-    app.dependency_overrides = {}
-
-
-@pytest.fixture
-async def hr_client2(hr_user2: User):
-    """Provide an AsyncClient with hr_user2 authentication."""
-
-    async def override_get_current_user():
-        return UserRead.model_validate(hr_user2)
+        return UserRead.model_validate(hr_user)
 
     app.dependency_overrides[get_current_user] = override_get_current_user
 

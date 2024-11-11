@@ -189,11 +189,11 @@ async def test_employee_cannot_create_benefit(employee_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_hr_create_benefit(hr_client1: AsyncClient):
+async def test_hr_create_benefit(hr_client: AsyncClient):
     benefit_data = {
         "name": "HR Created Benefit",
         "coins_cost": 10,
         "min_level_cost": 0,
     }
-    response = await hr_client1.post("/benefits/", json=benefit_data)
+    response = await hr_client.post("/benefits/", json=benefit_data)
     assert response.status_code == status.HTTP_201_CREATED

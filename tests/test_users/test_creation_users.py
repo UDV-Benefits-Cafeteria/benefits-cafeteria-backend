@@ -108,10 +108,10 @@ user_data_cases_for_admin = [
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("user_data, expected_status", user_data_cases_for_hr)
-async def test_create_user_hr_client1(
-    hr_client1: AsyncClient, user_data: dict, expected_status: int
+async def test_create_user_hr_client(
+    hr_client: AsyncClient, user_data: dict, expected_status: int
 ):
-    await create_user_test(hr_client1, user_data, expected_status)
+    await create_user_test(hr_client, user_data, expected_status)
 
 
 @pytest.mark.asyncio
@@ -229,7 +229,7 @@ async def test_create_user_admin_client(
 )
 @pytest.mark.asyncio
 async def test_create_users_invalid(
-    hr_client1: AsyncClient, user_data: dict, expected_status: int
+    hr_client: AsyncClient, user_data: dict, expected_status: int
 ):
-    response = await hr_client1.post("/users/", json=user_data)
+    response = await hr_client.post("/users/", json=user_data)
     assert response.status_code == expected_status
