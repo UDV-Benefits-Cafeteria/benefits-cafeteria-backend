@@ -16,8 +16,6 @@ asyncpg = "^0.30.0"
 pydantic-settings = "^2.5.0"
 starlette = "^0.38.5"
 loguru = "^0.7.2"
-celery = "^5.4.0"
-flower = "^2.0.1"
 pydantic = {extras = ["email"], version = "^2.9.2"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 pandas = "^2.2.3"
@@ -29,6 +27,7 @@ fastapi-mail = "^1.4.1"
 fastapi-storages = "^0.3.0"
 elasticsearch = {extras = ["async"], version = "^8.15.1"}
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+fastapi-limiter = "^0.1.6"
 
 [tool.poetry.group.dev]
 optional = true

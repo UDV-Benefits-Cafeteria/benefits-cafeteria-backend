@@ -1,8 +1,17 @@
 from fastapi import APIRouter
 
-from . import routers
+from src.config import get_settings
 
-router = APIRouter(prefix="/v1")
+from . import routers
+from .dependencies import BaseLimiter
+
+settings = get_settings()
+
+if not settings.DEBUG:
+    router = APIRouter(prefix="/v1", dependencies=(BaseLimiter,))
+else:
+    router = APIRouter(prefix="/v1")
+
 
 router.include_router(routers.auth)
 router.include_router(routers.benefit)

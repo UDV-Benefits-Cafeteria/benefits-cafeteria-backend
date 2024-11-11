@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from pydantic import EmailStr
 
 from src.api.v1.dependencies import (
@@ -293,6 +293,7 @@ async def forgot_password(
     auth_service: AuthServiceDependency,
     user_service: UsersServiceDependency,
     email: EmailStr,
+    background_tasks: BackgroundTasks,
 ):
     """
     Initiate the password reset process by sending a password reset email.
@@ -320,7 +321,7 @@ async def forgot_password(
             detail="User not found",
         )
 
-    await auth_service.send_forget_password_email(email)
+    await auth_service.send_forget_password_email(email, background_tasks)
 
     return {"is_success": True}
 

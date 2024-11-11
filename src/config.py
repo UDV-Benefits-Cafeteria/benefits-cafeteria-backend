@@ -2,7 +2,7 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import EmailStr, PostgresDsn, SecretStr
+from pydantic import EmailStr, PostgresDsn, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Set up logging
@@ -50,8 +50,8 @@ class Settings(BaseSettings):
     MAIL_FROM: EmailStr = "test@email.com"
     MAIL_PORT: int = 587
     MAIL_SERVER: str = "mailserver"
-    MAIL_STARTTLS: bool = True
-    MAIL_SSL_TLS: bool = False
+    MAIL_STARTTLS: bool = False
+    MAIL_SSL_TLS: bool = True
     MAIL_USE_CREDENTIALS: bool = True
     MAIL_VALIDATE_CERTS: bool = False
 
@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     AWS_DEFAULT_ACL: str = "public-read"
     AWS_S3_USE_SSL: bool = True
 
+    REDIS_PASSWORD: str = "someverysecuredpass"
+    REDIS_USER: str = "user"
+    REDIS_USER_PASSWORD: str = "pass"
+    REDIS_HOST: str = "redis"
+    REDIS_PORT: int = 6379
+
     @property
     def DATABASE_URL(self) -> PostgresDsn:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"  # noqa
@@ -74,6 +80,19 @@ class Settings(BaseSettings):
     @property
     def ELASTIC_URL(self) -> str:
         return f"http://{self.ELASTIC_HOST}:{self.ELASTIC_PORT}"
+
+    @property
+    def REDIS_BASE_URL(self) -> RedisDsn:
+        return f"redis://{self.REDIS_USER}:{self.REDIS_USER_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}"
+
+    @property
+    def REDIS_LIMITER_URL(self) -> RedisDsn:
+        return self.REDIS_BASE_URL + "/0"
+
+    # for future
+    @property
+    def REDIS_CACHE_URL(self) -> RedisDsn:
+        return self.REDIS_BASE_URL + "/1"
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parents[1] / ".env", extra="ignore"

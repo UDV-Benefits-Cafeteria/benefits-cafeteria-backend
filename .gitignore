@@ -163,3 +163,4 @@ cython_debug/
 pgdata/
 alembic/versions/*
 elastic_data/
+redisdata
