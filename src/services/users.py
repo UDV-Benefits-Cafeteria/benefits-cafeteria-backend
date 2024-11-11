@@ -2,6 +2,7 @@ import os
 from typing import Any, Optional
 
 from fastapi import BackgroundTasks, UploadFile
+from pydantic import ValidationError
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.user as schemas
@@ -205,15 +206,6 @@ class UsersService(
         positions_service: PositionsService,
         legal_entities_service: LegalEntitiesService,
     ) -> tuple[list[schemas.UserCreate], list[dict[str, Any]]]:
-        """
-        Parse users from the given Excel file contents.
-
-        :param file_contents: The contents of the Excel file.
-        :param positions_service: Instance of PositionsService.
-        :param legal_entities_service: Instance of LegalEntitiesService.
-        :return: A tuple of (valid_users, errors)
-        """
-
         required_columns = [
             "email",
             "имя",
@@ -254,42 +246,83 @@ class UsersService(
             field_parsers=field_parsers,
         )
 
-        valid_users_excel, errors = parser.parse_excel(file_contents)
+        valid_users_excel, parse_errors = parser.parse_excel(file_contents)
 
         valid_users = []
-        final_errors = []
+        service_errors = []
 
         for idx, user_excel in enumerate(valid_users_excel):
+            row_number = idx + 2
             try:
                 data = user_excel.model_dump()
+
+                position_name = data.pop("position_name", None)
+                if position_name:
+                    try:
+                        data["position_id"] = await self.resolve_position_id(
+                            position_name, positions_service
+                        )
+                    except service_exceptions.EntityNotFoundError:
+                        service_errors.append(
+                            {
+                                "row": row_number,
+                                "error": f"Должность '{position_name}' не найдена.",
+                            }
+                        )
+                        continue
+
+                legal_entity_name = data.pop("legal_entity_name", None)
+                if legal_entity_name:
+                    try:
+                        data["legal_entity_id"] = await self.resolve_legal_entity_id(
+                            legal_entity_name, legal_entities_service
+                        )
+                    except service_exceptions.EntityNotFoundError:
+                        service_errors.append(
+                            {
+                                "row": row_number,
+                                "error": f"Юридическое лицо '{legal_entity_name}' не найдено.",
+                            }
+                        )
+                        continue
+
                 try:
-                    data["position_id"] = await self.resolve_position_id(
-                        data.pop("position_name", None), positions_service
+                    user_create = schemas.UserCreate.model_validate(data)
+                except ValidationError as ve:
+                    error_messages = "; ".join(
+                        [f"{err['loc'][0]}: {err['msg']}" for err in ve.errors()]
                     )
-
-                    data["legal_entity_id"] = await self.resolve_legal_entity_id(
-                        data.pop("legal_entity_name", None), legal_entities_service
+                    service_errors.append(
+                        {
+                            "row": row_number,
+                            "error": f"Ошибка валидации: {error_messages}",
+                        }
                     )
-                except Exception:
-                    pass
-
-                user_create = schemas.UserCreate.model_validate(data)
+                    continue
 
                 try:
-                    await self.read_by_email(user_create.email)
-                except Exception:
+                    existing_user = await self.read_by_email(user_create.email)
+                    if existing_user:
+                        service_errors.append(
+                            {
+                                "row": row_number,
+                                "error": f"Email '{user_create.email}' уже используется.",
+                            }
+                        )
+                        continue
+                except service_exceptions.EntityNotFoundError:
                     pass
 
                 valid_users.append(user_create)
             except Exception as e:
-                final_errors.append(
+                service_errors.append(
                     {
-                        "row": idx + 2,
-                        "error": str(e),
+                        "row": row_number,
+                        "error": f"Неожиданная ошибка: {str(e)}",
                     }
                 )
 
-        return valid_users, errors + final_errors
+        return valid_users, parse_errors + service_errors
 
     async def update_image(
         self, image: Optional[UploadFile], user_id: int

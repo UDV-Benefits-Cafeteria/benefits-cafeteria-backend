@@ -21,8 +21,8 @@ def parse_role(value: str) -> str:
     for role, aliases in ROLES_MAP.items():
         if value in aliases:
             return role
-        else:
-            raise ValueError(f"Invalid value for role: '{value}'")
+
+    raise ValueError(f"Invalid value for role: '{value}'")
 
 
 def parse_is_adapted(value: str) -> bool:
@@ -30,11 +30,12 @@ def parse_is_adapted(value: str) -> bool:
         return False
 
     value = str(value).strip().lower()
+
     for role, aliases in BOOL_MAP.items():
         if value in aliases:
             return role
-        else:
-            raise ValueError(f"Invalid value for is_adapted: '{value}'")
+
+    raise ValueError(f"Invalid value for is_adapted: '{value}'")
 
 
 def parse_hired_at(value: str) -> date:

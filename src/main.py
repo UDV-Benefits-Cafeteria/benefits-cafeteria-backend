@@ -29,6 +29,7 @@ def get_application() -> FastAPI:
             settings.REDIS_LIMITER_URL, encoding="utf-8", decode_responses=True
         )
         await FastAPILimiter.init(redis_connection_limiter)
+
         yield
 
     if not settings.DEBUG:
