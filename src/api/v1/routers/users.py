@@ -144,6 +144,10 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create user"
         )
+    except PermissionDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+        )
 
 
 @router.get(
@@ -180,7 +184,7 @@ async def get_current_user(
     },
 )
 async def update_user(
-    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
+    current_user: Annotated[schemas.UserRead, Depends(get_active_user)],
     user_id: int,
     user_update: schemas.UserUpdate,
     service: UsersServiceDependency,
@@ -215,6 +219,10 @@ async def update_user(
     except EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update user"
+        )
+    except PermissionDeniedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
         )
 
 

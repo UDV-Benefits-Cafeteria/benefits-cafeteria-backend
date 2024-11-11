@@ -299,6 +299,12 @@ class BenefitRequestsService(
             user = await users_service.read_by_id(user_id)
         except Exception:
             raise
+
+        if benefit.adaptation_required and not user.is_adapted:
+            raise service_exceptions.EntityCreateError(
+                "Benefit Request", "User has not passed adaptation period"
+            )
+
         if remove:
             if user.coins < benefit.coins_cost:
                 raise service_exceptions.EntityCreateError(

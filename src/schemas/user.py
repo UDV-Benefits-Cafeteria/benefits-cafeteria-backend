@@ -146,7 +146,6 @@ class UserCreate(UserBase):
     """
 
     is_verified: bool = Field(default=False, exclude=True)
-    is_active: bool = Field(default=True, exclude=True)
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
@@ -176,7 +175,7 @@ class UserUpdate(UserBase):
     firstname: Annotated[Optional[str], Field(max_length=100)] = None
     lastname: Annotated[Optional[str], Field(max_length=100)] = None
     role: Optional[UserRole] = None
-    hired_at: Optional[date] = None
+    hired_at: Annotated[Optional[date], Field(..., le=date.today())] = None
     is_active: Optional[bool] = None
     is_adapted: Optional[bool] = None
 

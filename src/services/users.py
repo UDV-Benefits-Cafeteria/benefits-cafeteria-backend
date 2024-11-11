@@ -74,6 +74,10 @@ class UsersService(
         background_tasks: BackgroundTasks = None,
     ) -> schemas.UserRead:
         if current_user.role == schemas.UserRole.HR:
+            if create_schema.role == schemas.UserRole.ADMIN:
+                raise service_exceptions.PermissionDeniedError(
+                    "HR users cannot create admins."
+                )
             if create_schema.legal_entity_id != current_user.legal_entity_id:
                 raise service_exceptions.PermissionDeniedError(
                     "HR users cannot create users outside their own legal entity."
@@ -109,7 +113,7 @@ class UsersService(
             raise
 
         if current_user is not None:
-            if current_user.role == schemas.UserRole.HR:
+            if current_user.role == schemas.UserRole.HR.value:
                 if user_to_update.legal_entity_id != current_user.legal_entity_id:
                     raise service_exceptions.PermissionDeniedError(
                         "HR users cannot update users outside their own legal entity."
@@ -182,8 +186,6 @@ class UsersService(
     ) -> Optional[int]:
         if position_name:
             position = await positions_service.read_by_name(position_name)
-            if not position:
-                raise ValueError(f"Position '{position_name}' not found.")
             return position.id
         return None
 
@@ -194,8 +196,6 @@ class UsersService(
     ) -> Optional[int]:
         if legal_entity_name:
             legal_entity = await legal_entities_service.read_by_name(legal_entity_name)
-            if not legal_entity:
-                raise ValueError(f"Legal entity '{legal_entity_name}' not found.")
             return legal_entity.id
         return None
 
@@ -262,23 +262,22 @@ class UsersService(
         for idx, user_excel in enumerate(valid_users_excel):
             try:
                 data = user_excel.model_dump()
+                try:
+                    data["position_id"] = await self.resolve_position_id(
+                        data.pop("position_name", None), positions_service
+                    )
 
-                data["position_id"] = await self.resolve_position_id(
-                    data.pop("position_name", None), positions_service
-                )
-
-                data["legal_entity_id"] = await self.resolve_legal_entity_id(
-                    data.pop("legal_entity_name", None), legal_entities_service
-                )
+                    data["legal_entity_id"] = await self.resolve_legal_entity_id(
+                        data.pop("legal_entity_name", None), legal_entities_service
+                    )
+                except Exception:
+                    pass
 
                 user_create = schemas.UserCreate.model_validate(data)
 
                 try:
                     await self.read_by_email(user_create.email)
-                    raise ValueError(
-                        f"User with email '{user_create.email}' already exists."
-                    )
-                except service_exceptions.EntityNotFoundError:
+                except Exception:
                     pass
 
                 valid_users.append(user_create)

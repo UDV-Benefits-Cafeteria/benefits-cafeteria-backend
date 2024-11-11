@@ -27,7 +27,7 @@ router = APIRouter(prefix="/benefit-requests", tags=["Requests"])
 @router.post(
     "/",
     dependencies=[Depends(get_active_user)],
-    response_model=schemas.BenefitRequestCreate,
+    response_model=schemas.BenefitRequestRead,
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"description": "Benefit request created successfully"},
@@ -60,7 +60,7 @@ async def create_benefit_request(
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to create benefit request. Check the benefit coins cost and minimal level required+",
+            detail="Failed to create benefit request. Check the benefit coins cost and minimal level required",
         )
     except EntityUpdateError:
         raise HTTPException(
@@ -316,7 +316,7 @@ async def update_benefit_request(
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to update benefit request. Check the benefit coins cost and minimal level required+",
+            detail="Failed to update benefit request. Check the benefit coins cost and minimal level required",
         )
     except EntityReadError:
         raise HTTPException(

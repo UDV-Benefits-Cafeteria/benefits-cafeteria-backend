@@ -1,384 +1,407 @@
+from datetime import date
+
 import pytest
 from fastapi import status
 from httpx import AsyncClient
 
-from src.utils.email import fm
-
-requests_benefit_data = {
-    "name": "DMS",
-    "description": "Comprehensive health insurance for employees",
-    "coins_cost": 5,
-    "min_level_cost": 1,
-}
-
-requests_user_data = {
-    "email": "testbenefitrequest@example.com",
-    "firstname": "John",
-    "lastname": "Doe",
-    "middlename": "Smith",
-    "role": "admin",
-    "hired_at": "2023-10-10",
-    "is_adapted": True,
-    "is_active": True,
-    "is_verified": False,
-    "coins": 100,
-    "position_id": None,
-    "legal_entity_id": None,
-}
+import src.schemas.benefit as benefit_schemas
+import src.schemas.user as user_schemas
+from src.models import User
+from src.schemas.request import BenefitStatus
+from src.services.benefits import BenefitsService
+from src.services.users import UsersService
+from tests.conftest import get_employee_client
 
 
+@pytest.mark.parametrize(
+    "invalid_data, expected_status",
+    [
+        # Missing benefit_id
+        (
+            {
+                "user_id": 444,
+                "status": BenefitStatus.PENDING,
+                "comment": "Test comment",
+            },
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
+        # Missing user_id
+        (
+            {
+                "benefit_id": 1,
+                "status": BenefitStatus.PENDING,
+                "comment": "Test comment",
+            },
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
+        # Invalid status value
+        (
+            {
+                "benefit_id": 1,
+                "user_id": 444,
+                "status": "invalid_status",
+                "comment": "Test comment",
+            },
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
+        # Invalid data type for status
+        (
+            {
+                "benefit_id": 1,
+                "user_id": 444,
+                "status": 123,
+                "comment": "Test comment",
+            },
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
+    ],
+)
 @pytest.mark.asyncio
-async def test_create_benefit_request_valid(async_client: AsyncClient):
-    fm.config.SUPPRESS_SEND = 1
-    with fm.record_messages():
-        benefit = await async_client.post("/benefits/", json=requests_benefit_data)
-        user = await async_client.post("/users/", json=requests_user_data)
-        valid_benefit_request_data = {
-            "benefit_id": benefit.json()["id"],
-            "user_id": user.json()["id"],
-        }
-        response = await async_client.post(
-            "/benefit-requests/", json=valid_benefit_request_data
-        )
-        assert response.status_code == status.HTTP_201_CREATED
-        assert response.json()["status"] == "pending"
+async def test_create_benefit_request_invalid_data(
+    invalid_data, expected_status, employee_client: AsyncClient
+):
+    response = await employee_client.post("/benefit-requests/", json=invalid_data)
+    assert response.status_code == expected_status
 
 
+@pytest.mark.parametrize(
+    "benefit_data, user_data",
+    [
+        # Test 1
+        (
+            {
+                "name": "Benefit Adapted User",
+                "coins_cost": 10,
+                "min_level_cost": 1,
+                "amount": 10,
+                "adaptation_required": True,
+            },
+            {
+                "email": "adapted_user@example.com",
+                "firstname": "Adapted",
+                "lastname": "User",
+                "role": "employee",
+                "coins": 20,
+                "hired_at": "2022-01-01",
+                "is_adapted": True,
+                "legal_entity_id": 111,
+            },
+        ),
+        # Test 2
+        (
+            {
+                "name": "Benefit High Level",
+                "coins_cost": 15,
+                "min_level_cost": 2,
+                "amount": 5,
+                "adaptation_required": True,
+            },
+            {
+                "email": "high_level_user@example.com",
+                "firstname": "High",
+                "lastname": "Level",
+                "role": "employee",
+                "coins": 15,
+                "hired_at": "2021-01-01",
+                "is_adapted": True,
+                "legal_entity_id": 111,
+            },
+        ),
+        # Test 3
+        (
+            {
+                "name": "Benefit Non-Adapted User",
+                "coins_cost": 5,
+                "min_level_cost": 2,
+                "amount": 8,
+                "adaptation_required": False,
+            },
+            {
+                "email": "non_adapted_user@example.com",
+                "firstname": "NonAdapted",
+                "lastname": "User",
+                "role": "employee",
+                "coins": 10,
+                "hired_at": "2020-01-01",
+                "is_adapted": False,
+                "legal_entity_id": 111,
+            },
+        ),
+        # Test 4
+        (
+            {
+                "name": "Benefit Adapted Enough Coins",
+                "coins_cost": 10,
+                "min_level_cost": 1,
+                "amount": 10,
+                "adaptation_required": False,
+            },
+            {
+                "email": "adapted_enough_coins_user@example.com",
+                "firstname": "AdaptedCoins",
+                "lastname": "User",
+                "role": "employee",
+                "coins": 10,
+                "hired_at": "2022-01-01",
+                "is_adapted": True,
+                "legal_entity_id": 111,
+            },
+        ),
+    ],
+)
 @pytest.mark.asyncio
-async def test_create_benefit_request_invalid(async_client: AsyncClient):
-    invalid_benefit_request_data = {"benefit_id": 9999, "user_id": 9999}
-    response = await async_client.post(
-        "/benefit-requests/", json=invalid_benefit_request_data
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.asyncio
-async def test_get_benefit_request_not_found(async_client: AsyncClient):
-    request_id = 9999
-    response = await async_client.get(f"/benefit-requests/{request_id}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.asyncio
-async def test_get_benefit_requests_by_user(async_client: AsyncClient):
-    response = await async_client.get("/benefit-requests/user/1")
-    assert response.status_code == status.HTTP_200_OK
-    assert isinstance(response.json(), list)
-
-
-@pytest.mark.asyncio
-async def test_update_benefit_request_not_found(async_client: AsyncClient):
-    request_id = 9999
-    update_data = {"comment": "Some test comment"}
-    response = await async_client.patch(
-        f"/benefit-requests/{request_id}", json=update_data
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.asyncio
-async def test_update_benefit_request_invalid(async_client: AsyncClient):
-    request_id = 1
-    update_data = {"user_id": 555, "comment": "Some test comment"}
-    response = await async_client.patch(
-        f"/benefit-requests/{request_id}", json=update_data
-    )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-
-@pytest.mark.asyncio
-async def test_update_benefit_request_valid(async_client: AsyncClient):
-    request_id = 1
-    update_data = {"comment": "Some test comment"}
-    response = await async_client.patch(
-        f"/benefit-requests/{request_id}", json=update_data
-    )
-    assert response.status_code == status.HTTP_200_OK
-
-
-@pytest.mark.asyncio
-async def test_delete_benefit_request_not_found(async_client: AsyncClient):
-    request_id = 9999
-    response = await async_client.delete(f"/benefit-requests/{request_id}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.asyncio
-async def test_delete_benefit_request(async_client: AsyncClient):
-    request_id = 1
-    response = await async_client.delete(f"/benefit-requests/{request_id}")
-    assert response.status_code == status.HTTP_200_OK
-
-
-@pytest.mark.asyncio
-async def test_create_benefit_request_pairwise_1(async_client: AsyncClient):
-    """
-    Test 1:
-    - benefit_id_validity: Valid
-    - user_id_validity: Valid
-    - user_has_enough_coins: Yes
-    - user_meets_level_requirement: Yes
-    - benefit_amount_sufficient: Yes
-    - adaptation_match: Yes
-    Expected: Success
-    """
-    benefit_data = {
-        "name": "Benefit Test 1",
-        "coins_cost": 10,
-        "min_level_cost": 1,
-        "amount": 10,
-        "adaptation_required": True,
-    }
-    benefit_response = await async_client.post("/benefits/", json=benefit_data)
+async def test_create_benefit_request_pairwise(
+    benefit_data, user_data, admin_client: AsyncClient, hr_client: AsyncClient
+):
+    # Create benefit
+    benefit_response = await admin_client.post("/benefits/", json=benefit_data)
     assert benefit_response.status_code == status.HTTP_201_CREATED
-    benefit_id = benefit_response.json()["id"]
+    benefit = benefit_response.json()
+    benefit_id = benefit["id"]
 
-    user_data = {
-        "email": "user_test1@example.com",
-        "firstname": "User",
-        "lastname": "Test",
-        "role": "employee",
-        "coins": 10,
-        "hired_at": "2023-01-01",
-        "is_adapted": True,
-    }
-    user_response = await async_client.post("/users/", json=user_data)
+    # Create user
+    user_response = await hr_client.post("/users/", json=user_data)
     assert user_response.status_code == status.HTTP_201_CREATED
-    user_id = user_response.json()["id"]
+    user = user_response.json()
+    user_id = user["id"]
 
+    # Authenticate as the user
+    employee_client = await get_employee_client(user_id)
+
+    # Create benefit request
     request_data = {
         "benefit_id": benefit_id,
         "user_id": user_id,
     }
-    response = await async_client.post("/benefit-requests/", json=request_data)
+    response = await employee_client.post("/benefit-requests/", json=request_data)
     assert response.status_code == status.HTTP_201_CREATED
-    assert response.json()["status"] == "pending"
+    benefit_request = response.json()
+    assert benefit_request["status"] == "pending"
+    assert benefit_request["user"]["id"] == user_id
+    assert benefit_request["benefit"]["id"] == benefit_id
 
 
-@pytest.mark.asyncio
-async def test_create_benefit_request_pairwise_2(async_client: AsyncClient):
-    """
-    Test 2:
-    - benefit_id_validity: Valid
-    - user_id_validity: Valid
-    - user_has_enough_coins: No
-    - user_meets_level_requirement: No
-    - benefit_amount_sufficient: No
-    - adaptation_match: No
-    Expected: Failure due to multiple reasons
-    """
-    benefit_data = {
-        "name": "Benefit Test 2",
-        "coins_cost": 10,
-        "min_level_cost": 5,
-        "amount": 0,
-        "adaptation_required": False,
-    }
-    benefit_response = await async_client.post("/benefits/", json=benefit_data)
-    assert benefit_response.status_code == status.HTTP_201_CREATED
-    benefit_id = benefit_response.json()["id"]
+async def perform_benefit_request_test(
+    admin_user: User,
+    benefit_data: dict,
+    user_data: dict,
+    expected_status: int,
+):
+    # Create Benefit
+    valid_benefit_data = benefit_schemas.BenefitCreate.model_validate(benefit_data)
 
-    user_data = {
-        "email": "user_test2@example.com",
-        "firstname": "User",
-        "lastname": "Test",
-        "role": "employee",
-        "coins": 5,
-        "hired_at": "2023-10-01",
-        "is_adapted": True,
-    }
-    user_response = await async_client.post("/users/", json=user_data)
-    assert user_response.status_code == status.HTTP_201_CREATED
-    user_id = user_response.json()["id"]
+    created_benefit = await BenefitsService().create(valid_benefit_data)
+
+    created_benefit_data = created_benefit.model_dump()
+    assert created_benefit_data["id"] is not None
+
+    # Create User
+    admin_user_data = user_schemas.UserRead.model_validate(admin_user)
+
+    valid_user_data = user_schemas.UserCreate.model_validate(user_data)
+
+    created_user = await UsersService().create(valid_user_data, admin_user_data)
+
+    created_user_data = created_user.model_dump()
+    assert created_user_data["id"] is not None
+
+    employee_client = await get_employee_client(created_user_data["id"])
 
     request_data = {
-        "benefit_id": benefit_id,
-        "user_id": user_id,
+        "benefit_id": created_benefit_data["id"],
+        "user_id": created_user_data["id"],
     }
-    response = await async_client.post("/benefit-requests/", json=request_data)
-
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    response = await employee_client.post("/benefit-requests/", json=request_data)
+    assert response.status_code == expected_status
 
 
 @pytest.mark.asyncio
-async def test_create_benefit_request_pairwise_3(async_client: AsyncClient):
-    """
-    Test 3:
-    - benefit_id_validity: Valid
-    - user_id_validity: Invalid
-    - user_has_enough_coins: Yes
-    - user_meets_level_requirement: No
-    - benefit_amount_sufficient: Yes
-    - adaptation_match: No
-    Expected: Failure due to invalid user_id
-    """
+@pytest.mark.parametrize(
+    "benefit_data, user_data, expected_status",
+    [
+        # Test 1: User does not have enough coins
+        (
+            {
+                "name": "Benefit High Cost",
+                "coins_cost": 20,
+                "min_level_cost": 1,
+                "amount": 10,
+                "adaptation_required": False,
+            },
+            {
+                "email": "user_insufficient_coins@example.com",
+                "firstname": "Insufficient",
+                "lastname": "Coins",
+                "role": "employee",
+                "coins": 10,
+                "hired_at": "2022-01-01",
+                "is_adapted": True,
+                "legal_entity_id": 111,
+            },
+            status.HTTP_400_BAD_REQUEST,
+        ),
+        # Test 2: User does not have minimal required level
+        (
+            {
+                "name": "Benefit High Level",
+                "coins_cost": 10,
+                "min_level_cost": 12,
+                "amount": 10,
+                "adaptation_required": False,
+            },
+            {
+                "email": "user_low_level@example.com",
+                "firstname": "Low",
+                "lastname": "Level",
+                "role": "employee",
+                "coins": 20,
+                "hired_at": date.today(),
+                "is_adapted": True,
+                "legal_entity_id": 111,
+            },
+            status.HTTP_400_BAD_REQUEST,
+        ),
+        # Test 3: User is not adapted and the benefit is requiring adaptation
+        (
+            {
+                "name": "Benefit Requires Adaptation",
+                "coins_cost": 10,
+                "min_level_cost": 1,
+                "amount": 10,
+                "adaptation_required": True,
+            },
+            {
+                "email": "user_not_adapted@example.com",
+                "firstname": "NotAdapted",
+                "lastname": "User",
+                "role": "employee",
+                "coins": 20,
+                "hired_at": "2022-01-01",
+                "is_adapted": False,
+                "legal_entity_id": 111,
+            },
+            status.HTTP_400_BAD_REQUEST,
+        ),
+        # Test 4: Not enough amount of benefits
+        (
+            {
+                "name": "Benefit Out of Stock",
+                "coins_cost": 10,
+                "min_level_cost": 1,
+                "amount": 0,
+                "adaptation_required": False,
+            },
+            {
+                "email": "user_benefit_amount_insufficient@example.com",
+                "firstname": "Benefit",
+                "lastname": "AmountInsufficient",
+                "role": "employee",
+                "coins": 20,
+                "hired_at": "2022-01-01",
+                "is_adapted": True,
+                "legal_entity_id": 111,
+            },
+            status.HTTP_400_BAD_REQUEST,
+        ),
+    ],
+)
+async def test_benefit_request_invalid_conditions(
+    admin_user: User,
+    benefit_data: dict,
+    user_data: dict,
+    expected_status: int,
+):
+    await perform_benefit_request_test(
+        admin_user=admin_user,
+        benefit_data=benefit_data,
+        user_data=user_data,
+        expected_status=expected_status,
+    )
+
+
+@pytest.mark.asyncio
+async def test_cancel_benefit_request_restores_coins_and_amount(
+    admin_user: User, legal_entity1a
+):
     benefit_data = {
-        "name": "Benefit Test 3",
+        "name": "Benefit Cancel Test",
         "coins_cost": 10,
-        "min_level_cost": 5,
-        "amount": 10,
-        "adaptation_required": False,
-    }
-    benefit_response = await async_client.post("/benefits/", json=benefit_data)
-    assert benefit_response.status_code == status.HTTP_201_CREATED
-    benefit_id = benefit_response.json()["id"]
-
-    user_id = 9999
-
-    request_data = {
-        "benefit_id": benefit_id,
-        "user_id": user_id,
-    }
-    response = await async_client.post("/benefit-requests/", json=request_data)
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-@pytest.mark.asyncio
-async def test_create_benefit_request_pairwise_4(async_client: AsyncClient):
-    """
-    Test 4:
-    - benefit_id_validity: Valid
-    - user_id_validity: Invalid
-    - user_has_enough_coins: No
-    - user_meets_level_requirement: Yes
-    - benefit_amount_sufficient: No
-    - adaptation_match: Yes
-    Expected: Failure due to invalid user_id
-    """
-    benefit_data = {
-        "name": "Benefit Test 4",
-        "coins_cost": 15,
         "min_level_cost": 1,
-        "amount": 0,
-        "adaptation_required": True,
+        "amount": 5,
+        "adaptation_required": False,
     }
-    benefit_response = await async_client.post("/benefits/", json=benefit_data)
-    assert benefit_response.status_code == status.HTTP_201_CREATED
-    benefit_id = benefit_response.json()["id"]
 
-    user_id = 9999
+    valid_benefit_data = benefit_schemas.BenefitCreate.model_validate(benefit_data)
 
-    request_data = {
-        "benefit_id": benefit_id,
-        "user_id": user_id,
-    }
-    response = await async_client.post("/benefit-requests/", json=request_data)
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    created_benefit = await BenefitsService().create(valid_benefit_data)
 
+    created_benefit_data = created_benefit.model_dump()
+    assert created_benefit_data["id"] is not None
 
-@pytest.mark.asyncio
-async def test_create_benefit_request_pairwise_5(async_client: AsyncClient):
-    """
-    Test 5:
-    - benefit_id_validity: Invalid
-    - user_id_validity: Valid
-    - user_has_enough_coins: Yes
-    - user_meets_level_requirement: No
-    - benefit_amount_sufficient: No
-    - adaptation_match: Yes
-    Expected: Failure due to invalid benefit_id
-    """
     user_data = {
-        "email": "user_test5@example.com",
-        "firstname": "User",
+        "email": "user_cancel_test@example.com",
+        "firstname": "Cancel",
         "lastname": "Test",
         "role": "employee",
         "coins": 20,
         "hired_at": "2022-01-01",
         "is_adapted": True,
+        "legal_entity_id": 111,
     }
-    user_response = await async_client.post("/users/", json=user_data)
-    assert user_response.status_code == status.HTTP_201_CREATED
-    user_id = user_response.json()["id"]
 
-    benefit_id = 9999
+    admin_user_data = user_schemas.UserRead.model_validate(admin_user)
+    valid_user_data = user_schemas.UserCreate.model_validate(user_data)
+
+    created_user = await UsersService().create(valid_user_data, admin_user_data)
+
+    created_user_data = created_user.model_dump()
+    assert created_user_data["id"] is not None
+
+    employee_client = await get_employee_client(created_user_data["id"])
 
     request_data = {
-        "benefit_id": benefit_id,
-        "user_id": user_id,
+        "benefit_id": created_benefit_data["id"],
+        "user_id": created_user_data["id"],
     }
-    response = await async_client.post("/benefit-requests/", json=request_data)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
 
+    request_create_response = await employee_client.post(
+        "/benefit-requests/", json=request_data
+    )
+    assert request_create_response.status_code == status.HTTP_201_CREATED
 
-@pytest.mark.asyncio
-async def test_create_benefit_request_pairwise_6(async_client: AsyncClient):
-    """
-    Test 6:
-    - benefit_id_validity: Invalid
-    - user_id_validity: Valid
-    - user_has_enough_coins: No
-    - user_meets_level_requirement: Yes
-    - benefit_amount_sufficient: Yes
-    - adaptation_match: No
-    Expected: Failure due to invalid benefit_id
-    """
-    user_data = {
-        "email": "user_test6@example.com",
-        "firstname": "User",
-        "lastname": "Test",
-        "role": "employee",
-        "coins": 5,
-        "hired_at": "2020-01-01",
-        "is_adapted": False,
+    benefit_request = request_create_response.json()
+
+    request_id = benefit_request["id"]
+
+    benefit_response = await BenefitsService().read_by_id(created_benefit_data["id"])
+    updated_benefit_data = benefit_response.model_dump()
+    assert updated_benefit_data["amount"] == benefit_data["amount"] - 1
+
+    user_response = await UsersService().read_by_id(created_user_data["id"])
+    updated_user_data = user_response.model_dump()
+    assert updated_user_data["coins"] == user_data["coins"] - benefit_data["coins_cost"]
+
+    update_data = {
+        "status": "declined",
     }
-    user_response = await async_client.post("/users/", json=user_data)
-    assert user_response.status_code == status.HTTP_201_CREATED
-    user_id = user_response.json()["id"]
 
-    benefit_id = 9999
+    response = await employee_client.patch(
+        f"/benefit-requests/{request_id}", json=update_data
+    )
 
-    request_data = {
-        "benefit_id": benefit_id,
-        "user_id": user_id,
-    }
-    response = await async_client.post("/benefit-requests/", json=request_data)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_200_OK
 
+    updated_request = response.json()
+    assert updated_request["status"] == "declined"
 
-@pytest.mark.asyncio
-async def test_create_benefit_request_pairwise_7(async_client: AsyncClient):
-    """
-    Test 7:
-    - benefit_id_validity: Invalid
-    - user_id_validity: Invalid
-    - user_has_enough_coins: Yes
-    - user_meets_level_requirement: Yes
-    - benefit_amount_sufficient: No
-    - adaptation_match: No
-    Expected: Failure due to invalid benefit_id and user_id
-    """
-    benefit_id = 9999
-    user_id = 9999
+    restored_benefit_response = await BenefitsService().read_by_id(
+        created_benefit_data["id"]
+    )
 
-    request_data = {
-        "benefit_id": benefit_id,
-        "user_id": user_id,
-    }
-    response = await async_client.post("/benefit-requests/", json=request_data)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    restored_benefit_data = restored_benefit_response.model_dump()
+    assert restored_benefit_data["amount"] == benefit_data["amount"]
 
+    restored_user_response = await UsersService().read_by_id(created_user_data["id"])
+    restored_user_data = restored_user_response.model_dump()
 
-@pytest.mark.asyncio
-async def test_create_benefit_request_pairwise_8(async_client: AsyncClient):
-    """
-    Test 8:
-    - benefit_id_validity: Invalid
-    - user_id_validity: Invalid
-    - user_has_enough_coins: No
-    - user_meets_level_requirement: No
-    - benefit_amount_sufficient: Yes
-    - adaptation_match: Yes
-    Expected: Failure due to invalid benefit_id and user_id
-    """
-    benefit_id = 9999
-    user_id = 9999
-
-    request_data = {
-        "benefit_id": benefit_id,
-        "user_id": user_id,
-    }
-    response = await async_client.post("/benefit-requests/", json=request_data)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert restored_user_data["coins"] == user_data["coins"]

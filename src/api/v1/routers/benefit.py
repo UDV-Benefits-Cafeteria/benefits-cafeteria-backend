@@ -299,6 +299,15 @@ async def upload_images(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to upload benefit images",
         )
+    except EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to read benefit",
+        )
+    except EntityUpdateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to index benefit"
+        )
 
 
 @router.delete(

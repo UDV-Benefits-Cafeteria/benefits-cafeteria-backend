@@ -1,6 +1,8 @@
 from typing import Optional
 
+import src.repositories.exceptions as repo_exceptions
 import src.schemas.legalentity as schemas
+import src.services.exceptions as service_exceptions
 from src.repositories.legal_entities import LegalEntitiesRepository
 from src.services.base import BaseService
 
@@ -25,7 +27,17 @@ class LegalEntitiesService(
         Returns:
             Optional[schemas.LegalEntityRead]: An instance of LegalEntityRead if found, otherwise None.
         """
-        entity = await self.repo.read_by_name(name)
-        if entity:
-            return self.read_schema.model_validate(entity)
-        return None
+        try:
+            entity = await self.repo.read_by_name(name)
+
+        except repo_exceptions.EntityReadError as e:
+            raise service_exceptions.EntityReadError(
+                "Legal Entity", f"name: {name}", str(e)
+            )
+
+        if entity is None:
+            raise service_exceptions.EntityNotFoundError(
+                "Legal Entity", f"name: {name}"
+            )
+
+        return self.read_schema.model_validate(entity)

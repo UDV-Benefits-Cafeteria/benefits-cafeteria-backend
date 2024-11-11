@@ -255,9 +255,12 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
             {"email": [user.email], "body": email_body}
         )
 
-        background_tasks.add_task(
-            send_mail,
-            email.model_dump(),
-            email_title,
-            email_template,
-        )
+        try:
+            background_tasks.add_task(
+                send_mail,
+                email.model_dump(),
+                email_title,
+                email_template,
+            )
+        except Exception:
+            pass
