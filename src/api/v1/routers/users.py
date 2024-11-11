@@ -135,14 +135,15 @@ async def create_user(
     """
     try:
         created_user = await service.create(
-            create_schema=user, current_user=current_user
+            create_schema=user,
+            current_user=current_user,
+            background_tasks=background_tasks,
         )
+        return created_user
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create user"
         )
-    await service.send_email_registration(user, background_tasks)
-    return created_user
 
 
 @router.get(
@@ -366,9 +367,6 @@ async def bulk_create_users(
             )
         except Exception:
             errors.append({"row": idx, "error": "Unexpected Error"})
-
-    for user in created_users:
-        await service.send_email_registration(user, background_tasks)
 
     return schemas.UserUploadResponse(created_users=created_users, errors=errors)
 
