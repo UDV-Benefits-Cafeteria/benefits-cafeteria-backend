@@ -13,6 +13,7 @@ from src.models.base import Base
 from src.models.users import UserRole
 from src.schemas.user import UserRead
 from src.services.sessions import SessionsService
+from src.utils.email import fm
 
 pytest_plugins = ["pytest_asyncio"]
 
@@ -136,60 +137,65 @@ async def employee_user(db_session: AsyncSession, legal_entity1a) -> User:
 @pytest.fixture
 async def admin_client(admin_user: User):
     """Provide an AsyncClient with admin user authentication."""
+    fm.config.SUPPRESS_SEND = 1
+    with fm.record_messages():
+        async def override_get_current_user():
+            return UserRead.model_validate(admin_user)
 
-    async def override_get_current_user():
-        return UserRead.model_validate(admin_user)
+        app.dependency_overrides[get_current_user] = override_get_current_user
 
-    app.dependency_overrides[get_current_user] = override_get_current_user
+        async with AsyncClient(
+            transport=ASGITransport(app), base_url="http://test/api/v1"
+        ) as client:
+            yield client
 
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test/api/v1"
-    ) as client:
-        yield client
-
-    app.dependency_overrides = {}
+        app.dependency_overrides = {}
 
 
 @pytest.fixture
 async def hr_client(hr_user: User):
     """Provide an AsyncClient with hr_user authentication."""
+    fm.config.SUPPRESS_SEND = 1
+    with fm.record_messages():
+        async def override_get_current_user():
+            return UserRead.model_validate(hr_user)
 
-    async def override_get_current_user():
-        return UserRead.model_validate(hr_user)
+        app.dependency_overrides[get_current_user] = override_get_current_user
 
-    app.dependency_overrides[get_current_user] = override_get_current_user
+        async with AsyncClient(
+            transport=ASGITransport(app), base_url="http://test/api/v1"
+        ) as client:
+            yield client
 
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test/api/v1"
-    ) as client:
-        yield client
-
-    app.dependency_overrides = {}
+        app.dependency_overrides = {}
 
 
 @pytest.fixture
 async def employee_client(employee_user: User):
     """Provide an AsyncClient with regular employee user authentication."""
+    fm.config.SUPPRESS_SEND = 1
+    with fm.record_messages():
+        async def override_get_current_user():
+            return UserRead.model_validate(employee_user)
 
-    async def override_get_current_user():
-        return UserRead.model_validate(employee_user)
+        app.dependency_overrides[get_current_user] = override_get_current_user
 
-    app.dependency_overrides[get_current_user] = override_get_current_user
+        async with AsyncClient(
+            transport=ASGITransport(app), base_url="http://test/api/v1"
+        ) as client:
+            yield client
 
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test/api/v1"
-    ) as client:
-        yield client
-
-    app.dependency_overrides = {}
+        app.dependency_overrides = {}
 
 
 @pytest.fixture(scope="session")
 async def auth_client():
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test/api/v1"
-    ) as client:
-        yield client
+    fm.config.SUPPRESS_SEND = 1
+    with fm.record_messages():
+        async with AsyncClient(
+            transport=ASGITransport(app), base_url="http://test/api/v1"
+        ) as client:
+            yield client
 
 
 @pytest.fixture(scope="session")
@@ -211,16 +217,17 @@ async def get_employee_client(user_id: int):
         user_id, settings.SESSION_EXPIRE_TIME
     )
     csrf_token = await sessions_service.get_csrf_token(session_id)
-
-    client = AsyncClient(
-        transport=ASGITransport(app),
-        base_url="http://test/api/v1",
-        cookies={
-            settings.SESSION_COOKIE_NAME: session_id,
-            settings.CSRF_COOKIE_NAME: csrf_token,
-        },
-    )
-    return client
+    fm.config.SUPPRESS_SEND = 1
+    with fm.record_messages():
+        client = AsyncClient(
+            transport=ASGITransport(app),
+            base_url="http://test/api/v1",
+            cookies={
+                settings.SESSION_COOKIE_NAME: session_id,
+                settings.CSRF_COOKIE_NAME: csrf_token,
+            },
+        )
+        return client
 
 
 @pytest.fixture(autouse=True)
