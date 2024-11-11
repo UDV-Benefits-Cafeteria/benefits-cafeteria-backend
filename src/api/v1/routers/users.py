@@ -268,7 +268,6 @@ async def get_user(
 
 @router.post(
     "/upload",
-    dependencies=[Depends(get_hr_user)],
     response_model=schemas.UserValidationResponse,
     responses={
         200: {"description": "Users validated successfully"},
@@ -280,6 +279,7 @@ async def upload_users(
     positions_service: PositionsServiceDependency,
     legal_entities_service: LegalEntitiesServiceDependency,
     file: UploadFile = File(...),
+    current_user: schemas.UserRead = Depends(get_hr_user),
 ):
     """
     Upload users from an Excel file for validation.
@@ -315,6 +315,7 @@ async def upload_users(
             contents,
             positions_service=positions_service,
             legal_entities_service=legal_entities_service,
+            current_user=current_user,
         )
     except ValueError:
         raise HTTPException(

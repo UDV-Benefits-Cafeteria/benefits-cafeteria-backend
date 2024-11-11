@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Optional, Type
 
 import pandas as pd
 from pydantic import BaseModel, ValidationError
@@ -8,10 +8,10 @@ from pydantic import BaseModel, ValidationError
 class ExcelParser:
     def __init__(
         self,
-        required_columns: List[str],
-        column_mappings: Dict[str, str],
+        required_columns: list[str],
+        column_mappings: dict[str, str],
         model_class: Type[BaseModel],
-        field_parsers: Optional[Dict[str, Callable[[Any], Any]]] = None,
+        field_parsers: Optional[dict[str, Callable[[Any], Any]]] = None,
     ):
         """
         Initialize the ExcelParser.
@@ -28,7 +28,7 @@ class ExcelParser:
 
     def parse_excel(
         self, file_contents: bytes
-    ) -> Tuple[List[BaseModel], List[Dict[str, Any]]]:
+    ) -> tuple[list[BaseModel], list[dict[str, Any]]]:
         """
         Parse the Excel file contents and return valid models and errors.
 
@@ -63,7 +63,7 @@ class ExcelParser:
                         errors.append(
                             {
                                 "row": idx,
-                                "error": f"Value error in field '{model_field}': {str(e)}",
+                                "error": f"Ошибка в значении поля '{model_field}': {str(e)}",
                             }
                         )
                         value = None
@@ -71,7 +71,7 @@ class ExcelParser:
                         errors.append(
                             {
                                 "row": idx,
-                                "error": f"Unexpected error in field '{model_field}': {str(e)}",
+                                "error": f"Непредвиденная ошибка в поле '{model_field}': {str(e)}",
                             }
                         )
                         value = None
@@ -86,7 +86,7 @@ class ExcelParser:
                     [f"{err['loc'][0]}: {err['msg']}" for err in ve.errors()]
                 )
                 errors.append(
-                    {"row": idx, "error": f"Validation error: {error_messages}"}
+                    {"row": idx, "error": f"Ошибка валидации данных: {error_messages}"}
                 )
 
         return valid_models, errors

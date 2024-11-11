@@ -74,18 +74,11 @@ class UsersService(
         current_user: schemas.UserRead = None,
         background_tasks: BackgroundTasks = None,
     ) -> schemas.UserRead:
-        if current_user.role == schemas.UserRole.HR:
-            if create_schema.role == schemas.UserRole.ADMIN:
-                raise service_exceptions.PermissionDeniedError(
-                    "HR users cannot create admins."
-                )
-            if create_schema.legal_entity_id != current_user.legal_entity_id:
-                raise service_exceptions.PermissionDeniedError(
-                    "HR users cannot create users outside their own legal entity."
-                )
-
-            if create_schema.legal_entity_id is None:
-                create_schema.legal_entity_id = current_user.legal_entity_id
+        hr_error = self._validate_hr_permissions(
+            user_create=create_schema, current_user=current_user
+        )
+        if hr_error is not None:
+            raise service_exceptions.PermissionDeniedError(hr_error)
 
         await self.send_email(
             create_schema,
@@ -205,7 +198,35 @@ class UsersService(
         file_contents: bytes,
         positions_service: PositionsService,
         legal_entities_service: LegalEntitiesService,
+        current_user: schemas.UserRead,
     ) -> tuple[list[schemas.UserCreate], list[dict[str, Any]]]:
+        parser = self._initialize_excel_parser()
+        valid_users_excel, parse_errors = parser.parse_excel(file_contents)
+
+        valid_users = []
+        service_errors = []
+
+        for idx, user_excel_raw in enumerate(valid_users_excel):
+            row_number = idx + 2
+
+            user_excel = schemas.UserCreateExcel.model_validate(user_excel_raw)
+
+            user_create, error = await self._process_user_row(
+                user_excel,
+                row_number,
+                positions_service,
+                legal_entities_service,
+                current_user,
+            )
+
+            if error:
+                service_errors.append(error)
+            else:
+                valid_users.append(user_create)
+
+        return valid_users, parse_errors + service_errors
+
+    def _initialize_excel_parser(self) -> ExcelParser:
         required_columns = [
             "email",
             "имя",
@@ -239,90 +260,109 @@ class UsersService(
             "coins": parse_coins,
         }
 
-        parser = ExcelParser(
+        return ExcelParser(
             required_columns=required_columns,
             column_mappings=column_mappings,
             model_class=schemas.UserCreateExcel,
             field_parsers=field_parsers,
         )
 
-        valid_users_excel, parse_errors = parser.parse_excel(file_contents)
+    async def _process_user_row(
+        self,
+        user_excel: schemas.UserCreateExcel,
+        row_number: int,
+        positions_service: PositionsService,
+        legal_entities_service: LegalEntitiesService,
+        current_user: schemas.UserRead,
+    ) -> tuple[Optional[schemas.UserCreate], Optional[dict[str, Any]]]:
+        try:
+            data = user_excel.model_dump()
 
-        valid_users = []
-        service_errors = []
+            position_name = data.pop("position_name", None)
 
-        for idx, user_excel in enumerate(valid_users_excel):
-            row_number = idx + 2
-            try:
-                data = user_excel.model_dump()
-
-                position_name = data.pop("position_name", None)
-                if position_name:
-                    try:
-                        data["position_id"] = await self.resolve_position_id(
-                            position_name, positions_service
-                        )
-                    except service_exceptions.EntityNotFoundError:
-                        service_errors.append(
-                            {
-                                "row": row_number,
-                                "error": f"Должность '{position_name}' не найдена.",
-                            }
-                        )
-                        continue
-
-                legal_entity_name = data.pop("legal_entity_name", None)
-                if legal_entity_name:
-                    try:
-                        data["legal_entity_id"] = await self.resolve_legal_entity_id(
-                            legal_entity_name, legal_entities_service
-                        )
-                    except service_exceptions.EntityNotFoundError:
-                        service_errors.append(
-                            {
-                                "row": row_number,
-                                "error": f"Юридическое лицо '{legal_entity_name}' не найдено.",
-                            }
-                        )
-                        continue
-
+            if position_name:
                 try:
-                    user_create = schemas.UserCreate.model_validate(data)
-                except ValidationError as ve:
-                    error_messages = "; ".join(
-                        [f"{err['loc'][0]}: {err['msg']}" for err in ve.errors()]
+                    data["position_id"] = await self.resolve_position_id(
+                        position_name, positions_service
                     )
-                    service_errors.append(
-                        {
-                            "row": row_number,
-                            "error": f"Ошибка валидации: {error_messages}",
-                        }
-                    )
-                    continue
 
-                try:
-                    existing_user = await self.read_by_email(user_create.email)
-                    if existing_user:
-                        service_errors.append(
-                            {
-                                "row": row_number,
-                                "error": f"Email '{user_create.email}' уже используется.",
-                            }
-                        )
-                        continue
                 except service_exceptions.EntityNotFoundError:
-                    pass
-
-                valid_users.append(user_create)
-            except Exception as e:
-                service_errors.append(
-                    {
+                    return None, {
                         "row": row_number,
-                        "error": f"Неожиданная ошибка: {str(e)}",
+                        "error": f"Должность '{position_name}' не найдена.",
                     }
-                )
 
-        return valid_users, parse_errors + service_errors
+            legal_entity_name = data.pop("legal_entity_name", None)
+
+            if legal_entity_name:
+                try:
+                    data["legal_entity_id"] = await self.resolve_legal_entity_id(
+                        legal_entity_name, legal_entities_service
+                    )
+
+                except service_exceptions.EntityNotFoundError:
+                    return None, {
+                        "row": row_number,
+                        "error": f"Юридическое лицо '{legal_entity_name}' не найдено.",
+                    }
+
+            try:
+                user_create = schemas.UserCreate.model_validate(data)
+
+            except ValidationError as ve:
+                error_messages = "; ".join(
+                    [f"{err['loc'][0]}: {err['msg']}" for err in ve.errors()]
+                )
+                return None, {
+                    "row": row_number,
+                    "error": f"Ошибка валидации: {error_messages}",
+                }
+
+            try:
+                existing_user = await self.read_by_email(user_create.email)
+                if existing_user:
+                    return None, {
+                        "row": row_number,
+                        "error": f"Email '{user_create.email}' уже используется.",
+                    }
+
+            except service_exceptions.EntityNotFoundError:
+                pass
+
+            hr_error = self._validate_hr_permissions(user_create, current_user)
+
+            if hr_error:
+                return None, {
+                    "row": row_number,
+                    "error": hr_error,
+                }
+
+            return user_create, None
+
+        except Exception as e:
+            return None, {
+                "row": row_number,
+                "error": f"Неожиданная ошибка: {str(e)}",
+            }
+
+    @staticmethod
+    def _validate_hr_permissions(
+        user_create: schemas.UserCreate, current_user: schemas.UserRead
+    ) -> Optional[str]:
+        if current_user.role == schemas.UserRole.HR:
+            if user_create.role == schemas.UserRole.ADMIN:
+                return "HR пользователи не могут создавать админов."
+
+            if (
+                user_create.legal_entity_id is not None
+                and user_create.legal_entity_id != current_user.legal_entity_id
+            ):
+                return "HR пользователи не могут создавать пользователей вне своего юридического лица."
+
+            if user_create.legal_entity_id is None:
+                user_create.legal_entity_id = current_user.legal_entity_id
+
+        return None
 
     async def update_image(
         self, image: Optional[UploadFile], user_id: int
