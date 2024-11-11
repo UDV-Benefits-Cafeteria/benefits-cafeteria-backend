@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
+from fastapi_limiter.depends import RateLimiter
 from starlette import status
 
 from src.config import get_settings
@@ -22,6 +23,8 @@ PositionsServiceDependency = Annotated[PositionsService, Depends()]
 CategoriesServiceDependency = Annotated[CategoriesService, Depends()]
 LegalEntitiesServiceDependency = Annotated[LegalEntitiesService, Depends()]
 BenefitRequestsServiceDependency = Annotated[BenefitRequestsService, Depends()]
+
+BaseLimiter = Depends(RateLimiter(times=60, seconds=60))
 
 settings = get_settings()
 

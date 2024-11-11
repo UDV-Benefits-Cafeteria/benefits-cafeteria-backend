@@ -1,13 +1,11 @@
 import os
 from typing import Any, Optional
 
-from fastapi import UploadFile
+from fastapi import BackgroundTasks, UploadFile
 
 import src.repositories.exceptions as repo_exceptions
-import src.schemas.email as email_schemas
 import src.schemas.user as schemas
 import src.services.exceptions as service_exceptions
-from src.celery.tasks import background_send_mail
 from src.config import get_settings, logger
 from src.repositories.users import UsersRepository
 from src.services.base import BaseService
@@ -73,6 +71,7 @@ class UsersService(
         self,
         create_schema: schemas.UserCreate,
         current_user: schemas.UserRead = None,
+        background_tasks: BackgroundTasks = None,
     ) -> schemas.UserRead:
         if current_user.role == schemas.UserRole.HR:
             if create_schema.legal_entity_id != current_user.legal_entity_id:
@@ -83,6 +82,18 @@ class UsersService(
             if create_schema.legal_entity_id is None:
                 create_schema.legal_entity_id = current_user.legal_entity_id
 
+        await self.send_email(
+            create_schema,
+            "register.html",
+            f"Добро пожаловать на {settings.APP_TITLE}",
+            {
+                "name": create_schema.firstname,
+                "product": settings.APP_TITLE,
+                "register_url": f"https://{settings.DOMAIN}/register?email={create_schema.email}",
+            },
+            background_tasks,
+        )
+
         return await super().create(create_schema)
 
     async def update_by_id(
@@ -90,6 +101,7 @@ class UsersService(
         entity_id: int,
         update_schema: schemas.UserUpdate,
         current_user: schemas.UserRead = None,
+        background_tasks: BackgroundTasks = None,
     ) -> schemas.UserRead:
         try:
             user_to_update = await self.read_by_id(entity_id)
@@ -107,6 +119,36 @@ class UsersService(
                     raise service_exceptions.PermissionDeniedError(
                         "You can only change yourself"
                     )
+
+        if update_schema.coins and current_user:
+            if user_to_update.coins > update_schema.coins:
+                await self.send_email(
+                    user_to_update,
+                    "balance-changes.html",
+                    f"Списание с баланса на {settings.APP_TITLE}",
+                    {
+                        "operation_type": "decrease",
+                        "name": current_user.firstname,
+                        "amount_change": user_to_update.coins - update_schema.coins,
+                        "current_balance": update_schema.coins,
+                        "home_url": f"https://{settings.DOMAIN}/main/account",
+                    },
+                    background_tasks,
+                )
+            elif user_to_update.coins < update_schema.coins:
+                await self.send_email(
+                    user_to_update,
+                    "balance-changes.html",
+                    f"Пополнение баланса на {settings.APP_TITLE}",
+                    {
+                        "operation_type": "increase",
+                        "name": current_user.firstname,
+                        "amount_change": update_schema.coins - user_to_update.coins,
+                        "current_balance": update_schema.coins,
+                        "home_url": f"https://{settings.DOMAIN}/main/account",
+                    },
+                    background_tasks,
+                )
 
         return await super().update_by_id(entity_id, update_schema)
 
@@ -249,39 +291,6 @@ class UsersService(
                 )
 
         return valid_users, errors + final_errors
-
-    @staticmethod
-    async def send_email_registration(
-        user: schemas.UserCreate | schemas.UserRead,
-    ) -> None:
-        """
-        Asynchronously sends a registration email to the user.
-
-        :param user: The user for whom the registration email is being sent. This can be either a
-                     UserCreate or UserRead schema, containing information like the user's email and
-                     first name.
-        :type user: schemas.UserCreate | schemas.UserRead
-
-        :return: None. The function sends a registration email and does not return a value.
-        :rtype: None
-        """
-        email = email_schemas.EmailSchema.model_validate(
-            {
-                "email": [user.email],
-                "body": {
-                    "name": user.firstname,
-                    "product": settings.APP_TITLE,
-                    "register_url": f"https://{settings.DOMAIN}/register?email={user.email}",
-                },
-            }
-        )
-        logger.info(f"Sending registration email with data: {email.model_dump()}")
-
-        background_send_mail.delay(
-            email.model_dump(),
-            f"Регистрация на сайте {settings.APP_TITLE}",
-            "register.html",
-        )
 
     async def update_image(
         self, image: Optional[UploadFile], user_id: int

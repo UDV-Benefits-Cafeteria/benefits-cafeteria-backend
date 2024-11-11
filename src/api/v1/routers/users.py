@@ -1,6 +1,15 @@
 from typing import Annotated, Any, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 
 import src.schemas.user as schemas
 from src.api.v1.dependencies import (
@@ -110,6 +119,7 @@ async def create_user(
     current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
     user: schemas.UserCreate,
     service: UsersServiceDependency,
+    background_tasks: BackgroundTasks,
 ):
     """
     Create a new user.
@@ -125,14 +135,15 @@ async def create_user(
     """
     try:
         created_user = await service.create(
-            create_schema=user, current_user=current_user
+            create_schema=user,
+            current_user=current_user,
+            background_tasks=background_tasks,
         )
+        return created_user
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create user"
         )
-    # await service.send_email_registration(user)
-    return created_user
 
 
 @router.get(
@@ -173,6 +184,7 @@ async def update_user(
     user_id: int,
     user_update: schemas.UserUpdate,
     service: UsersServiceDependency,
+    background_tasks: BackgroundTasks,
 ):
     """
     Update an existing user by ID.
@@ -190,7 +202,10 @@ async def update_user(
     """
     try:
         updated_user = await service.update_by_id(
-            entity_id=user_id, update_schema=user_update, current_user=current_user
+            entity_id=user_id,
+            update_schema=user_update,
+            current_user=current_user,
+            background_tasks=background_tasks,
         )
         return updated_user
     except EntityNotFoundError:
@@ -319,6 +334,7 @@ async def bulk_create_users(
     current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
     users_data: list[schemas.UserCreate],
     service: UsersServiceDependency,
+    background_tasks: BackgroundTasks,
 ):
     """
     Create multiple users from the provided list.
@@ -351,9 +367,6 @@ async def bulk_create_users(
             )
         except Exception:
             errors.append({"row": idx, "error": "Unexpected Error"})
-
-    for user in created_users:
-        await service.send_email_registration(user)
 
     return schemas.UserUploadResponse(created_users=created_users, errors=errors)
 

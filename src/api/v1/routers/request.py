@@ -1,6 +1,6 @@
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.params import Query
 
 from src.api.v1.dependencies import (
@@ -38,6 +38,7 @@ router = APIRouter(prefix="/benefit-requests", tags=["Requests"])
 async def create_benefit_request(
     benefit_request: schemas.BenefitRequestCreate,
     service: BenefitRequestsServiceDependency,
+    background_tasks: BackgroundTasks,
 ):
     """
     Create a new benefit request.
@@ -52,7 +53,9 @@ async def create_benefit_request(
     - **BenefitRequestCreate**: The created benefit request data.
     """
     try:
-        created_benefit_request = await service.create(benefit_request)
+        created_benefit_request = await service.create(
+            benefit_request, background_tasks
+        )
         return created_benefit_request
     except EntityCreateError:
         raise HTTPException(
@@ -276,6 +279,7 @@ async def update_benefit_request(
     request_id: int,
     benefit_request_update: schemas.BenefitRequestUpdate,
     service: BenefitRequestsServiceDependency,
+    background_tasks: BackgroundTasks,
     current_user: UserRead = Depends(get_active_user),
 ):
     """
@@ -297,6 +301,7 @@ async def update_benefit_request(
             entity_id=request_id,
             update_schema=benefit_request_update,
             current_user=current_user,
+            background_tasks=background_tasks,
         )
         return updated_benefit_request
     except EntityNotFoundError:

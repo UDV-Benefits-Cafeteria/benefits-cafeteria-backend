@@ -47,48 +47,33 @@ services:
       retries: 5
     restart: unless-stopped
 
-  rabbitmq:
-    image: "rabbitmq:4-management"
-
+  redis:
+    image: redis:latest
+    environment:
+      - REDIS_PASSWORD=someverysecurepassword
+      - REDIS_USER=redisusr
+      - REDIS_USER_PASSWORD=someverysecureuserpassword
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redisdata:/data
+    command: >
+      sh -c '
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
+        echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      '
     healthcheck:
-      test: rabbitmq-diagnostics -q ping
+      test: [ "CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping" ]
       interval: 30s
-      timeout: 30s
-      retries: 3
-    ports:
-      - "5672:5672"
-
-  celery:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    command: poetry run celery -A src.celery.celery worker -l debug --without-mingle --without-gossip
-    environment:
-      - DATABASE_URL=postgres+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/${POSTGRES_DB}
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq//
-    depends_on:
-      - rabbitmq
-      - db
-      - app
-    restart: on-failure
-
-  flower:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    hostname: flower
-    environment:
-      - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq//
-      - CELERY_RESULT_BACKEND=rpc://
-      - FLOWER_PORT=5555
-      - DATABASE_URL=postgres+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/${POSTGRES_DB}
-    command: poetry run celery -A src.celery.celery flower
-    depends_on:
-      - rabbitmq
-      - db
-      - app
-    ports:
-      - "5555:5555"
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
 
   elasticsearch:
     image: elasticsearch:8.15.3

@@ -29,11 +29,6 @@ POSTGRES_HOST=db
 
 SECRET_KEY=some_secret_key
 
-FLOWER_LOGIN=admin
-FLOWER_PASSWORD=admin
-CELERY_BROKER_URL=amqp://guest:guest@rabbitmq//
-CELERY_RESULT_BACKEND=rpc://
-
 SENTRY_DSN=emptyurl
 SENTRY_ENVIRONMENT=development
 
@@ -55,6 +50,12 @@ AWS_S3_USE_SSL=True
 ELASTIC_PASSWORD=elasticpass
 ELASTIC_HOST=elasticsearch
 ELASTIC_PORT=9200
+
+REDIS_PASSWORD=my_redis_password
+REDIS_USER=my_user
+REDIS_USER_PASSWORD=my_user_password
+REDIS_HOST=redis
+REDIS_PORT=6379
 ```
 
 ### 3. Set up Docker

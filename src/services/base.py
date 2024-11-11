@@ -1,12 +1,16 @@
-from typing import Generic, List, Optional, TypeVar
+from typing import Any, Generic, List, Optional, TypeVar
 
+from fastapi import BackgroundTasks
 from pydantic import BaseModel
 
 import src.repositories.exceptions as repo_exceptions
+import src.schemas.email as email_schemas
 import src.services.exceptions as service_exceptions
 from src.config import logger
 from src.repositories.abstract import AbstractRepository
 from src.repositories.exceptions import EntityDeleteError
+from src.schemas import user as user_schemas
+from src.utils.email import send_mail
 
 TCreate = TypeVar("TCreate", bound=BaseModel)
 TRead = TypeVar("TRead", bound=BaseModel)
@@ -238,3 +242,22 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
             f"Successfully deleted {self.read_schema.__name__} with ID: {entity_id}"
         )
         return is_deleted
+
+    @staticmethod
+    async def send_email(
+        user: user_schemas.UserRead | user_schemas.UserCreate,
+        email_template: str,
+        email_title: str,
+        email_body: dict[str, Any],
+        background_tasks: BackgroundTasks,
+    ) -> None:
+        email = email_schemas.EmailSchema.model_validate(
+            {"email": [user.email], "body": email_body}
+        )
+
+        background_tasks.add_task(
+            send_mail,
+            email.model_dump(),
+            email_title,
+            email_template,
+        )

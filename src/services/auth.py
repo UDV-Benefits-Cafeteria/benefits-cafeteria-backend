@@ -1,14 +1,15 @@
 from typing import Optional
 
+from fastapi import BackgroundTasks
 from pydantic import EmailStr
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.email as email_schemas
-from src.celery.tasks import background_send_mail
 from src.config import get_settings
 from src.repositories.users import UsersRepository
 from src.schemas.user import UserAuth, UserResetForgetPassword
 from src.services.exceptions import EntityNotFoundError, EntityReadError
+from src.utils.email import send_mail
 from src.utils.security import (
     create_reset_password_token,
     decode_reset_password_token,
@@ -81,7 +82,9 @@ class AuthService:
         return await self.users_repo.update_by_id(user_id, data)
 
     @staticmethod
-    async def send_forget_password_email(email: EmailStr):
+    async def send_forget_password_email(
+        email: EmailStr, background_tasks: BackgroundTasks
+    ):
         """
         Send a password reset email to the specified email address.
 
@@ -102,7 +105,8 @@ class AuthService:
             }
         )
 
-        background_send_mail.delay(
+        background_tasks.add_task(
+            send_mail,
             email.model_dump(),
             f"Смена пароля на сайте {settings.APP_TITLE}",
             "reset-password.html",
