@@ -11,7 +11,7 @@ class ExcelParser:
         required_columns: list[str],
         column_mappings: dict[str, str],
         model_class: Type[BaseModel],
-        field_parsers: Optional[dict[str, Callable[[Any], Any]]] = None,
+        field_parsers: Optional[dict[str, Callable[[str], Any]]] = None,
     ):
         """
         Initialize the ExcelParser.
@@ -90,3 +90,17 @@ class ExcelParser:
                 )
 
         return valid_models, errors
+
+
+def initialize_excel_parser(
+    required_columns: list[str],
+    column_mappings: dict[str, str],
+    model_class: Type[BaseModel],
+    field_parsers: Optional[dict[str, Callable[[Any], Any]]] = None,
+) -> ExcelParser:
+    return ExcelParser(
+        required_columns=required_columns,
+        column_mappings=column_mappings,
+        model_class=model_class,
+        field_parsers=field_parsers,
+    )

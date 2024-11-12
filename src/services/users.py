@@ -12,8 +12,8 @@ from src.repositories.users import UsersRepository
 from src.services.base import BaseService
 from src.services.legal_entities import LegalEntitiesService
 from src.services.positions import PositionsService
-from src.utils.excel_parser import ExcelParser
-from src.utils.field_parsers import (
+from src.utils.parser.excel_parser import initialize_excel_parser
+from src.utils.parser.field_parsers import (
     parse_coins,
     parse_hired_at,
     parse_is_adapted,
@@ -174,25 +174,6 @@ class UsersService(
                 self.read_schema.__name__, email, str(e)
             )
 
-    @staticmethod
-    async def resolve_position_id(
-        position_name: Optional[str], positions_service: PositionsService
-    ) -> Optional[int]:
-        if position_name:
-            position = await positions_service.read_by_name(position_name)
-            return position.id
-        return None
-
-    @staticmethod
-    async def resolve_legal_entity_id(
-        legal_entity_name: Optional[str],
-        legal_entities_service: LegalEntitiesService,
-    ) -> Optional[int]:
-        if legal_entity_name:
-            legal_entity = await legal_entities_service.read_by_name(legal_entity_name)
-            return legal_entity.id
-        return None
-
     async def parse_users_from_excel(
         self,
         file_contents: bytes,
@@ -200,7 +181,53 @@ class UsersService(
         legal_entities_service: LegalEntitiesService,
         current_user: schemas.UserRead,
     ) -> tuple[list[schemas.UserCreate], list[dict[str, Any]]]:
-        parser = self._initialize_excel_parser()
+        """
+        Parses users from an Excel file.
+
+        Args:
+            file_contents (bytes): The raw bytes of the uploaded Excel file.
+            positions_service (PositionsService): Service to resolve position IDs.
+            legal_entities_service (LegalEntitiesService): Service to resolve legal entity IDs.
+            current_user (schemas.UserRead): The user performing the upload.
+
+        Returns:
+            tuple[list[schemas.UserCreate], list[dict[str, Any]]]:
+                A tuple containing a list of valid `UserCreate` instances and a list of error dictionaries.
+        """
+        parser = initialize_excel_parser(
+            required_columns=[
+                "email",
+                "фамилия",
+                "имя",
+                "отчество",
+                "роль",
+                "дата найма",
+                "адаптационный период",
+                "ю-коины",
+                "должность",
+                "юр. лицо",
+            ],
+            column_mappings={
+                "email": "email",
+                "фамилия": "lastname",
+                "имя": "firstname",
+                "отчество": "middlename",
+                "роль": "role",
+                "дата найма": "hired_at",
+                "адаптационный период": "is_adapted",
+                "ю-коины": "coins",
+                "должность": "position_name",
+                "юр. лицо": "legal_entity_name",
+            },
+            model_class=schemas.UserCreateExcel,
+            field_parsers={
+                "role": parse_role,
+                "is_adapted": parse_is_adapted,
+                "hired_at": parse_hired_at,
+                "coins": parse_coins,
+            },
+        )
+
         valid_users_excel, parse_errors = parser.parse_excel(file_contents)
 
         valid_users = []
@@ -226,46 +253,24 @@ class UsersService(
 
         return valid_users, parse_errors + service_errors
 
-    def _initialize_excel_parser(self) -> ExcelParser:
-        required_columns = [
-            "email",
-            "имя",
-            "фамилия",
-            "роль",
-            "дата найма",
-            "адаптационный период",
-            "отчество",
-            "ю-коины",
-            "должность",
-            "юр. лицо",
-        ]
+    @staticmethod
+    async def resolve_position_id(
+        position_name: Optional[str], positions_service: PositionsService
+    ) -> Optional[int]:
+        if position_name:
+            position = await positions_service.read_by_name(position_name)
+            return position.id
+        return None
 
-        column_mappings = {
-            "email": "email",
-            "имя": "firstname",
-            "фамилия": "lastname",
-            "отчество": "middlename",
-            "роль": "role",
-            "дата найма": "hired_at",
-            "адаптационный период": "is_adapted",
-            "ю-коины": "coins",
-            "должность": "position_name",
-            "юр. лицо": "legal_entity_name",
-        }
-
-        field_parsers = {
-            "role": parse_role,
-            "is_adapted": parse_is_adapted,
-            "hired_at": parse_hired_at,
-            "coins": parse_coins,
-        }
-
-        return ExcelParser(
-            required_columns=required_columns,
-            column_mappings=column_mappings,
-            model_class=schemas.UserCreateExcel,
-            field_parsers=field_parsers,
-        )
+    @staticmethod
+    async def resolve_legal_entity_id(
+        legal_entity_name: Optional[str],
+        legal_entities_service: LegalEntitiesService,
+    ) -> Optional[int]:
+        if legal_entity_name:
+            legal_entity = await legal_entities_service.read_by_name(legal_entity_name)
+            return legal_entity.id
+        return None
 
     async def _process_user_row(
         self,
@@ -275,6 +280,22 @@ class UsersService(
         legal_entities_service: LegalEntitiesService,
         current_user: schemas.UserRead,
     ) -> tuple[Optional[schemas.UserCreate], Optional[dict[str, Any]]]:
+        """
+        Processes a single user row from the Excel file.
+
+        Args:
+            user_excel (schemas.UserCreateExcel): The user data extracted from the Excel row.
+            row_number (int): The Excel row number for error reporting.
+            positions_service (PositionsService): Service to resolve position IDs.
+            legal_entities_service (LegalEntitiesService): Service to resolve legal entity IDs.
+            current_user (schemas.UserRead): The user performing the operation.
+
+        Returns:
+            tuple[Optional[schemas.UserCreate], Optional[dict[str, Any]]]:
+                A tuple containing the created `UserCreate` instance if successful,
+                or an error dictionary if processing fails.
+        """
+
         try:
             data = user_excel.model_dump()
 
