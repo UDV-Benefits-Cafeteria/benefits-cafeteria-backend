@@ -77,7 +77,7 @@ def create_application() -> FastAPI:
 
     sessions_service = SessionsService()
 
-    add_middlewares(application, settings, sessions_service)
+    add_middlewares(application, sessions_service)
 
     if not settings.DEBUG:
         configure_sentry()
