@@ -18,6 +18,12 @@ settings = get_settings()
 
 
 async def initialize_redis_limiter(redis_url: str) -> None:
+    """
+    Initializes the Redis limiter for request rate limiting.
+
+    Args:
+        redis_url (str): The URL to connect to the Redis server used for rate limiting.
+    """
     redis_connection_limiter = redis.from_url(
         redis_url, encoding="utf-8", decode_responses=True
     )
@@ -25,12 +31,23 @@ async def initialize_redis_limiter(redis_url: str) -> None:
 
 
 async def initialize_resources() -> None:
+    """
+    Initializes resources required by the application, such as search indices
+    and Redis limiter.
+    """
     await SearchService().create_benefits_index()
     await SearchService().create_users_index()
     await initialize_redis_limiter(settings.REDIS_LIMITER_URL)
 
 
 def add_middlewares(application: FastAPI, sessions_service: SessionsService) -> None:
+    """
+    Adds necessary middleware components to the FastAPI application.
+
+    Args:
+        application (FastAPI): The FastAPI application instance.
+        sessions_service (SessionsService): The service used to manage user sessions.
+    """
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.ALLOW_ORIGINS,
@@ -52,6 +69,9 @@ def add_middlewares(application: FastAPI, sessions_service: SessionsService) -> 
 
 
 def configure_sentry() -> None:
+    """
+    Configures Sentry for error tracking and performance monitoring.
+    """
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
         traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
@@ -61,9 +81,23 @@ def configure_sentry() -> None:
 
 
 def create_application() -> FastAPI:
+    """
+    Creates and configures the FastAPI application instance, setting up
+    resources, middlewares, and routing.
+
+    Returns:
+        FastAPI: The configured FastAPI application instance.
+    """
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        """
+        Asynchronous context manager for initializing resources
+        during the application's lifespan.
+
+        Args:
+            app (FastAPI): The FastAPI application instance.
+        """
         await initialize_resources()
         yield
 
