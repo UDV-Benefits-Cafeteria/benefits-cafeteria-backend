@@ -107,9 +107,11 @@ class BenefitRequestsService(
                 {
                     "product": settings.APP_TITLE,
                     "name": user.firstname,
-                    "benefit_image": benefit.images[0].image_url
-                    if benefit.images
-                    else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
+                    "benefit_image": (
+                        benefit.images[0].image_url
+                        if benefit.images
+                        else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png"
+                    ),
                     "benefit_name": benefit.name,
                     "benefit_price": benefit.coins_cost,
                     "benefit_url": f"https://{settings.DOMAIN}/main/benefits/{benefit.id}",
@@ -234,9 +236,11 @@ class BenefitRequestsService(
                     {
                         "request_status": new_status.value,
                         "name": current_user.firstname,
-                        "benefit_image": benefit.images[0].image_url
-                        if benefit.images
-                        else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
+                        "benefit_image": (
+                            benefit.images[0].image_url
+                            if benefit.images
+                            else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png"
+                        ),
                         "benefit_name": benefit.name,
                         "benefit_price": benefit.coins_cost,
                         "benefit_url": f"https://{settings.DOMAIN}/main/benefits/{benefit.id}",
