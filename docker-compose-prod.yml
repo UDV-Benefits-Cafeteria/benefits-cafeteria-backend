@@ -22,7 +22,7 @@ services:
 #      elasticsearch:
 #        condition: service_healthy
     networks:
-      - backend
+      - backend-databases_backend
     restart: unless-stopped
 
 #  db:
@@ -93,3 +93,7 @@ services:
 #    esdata:
 #    pgdata-volume:
 #    redisdata:
+
+networks:
+  backend-databases_backend:
+    external: true
