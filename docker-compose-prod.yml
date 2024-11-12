@@ -21,6 +21,8 @@ services:
 #        condition: service_healthy
 #      elasticsearch:
 #        condition: service_healthy
+    networks:
+      - backend
     restart: unless-stopped
 
 #  db:
