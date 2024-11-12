@@ -365,7 +365,9 @@ async def bulk_create_users(
             user_data = schemas.UserCreate.model_validate(user_data)
 
             created_user = await service.create(
-                create_schema=user_data, current_user=current_user
+                create_schema=user_data,
+                current_user=current_user,
+                background_tasks=background_tasks,
             )
             created_users.append(created_user)
         except EntityCreateError:
