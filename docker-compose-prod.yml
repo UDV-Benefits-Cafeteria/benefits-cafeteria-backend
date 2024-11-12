@@ -16,7 +16,7 @@ services:
       - POSTGRES_PORT
       - POSTGRES_HOST
       - SECRET_KEY
-    depends_on:
+#    depends_on:
 #      db:
 #        condition: service_healthy
 #      elasticsearch:
