@@ -1,19 +1,13 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from pydantic import EmailStr
 
+import src.schemas.user as schemas
 from src.api.v1.dependencies import (
     AuthServiceDependency,
     SessionsServiceDependency,
     UsersServiceDependency,
 )
 from src.config import get_settings
-from src.schemas.user import (
-    UserLogin,
-    UserRegister,
-    UserResetForgetPassword,
-    UserVerified,
-    UserVerify,
-)
 from src.services.exceptions import (
     EntityCreateError,
     EntityDeletionError,
@@ -29,7 +23,7 @@ settings = get_settings()
 
 @router.post(
     "/verify",
-    response_model=UserVerified,
+    response_model=schemas.UserVerified,
     responses={
         200: {"description": "User email verification successful"},
         400: {"description": "User already verified or failed to read user"},
@@ -37,7 +31,7 @@ settings = get_settings()
     },
 )
 async def verify_email(
-    email_data: UserVerify,
+    email_data: schemas.UserVerify,
     service: UsersServiceDependency,
 ):
     """
@@ -57,7 +51,7 @@ async def verify_email(
         user = await service.read_by_email(email_data.email)
 
         if not user.is_verified:
-            return UserVerified(id=user.id)
+            return schemas.UserVerified(id=user.id)
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -86,7 +80,7 @@ async def verify_email(
     },
 )
 async def signup(
-    user_register: UserRegister,
+    user_register: schemas.UserRegister,
     auth_service: AuthServiceDependency,
 ):
     """
@@ -148,7 +142,7 @@ async def signup(
     },
 )
 async def signin(
-    user_login: UserLogin,
+    user_login: schemas.UserLogin,
     response: Response,
     auth_service: AuthServiceDependency,
     sessions_service: SessionsServiceDependency,
@@ -330,7 +324,7 @@ async def forgot_password(
 async def reset_password(
     auth_service: AuthServiceDependency,
     user_service: UsersServiceDependency,
-    rfp: UserResetForgetPassword,
+    rfp: schemas.UserResetForgetPassword,
 ):
     """
     Reset the user's password using a token.
