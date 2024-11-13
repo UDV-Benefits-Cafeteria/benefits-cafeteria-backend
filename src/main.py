@@ -1,14 +1,8 @@
-from contextlib import asynccontextmanager
+import uvicorn
 
-import redis.asyncio as redis
-import sentry_sdk
-from fastapi import FastAPI
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi_limiter import FastAPILimiter
-from starlette.middleware.cors import CORSMiddleware
+from src.application import create_application
 
-from src.api.v1 import router as api_v1_router
-from src.config import get_settings
+app = create_application()
 
 # from src.middlewares.csrf_middleware import CSRFMiddleware
 from src.middlewares.server_error_middleware import CatchServerErrorMiddleware
@@ -87,3 +81,7 @@ def get_application() -> FastAPI:
 
 
 app = get_application()
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    

@@ -40,9 +40,9 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             "amount": benefit.amount,
             "is_active": benefit.is_active,
             "adaptation_required": benefit.adaptation_required,
-            "real_currency_cost": benefit.real_currency_cost
-            if benefit.real_currency_cost
-            else None,
+            "real_currency_cost": (
+                benefit.real_currency_cost if benefit.real_currency_cost else None
+            ),
             "created_at": benefit.created_at.isoformat(),
             "category_id": benefit.category_id,
         }
