@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional
 
 import pandas as pd
 from pydantic import BaseModel, ValidationError
@@ -10,7 +10,7 @@ class ExcelParser:
         self,
         required_columns: list[str],
         column_mappings: dict[str, str],
-        model_class: Type[BaseModel],
+        model_class: type[BaseModel],
         field_parsers: Optional[dict[str, Callable[[str], Any]]] = None,
     ):
         """
@@ -46,6 +46,7 @@ class ExcelParser:
 
         valid_models = []
         errors = []
+        error_fields = []
 
         for idx, (_, row) in enumerate(
             df.iterrows(), start=2
@@ -66,6 +67,7 @@ class ExcelParser:
                                 "error": f"Ошибка в значении поля '{model_field}': {str(e)}",
                             }
                         )
+                        error_fields.append(model_field)
                         value = None
                     except Exception as e:
                         errors.append(
@@ -74,6 +76,7 @@ class ExcelParser:
                                 "error": f"Непредвиденная ошибка в поле '{model_field}': {str(e)}",
                             }
                         )
+                        error_fields.append(model_field)
                         value = None
 
                 data[model_field] = value
@@ -82,12 +85,16 @@ class ExcelParser:
                 model_instance = self.model_class(**data)
                 valid_models.append(model_instance)
             except ValidationError as ve:
-                error_messages = "; ".join(
-                    [f"{err['loc'][0]}: {err['msg']}" for err in ve.errors()]
-                )
-                errors.append(
-                    {"row": idx, "error": f"Ошибка валидации данных: {error_messages}"}
-                )
+                for err in ve.errors():
+                    field = err["loc"][0]
+                    if field not in error_fields:
+                        error_messages = "; ".join([f"{field}: {err['msg']}"])
+                        errors.append(
+                            {
+                                "row": idx,
+                                "error": f"Ошибка валидации данных: {error_messages}",
+                            }
+                        )
 
         return valid_models, errors
 
@@ -95,8 +102,8 @@ class ExcelParser:
 def initialize_excel_parser(
     required_columns: list[str],
     column_mappings: dict[str, str],
-    model_class: Type[BaseModel],
-    field_parsers: Optional[dict[str, Callable[[Any], Any]]] = None,
+    model_class: type[BaseModel],
+    field_parsers: Optional[dict[str, Callable[[str], Any]]] = None,
 ) -> ExcelParser:
     return ExcelParser(
         required_columns=required_columns,

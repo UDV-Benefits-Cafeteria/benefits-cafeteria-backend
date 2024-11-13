@@ -319,7 +319,8 @@ async def upload_users(
         )
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Error while parsing users"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error while parsing users. Some columns might be missing.",
         )
     except Exception:
         raise HTTPException(

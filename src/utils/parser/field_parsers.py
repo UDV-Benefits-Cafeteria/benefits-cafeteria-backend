@@ -42,7 +42,7 @@ def parse_hired_at(value: str) -> date:
     if value is None:
         raise ValueError("Требуется дата найма")
     try:
-        return pd.to_datetime(value, dayfirst=True).date()
+        return pd.to_datetime(value).date()
     except Exception as e:
         raise ValueError(f"Неверный формат даты: {str(e)}")
 
