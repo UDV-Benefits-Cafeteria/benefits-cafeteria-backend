@@ -20,7 +20,7 @@ from tests.conftest import get_employee_client
         (
             {
                 "user_id": 444,
-                "status": BenefitStatus.PENDING,
+                "status": BenefitStatus.NEW,
                 "comment": "Test comment",
             },
             status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -29,7 +29,7 @@ from tests.conftest import get_employee_client
         (
             {
                 "benefit_id": 1,
-                "status": BenefitStatus.PENDING,
+                "status": BenefitStatus.NEW,
                 "comment": "Test comment",
             },
             status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -176,7 +176,7 @@ async def test_create_benefit_request_pairwise(
     response = await employee_client.post("/benefit-requests/", json=request_data)
     assert response.status_code == status.HTTP_201_CREATED
     benefit_request = response.json()
-    assert benefit_request["status"] == "pending"
+    assert benefit_request["status"] == "new"
     assert benefit_request["user"]["id"] == user_id
     assert benefit_request["benefit"]["id"] == benefit_id
 
@@ -382,7 +382,7 @@ async def test_cancel_benefit_request_restores_coins_and_amount(
     assert updated_user_data["coins"] == user_data["coins"] - benefit_data["coins_cost"]
 
     update_data = {
-        "status": "declined",
+        "status": "canceled",
     }
 
     response = await employee_client.patch(
@@ -392,7 +392,7 @@ async def test_cancel_benefit_request_restores_coins_and_amount(
     assert response.status_code == status.HTTP_200_OK
 
     updated_request = response.json()
-    assert updated_request["status"] == "declined"
+    assert updated_request["status"] == "canceled"
 
     restored_benefit_response = await BenefitsService().read_by_id(
         created_benefit_data["id"]

@@ -9,9 +9,15 @@ from src.schemas.user import UserRead
 
 
 class BenefitStatus(str, Enum):
+    # Old. To support old records
     PENDING = "pending"  # В ожидании
     APPROVED = "approved"  # Одобрен
     DECLINED = "declined"  # Отклонен
+
+    NEW = "new"
+    PROCESSING = "processing"
+    COMPLETE = "complete"
+    CANCELED = "canceled"
 
 
 class BenefitRequestSortFields(str, Enum):
@@ -21,7 +27,7 @@ class BenefitRequestSortFields(str, Enum):
 class BenefitRequestBase(BaseModel):
     benefit_id: Optional[int] = None
     user_id: Optional[int] = None
-    status: BenefitStatus = BenefitStatus.PENDING
+    status: BenefitStatus = BenefitStatus.NEW
     content: Optional[str] = None
     comment: Optional[str] = None
 

@@ -181,7 +181,7 @@ class BenefitRequestsService(
 
             benefits_service = BenefitsService()
             users_service = UsersService()
-            if old_status.value != "declined" and new_status.value == "declined":
+            if old_status.value != "canceled" and new_status.value == "canceled":
                 if (
                     current_user.id == existing_request.user_id
                     or current_user.role in [UserRole.HR.value, UserRole.ADMIN.value]
@@ -201,9 +201,11 @@ class BenefitRequestsService(
                         "You cannot decline benefit request",
                     )
 
-            elif old_status.value == "declined" and new_status.value in [
-                "approved",
-                "pending",
+            elif old_status.value == "canceled" and new_status.value in [
+                "new",
+                "processing",
+                "completed",
+                "canceled",
             ]:
                 if current_user.role in [UserRole.HR.value, UserRole.ADMIN.value]:
                     await self.change_benefit_amount(-1, benefit_id, benefits_service)
@@ -223,7 +225,7 @@ class BenefitRequestsService(
 
             updated_request = await super().update_by_id(entity_id, update_schema)
 
-            if new_status.value != "pending":
+            if new_status.value != "new":
                 try:
                     benefit = await benefits_service.read_by_id(benefit_id)
                 except Exception:

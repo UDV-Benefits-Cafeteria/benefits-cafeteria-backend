@@ -163,11 +163,22 @@ class BenefitStatus(enum.Enum):
         PENDING: The request is awaiting approval.
         APPROVED: The request has been approved.
         DECLINED: The request has been declined.
+
+        NEW: The request is created
+        PROCESSING: The request is processing
+        COMPLETE: The request has been complete
+        CANCELED: The request has been canceled
     """
 
+    # Old. To support old records
     PENDING = "pending"  # В ожидании
     APPROVED = "approved"  # Одобрен
     DECLINED = "declined"  # Отклонен
+
+    NEW = "new"
+    PROCESSING = "processing"
+    COMPLETE = "complete"
+    CANCELED = "canceled"
 
 
 class BenefitRequest(Base):
@@ -204,7 +215,7 @@ class BenefitRequest(Base):
             name="benefit_status_enum",
             values_callable=lambda enum_class: [member.value for member in enum_class],
         ),
-        default=BenefitStatus.PENDING,
+        default=BenefitStatus.NEW,
         index=True,
         nullable=False,
     )
