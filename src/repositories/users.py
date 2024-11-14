@@ -15,14 +15,14 @@ class UsersRepository(SQLAlchemyRepository[User]):
     model = User
 
     async def create(self, data: dict, session: Optional[AsyncSession] = None) -> User:
-        user = await super().create(data)
+        user = await super().create(data, session)
         await self.index_user(user)
         return user
 
     async def update_by_id(
         self, entity_id: int, data: dict, session: Optional[AsyncSession] = None
     ) -> bool:
-        success = await super().update_by_id(entity_id, data)
+        success = await super().update_by_id(entity_id, data, session)
         if success:
             user = await self.read_by_id(entity_id)
             if user:
@@ -32,7 +32,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
     async def delete_by_id(
         self, entity_id: int, session: Optional[AsyncSession] = None
     ) -> bool:
-        success = await super().delete_by_id(entity_id)
+        success = await super().delete_by_id(entity_id, session)
         if success:
             await self.delete_user_from_index(entity_id)
         return success
