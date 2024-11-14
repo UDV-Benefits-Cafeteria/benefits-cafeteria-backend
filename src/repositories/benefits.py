@@ -1,8 +1,10 @@
 from typing import Any, Optional, Union
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.config import get_settings, logger
 from src.models import Benefit
-from src.repositories.abstract import SQLAlchemyRepository
+from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError, EntityUpdateError
 from src.utils.elastic_index import SearchService, es
 
@@ -12,21 +14,30 @@ settings = get_settings()
 class BenefitsRepository(SQLAlchemyRepository[Benefit]):
     model = Benefit
 
-    async def create(self, data: dict) -> Benefit:
-        benefit = await super().create(data)
+    async def create(
+        self, data: dict, session: Optional[AsyncSession] = None
+    ) -> Benefit:
+        benefit = await super().create(data, session=session)
         await self.index_benefit(benefit)
         return benefit
 
-    async def update_by_id(self, entity_id: Union[int, str], data: dict) -> bool:
-        success = await super().update_by_id(entity_id, data)
+    async def update_by_id(
+        self,
+        entity_id: Union[int, str],
+        data: dict,
+        session: Optional[AsyncSession] = None,
+    ) -> bool:
+        success = await super().update_by_id(entity_id, data, session=session)
         if success:
-            benefit = await self.read_by_id(entity_id)
+            benefit = await self.read_by_id(entity_id, session=session)
             if benefit:
                 await self.index_benefit(benefit)
         return success
 
-    async def delete_by_id(self, entity_id: Union[int, str]) -> bool:
-        success = await super().delete_by_id(entity_id)
+    async def delete_by_id(
+        self, entity_id: Union[int, str], session: Optional[AsyncSession] = None
+    ) -> bool:
+        success = await super().delete_by_id(entity_id, session=session)
         if success:
             await self.delete_benefit_from_index(entity_id)
         return success

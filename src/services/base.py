@@ -1,13 +1,14 @@
-from typing import Any, Generic, List, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from fastapi import BackgroundTasks
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.email as email_schemas
 import src.services.exceptions as service_exceptions
 from src.config import logger
-from src.repositories.abstract import AbstractRepository
+from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityDeleteError
 from src.schemas import user as user_schemas
 from src.utils.email import send_mail
@@ -70,12 +71,14 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
             When an error occurs during entity deletion.
     """
 
-    repo: AbstractRepository
+    repo: SQLAlchemyRepository
     create_schema: type(TCreate)
     read_schema: type(TRead)
     update_schema: type(TUpdate)
 
-    async def create(self, create_schema: TCreate) -> TRead:
+    async def create(
+        self, create_schema: TCreate, session: Optional[AsyncSession] = None
+    ) -> TRead:
         """
         Create a new entity and return the created entity's details.
 
@@ -85,7 +88,7 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         """
         try:
             data = create_schema.model_dump(exclude_unset=True)
-            entity = await self.repo.create(data)
+            entity = await self.repo.create(data, session=session)
             validated_entity: TRead = self.read_schema.model_validate(entity)
             logger.info(
                 f"Successfully created {self.create_schema.__name__}: {validated_entity}"
@@ -97,7 +100,9 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
                 self.create_schema.__name__, str(e)
             )
 
-    async def create_many(self, create_schemas: List[TCreate]) -> List[TRead]:
+    async def create_many(
+        self, create_schemas: list[TCreate], session: Optional[AsyncSession] = None
+    ) -> list[TRead]:
         """
         Create multiple entities and return their details.
 
@@ -107,8 +112,8 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         """
         try:
             data = [schema.model_dump(exclude_unset=True) for schema in create_schemas]
-            entities = await self.repo.create_many(data)
-            validated_entities: List[TRead] = [
+            entities = await self.repo.create_many(data, session=session)
+            validated_entities: list[TRead] = [
                 self.read_schema.model_validate(entity) for entity in entities
             ]
             logger.info(
@@ -123,7 +128,9 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
                 self.create_schema.__name__, str(e)
             )
 
-    async def read_by_id(self, entity_id: int) -> TRead:
+    async def read_by_id(
+        self, entity_id: int, session: Optional[AsyncSession] = None
+    ) -> TRead:
         """
         Retrieve a single entity by its ID.
 
@@ -133,7 +140,7 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         :raises service_exceptions.EntityReadError: Raised when an error occurs while reading the entity.
         """
         try:
-            entity = await self.repo.read_by_id(entity_id)
+            entity = await self.repo.read_by_id(entity_id, session=session)
             if not entity:
                 logger.warning(
                     f"{self.read_schema.__name__} with ID {entity_id} not found."
@@ -155,7 +162,9 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
                 self.read_schema.__name__, entity_id, str(e)
             )
 
-    async def read_all(self, page: int = 1, limit: int = 10) -> List[TRead]:
+    async def read_all(
+        self, page: int = 1, limit: int = 10, session: Optional[AsyncSession] = None
+    ) -> list[TRead]:
         """
         Retrieve all entities.
 
@@ -163,7 +172,7 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         :raises service_exceptions.EntityReadError: Raised when an error occurs while reading entities.
         """
         try:
-            entities = await self.repo.read_all(page, limit)
+            entities = await self.repo.read_all(page, limit, session=session)
             validated_entities = [self.read_schema.model_validate(e) for e in entities]
             logger.info(
                 f"Successfully retrieved all {self.read_schema.__name__} entities."
@@ -178,7 +187,10 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
             )
 
     async def update_by_id(
-        self, entity_id: int, update_schema: TUpdate
+        self,
+        entity_id: int,
+        update_schema: TUpdate,
+        session: Optional[AsyncSession] = None,
     ) -> Optional[TRead]:
         """
         Update an existing entity and return the updated entity's details if successful.
@@ -191,7 +203,9 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         """
         try:
             data: dict = update_schema.model_dump(exclude_unset=True)
-            is_updated: bool = await self.repo.update_by_id(entity_id, data)
+            is_updated: bool = await self.repo.update_by_id(
+                entity_id, data, session=session
+            )
             if not is_updated:
                 logger.warning(
                     f"{self.read_schema.__name__} with ID {entity_id} not found for update."
@@ -203,7 +217,7 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
             logger.info(
                 f"Successfully updated {self.read_schema.__name__} with ID: {entity_id}"
             )
-            return await self.read_by_id(entity_id)
+            return await self.read_by_id(entity_id, session=session)
         except repo_exceptions.EntityUpdateError as e:
             logger.error(
                 f"Failed to update {self.read_schema.__name__} with ID {entity_id}: {str(e)}"
@@ -212,7 +226,9 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
                 self.read_schema.__name__, e.read_param, str(e)
             )
 
-    async def delete_by_id(self, entity_id: int) -> bool:
+    async def delete_by_id(
+        self, entity_id: int, session: Optional[AsyncSession] = None
+    ) -> bool:
         """
         Delete an entity by its ID.
 
@@ -222,7 +238,7 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         :raises service_exceptions.EntityDeletionError: Raised when the entity deletion fails.
         """
         try:
-            is_deleted: bool = await self.repo.delete_by_id(entity_id)
+            is_deleted: bool = await self.repo.delete_by_id(entity_id, session=session)
         except EntityDeleteError as e:
             logger.error(
                 f"Failed to delete {self.read_schema.__name__} with ID {entity_id}: {str(e)}"

@@ -4,14 +4,13 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+import src.schemas.user as user_schemas
 from src.api.v1.dependencies import get_current_user
 from src.config import get_settings
 from src.db.db import AsyncSession, async_session_factory, engine
 from src.main import app
 from src.models import Category, LegalEntity, User
 from src.models.base import Base
-from src.models.users import UserRole
-from src.schemas.user import UserRead
 from src.services.sessions import SessionsService
 from src.utils.email import fm
 
@@ -50,7 +49,7 @@ async def admin_user(db_session: AsyncSession) -> User:
         email="admin@example.com",
         firstname="Admin",
         lastname="User",
-        role=UserRole.ADMIN,
+        role=user_schemas.UserRole.ADMIN,
         is_active=True,
         is_verified=True,
         is_adapted=True,
@@ -98,7 +97,7 @@ async def hr_user(db_session: AsyncSession, legal_entity1a) -> User:
         email="hr1@example.com",
         firstname="HRone",
         lastname="User",
-        role=UserRole.HR,
+        role=user_schemas.UserRole.HR,
         is_active=True,
         is_verified=True,
         is_adapted=True,
@@ -120,7 +119,7 @@ async def employee_user(db_session: AsyncSession, legal_entity1a) -> User:
         email="user@example.com",
         firstname="Employee",
         lastname="User",
-        role=UserRole.EMPLOYEE,
+        role=user_schemas.UserRole.EMPLOYEE,
         is_active=True,
         is_verified=True,
         is_adapted=True,
@@ -141,7 +140,7 @@ async def admin_client(admin_user: User):
     with fm.record_messages():
 
         async def override_get_current_user():
-            return UserRead.model_validate(admin_user)
+            return user_schemas.UserRead.model_validate(admin_user)
 
         app.dependency_overrides[get_current_user] = override_get_current_user
 
@@ -160,7 +159,7 @@ async def hr_client(hr_user: User):
     with fm.record_messages():
 
         async def override_get_current_user():
-            return UserRead.model_validate(hr_user)
+            return user_schemas.UserRead.model_validate(hr_user)
 
         app.dependency_overrides[get_current_user] = override_get_current_user
 
@@ -179,7 +178,7 @@ async def employee_client(employee_user: User):
     with fm.record_messages():
 
         async def override_get_current_user():
-            return UserRead.model_validate(employee_user)
+            return user_schemas.UserRead.model_validate(employee_user)
 
         app.dependency_overrides[get_current_user] = override_get_current_user
 

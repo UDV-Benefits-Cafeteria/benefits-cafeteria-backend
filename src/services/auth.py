@@ -5,9 +5,9 @@ from pydantic import EmailStr
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.email as email_schemas
+import src.schemas.user as user_schemas
 from src.config import get_settings
 from src.repositories.users import UsersRepository
-from src.schemas.user import UserAuth, UserResetForgetPassword
 from src.services.exceptions import EntityNotFoundError, EntityReadError
 from src.utils.email import send_mail
 from src.utils.security import (
@@ -24,7 +24,7 @@ class AuthService:
 
     async def read_auth_data(
         self, email: Optional[str] = None, user_id: Optional[int] = None
-    ) -> Optional[UserAuth]:
+    ) -> Optional[user_schemas.UserAuth]:
         """
         Retrieve authentication data for a user by email or user ID.
 
@@ -46,7 +46,7 @@ class AuthService:
                 )
 
             if user is not None:
-                return UserAuth.model_validate(user)
+                return user_schemas.UserAuth.model_validate(user)
             else:
                 raise EntityNotFoundError(self.__repr__(), email if email else user_id)
 
@@ -114,7 +114,7 @@ class AuthService:
 
     @staticmethod
     async def verify_reset_password_data(
-        rfp: UserResetForgetPassword,
+        rfp: user_schemas.UserResetForgetPassword,
     ) -> Optional[EmailStr]:
         """
         Verify the reset password token and password confirmation.

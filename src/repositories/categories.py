@@ -1,5 +1,5 @@
 from src.models.benefits import Category
-from src.repositories.abstract import SQLAlchemyRepository
+from src.repositories.base import SQLAlchemyRepository
 
 
 class CategoriesRepository(SQLAlchemyRepository[Category]):

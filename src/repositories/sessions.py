@@ -5,7 +5,7 @@ from sqlalchemy import delete
 from src.config import logger
 from src.db.db import async_session_factory
 from src.models import Session
-from src.repositories.abstract import SQLAlchemyRepository
+from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityDeleteError
 
 

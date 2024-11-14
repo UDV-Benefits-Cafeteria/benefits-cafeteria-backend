@@ -3,6 +3,7 @@ from typing import Any, Optional
 
 from fastapi import BackgroundTasks, UploadFile
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.user as schemas
@@ -73,6 +74,7 @@ class UsersService(
         create_schema: schemas.UserCreate,
         current_user: schemas.UserRead = None,
         background_tasks: BackgroundTasks = None,
+        session: Optional[AsyncSession] = None,
     ) -> schemas.UserRead:
         hr_error = self._validate_hr_permissions(
             user_create=create_schema, current_user=current_user
@@ -92,7 +94,7 @@ class UsersService(
             background_tasks,
         )
 
-        return await super().create(create_schema)
+        return await super().create(create_schema, session=session)
 
     async def update_by_id(
         self,
@@ -100,9 +102,10 @@ class UsersService(
         update_schema: schemas.UserUpdate,
         current_user: schemas.UserRead = None,
         background_tasks: BackgroundTasks = None,
+        session: Optional[AsyncSession] = None,
     ) -> schemas.UserRead:
         try:
-            user_to_update = await self.read_by_id(entity_id)
+            user_to_update = await self.read_by_id(entity_id, session=session)
         except service_exceptions.EntityNotFoundError:
             raise
 
@@ -148,7 +151,7 @@ class UsersService(
                     background_tasks,
                 )
 
-        return await super().update_by_id(entity_id, update_schema)
+        return await super().update_by_id(entity_id, update_schema, session=session)
 
     async def read_by_email(self, email: str) -> Optional[schemas.UserRead]:
         try:

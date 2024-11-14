@@ -405,3 +405,64 @@ async def test_cancel_benefit_request_restores_coins_and_amount(
     restored_user_data = restored_user_response.model_dump()
 
     assert restored_user_data["coins"] == user_data["coins"]
+
+
+@pytest.mark.asyncio
+async def test_benefit_request_transaction(admin_user: User, legal_entity1a):
+    benefit_data = {
+        "name": "Benefit Transaction Test",
+        "coins_cost": 50,
+        "min_level_cost": 1,
+        "amount": 5,
+        "adaptation_required": False,
+    }
+
+    valid_benefit_data = benefit_schemas.BenefitCreate.model_validate(benefit_data)
+
+    created_benefit = await BenefitsService().create(valid_benefit_data)
+
+    created_benefit_data = created_benefit.model_dump()
+    assert created_benefit_data["id"] is not None
+
+    user_data = {
+        "email": "user_transaction_test@example.com",
+        "firstname": "Transaction",
+        "lastname": "Test",
+        "role": "employee",
+        "coins": 10,  # Not Enough
+        "hired_at": "2022-01-01",
+        "is_adapted": True,
+        "legal_entity_id": 111,
+    }
+
+    admin_user_data = user_schemas.UserRead.model_validate(admin_user)
+    valid_user_data = user_schemas.UserCreate.model_validate(user_data)
+
+    created_user = await UsersService().create(valid_user_data, admin_user_data)
+
+    created_user_data = created_user.model_dump()
+
+    benefit_id = created_benefit_data["id"]
+    user_id = created_user_data["id"]
+
+    assert user_id is not None
+
+    employee_client = await get_employee_client(user_id)
+
+    request_data = {
+        "benefit_id": benefit_id,
+        "user_id": user_id,
+    }
+
+    request_create_response = await employee_client.post(
+        "/benefit-requests/", json=request_data
+    )
+
+    assert request_create_response.status_code == status.HTTP_400_BAD_REQUEST
+
+    benefit_after_operation = await BenefitsService().read_by_id(benefit_id)
+    # Check that amount didn't change meaning transaction had a rollback
+    assert benefit_after_operation.amount == 5
+
+    user_after_operation = await UsersService().read_by_id(user_id)
+    assert user_after_operation.coins == 10

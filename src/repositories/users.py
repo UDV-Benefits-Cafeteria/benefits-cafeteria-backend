@@ -1,11 +1,12 @@
 from typing import Any, Optional
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import logger
 from src.db.db import async_session_factory
 from src.models.users import User
-from src.repositories.abstract import SQLAlchemyRepository
+from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
 from src.utils.elastic_index import SearchService, es
 
@@ -13,12 +14,14 @@ from src.utils.elastic_index import SearchService, es
 class UsersRepository(SQLAlchemyRepository[User]):
     model = User
 
-    async def create(self, data: dict) -> User:
+    async def create(self, data: dict, session: Optional[AsyncSession] = None) -> User:
         user = await super().create(data)
         await self.index_user(user)
         return user
 
-    async def update_by_id(self, entity_id: int, data: dict) -> bool:
+    async def update_by_id(
+        self, entity_id: int, data: dict, session: Optional[AsyncSession] = None
+    ) -> bool:
         success = await super().update_by_id(entity_id, data)
         if success:
             user = await self.read_by_id(entity_id)
@@ -26,7 +29,9 @@ class UsersRepository(SQLAlchemyRepository[User]):
                 await self.index_user(user)
         return success
 
-    async def delete_by_id(self, entity_id: int) -> bool:
+    async def delete_by_id(
+        self, entity_id: int, session: Optional[AsyncSession] = None
+    ) -> bool:
         success = await super().delete_by_id(entity_id)
         if success:
             await self.delete_user_from_index(entity_id)

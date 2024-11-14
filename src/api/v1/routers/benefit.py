@@ -2,6 +2,7 @@ from typing import Annotated, Any, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
+import src.schemas.user as user_schemas
 from src.api.v1.dependencies import (
     BenefitsServiceDependency,
     get_active_user,
@@ -10,8 +11,7 @@ from src.api.v1.dependencies import (
 from src.config import get_settings
 from src.repositories.exceptions import EntityDeleteError
 from src.schemas import benefit as schemas
-from src.schemas.benefit import BenefitSortFields, SortOrderField
-from src.schemas.user import UserRead
+from src.schemas.benefit import SortOrderField
 from src.services.exceptions import (
     EntityCreateError,
     EntityDeletionError,
@@ -37,7 +37,7 @@ settings = get_settings()
     },
 )
 async def get_benefits(
-    current_user: Annotated[UserRead, Depends(get_active_user)],
+    current_user: Annotated[user_schemas.UserRead, Depends(get_active_user)],
     service: BenefitsServiceDependency,
     query: Annotated[
         Optional[str], Query(description="Search query for benefit name")
@@ -65,7 +65,7 @@ async def get_benefits(
         ),
     ] = None,
     categories: Annotated[Optional[list[int]], Query()] = None,
-    sort_by: Annotated[Optional[BenefitSortFields], Query()] = None,
+    sort_by: Annotated[Optional[schemas.BenefitSortFields], Query()] = None,
     sort_order: Annotated[SortOrderField, Query()] = SortOrderField.ASCENDING,
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
     offset: Annotated[int, Query(ge=0)] = 0,
