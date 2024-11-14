@@ -3,6 +3,7 @@ from typing import Optional
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.position as schemas
 import src.services.exceptions as service_exceptions
+from src.db.db import async_session_factory
 from src.repositories.positions import PositionsRepository
 from src.services.base import BaseService
 
@@ -25,13 +26,14 @@ class PositionsService(
         Returns:
             Optional[schemas.PositionRead]: An instance of PositionRead if found, otherwise None.
         """
-        try:
-            entity = await self.repo.read_by_name(name)
+        async with async_session_factory() as session:
+            try:
+                entity = await self.repo.read_by_name(session, name)
 
-        except repo_exceptions.EntityReadError as e:
-            raise service_exceptions.EntityReadError(
-                "Position", f"name: {name}", str(e)
-            )
+            except repo_exceptions.EntityReadError as e:
+                raise service_exceptions.EntityReadError(
+                    "Position", f"name: {name}", str(e)
+                )
 
         if entity is None:
             raise service_exceptions.EntityNotFoundError("Position", f"name: {name}")

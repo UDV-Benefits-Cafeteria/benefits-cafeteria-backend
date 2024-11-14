@@ -27,6 +27,10 @@ from src.services.exceptions import (
     EntityUpdateError,
     PermissionDeniedError,
 )
+from src.utils.email_sender.users import (
+    send_user_coin_update_email,
+    send_user_greeting_email,
+)
 from src.utils.filter_parsers import range_filter_parser
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -139,6 +143,11 @@ async def create_user(
             current_user=current_user,
             background_tasks=background_tasks,
         )
+
+        await send_user_greeting_email(
+            created_user.email, created_user.firstname, background_tasks
+        )
+
         return created_user
     except EntityCreateError:
         raise HTTPException(
@@ -211,6 +220,16 @@ async def update_user(
             current_user=current_user,
             background_tasks=background_tasks,
         )
+
+        if user_update.coins:
+            await send_user_coin_update_email(
+                updated_user.email,
+                updated_user.firstname,
+                updated_user.coins - current_user.coins,
+                updated_user.coins,
+                background_tasks,
+            )
+
         return updated_user
     except EntityNotFoundError:
         raise HTTPException(

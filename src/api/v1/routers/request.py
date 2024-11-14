@@ -20,13 +20,16 @@ from src.services.exceptions import (
     EntityUpdateError,
 )
 from src.services.users import UsersService
+from src.utils.email_sender.benefit_requests import (
+    send_users_benefit_request_created_email,
+    send_users_benefit_request_updated_email,
+)
 
 router = APIRouter(prefix="/benefit-requests", tags=["Requests"])
 
 
 @router.post(
     "/",
-    dependencies=[Depends(get_active_user)],
     response_model=schemas.BenefitRequestRead,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -37,6 +40,7 @@ router = APIRouter(prefix="/benefit-requests", tags=["Requests"])
 )
 async def create_benefit_request(
     benefit_request: schemas.BenefitRequestCreate,
+    current_user: Annotated[user_schemas.UserRead, Depends(get_active_user)],
     service: BenefitRequestsServiceDependency,
     background_tasks: BackgroundTasks,
 ):
@@ -53,9 +57,28 @@ async def create_benefit_request(
     - **BenefitRequestCreate**: The created benefit request data.
     """
     try:
+        if current_user.id != benefit_request.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied. You can create only your own requests.",
+            )
+
         created_benefit_request = await service.create(
             benefit_request, background_tasks
         )
+
+        await send_users_benefit_request_created_email(
+            current_user.email,
+            current_user.firstname,
+            created_benefit_request.benefit.id,
+            created_benefit_request.benefit.name,
+            created_benefit_request.benefit.coins_cost,
+            created_benefit_request.benefit.images[0].image_url
+            if created_benefit_request.benefit.images
+            else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
+            background_tasks,
+        )
+
         return created_benefit_request
     except EntityCreateError:
         raise HTTPException(
@@ -226,7 +249,7 @@ async def get_benefit_request(
 )
 async def get_benefit_requests(
     service: BenefitRequestsServiceDependency,
-    current_user: user_schemas.UserRead = Depends(get_hr_user),
+    current_user: Annotated[user_schemas.UserRead, Depends(get_hr_user)],
     status: Optional[schemas.BenefitStatus] = Query(None),
     sort_by: Annotated[Optional[BenefitRequestSortFields], Query()] = None,
     sort_order: Annotated[SortOrderField, Query()] = SortOrderField.ASCENDING,
@@ -280,7 +303,7 @@ async def update_benefit_request(
     benefit_request_update: schemas.BenefitRequestUpdate,
     service: BenefitRequestsServiceDependency,
     background_tasks: BackgroundTasks,
-    current_user: user_schemas.UserRead = Depends(get_active_user),
+    current_user: Annotated[user_schemas.UserRead, Depends(get_active_user)],
 ):
     """
     Update a benefit request by ID.
@@ -297,12 +320,36 @@ async def update_benefit_request(
     - **BenefitRequestUpdate**: The updated benefit request data.
     """
     try:
+        if (
+            current_user.id != benefit_request_update.user_id
+            and current_user.role
+            not in [user_schemas.UserRole.ADMIN, user_schemas.UserRole.HR]
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied. Your role cannot get update other users' requests.",
+            )
+
         updated_benefit_request = await service.update_by_id(
             entity_id=request_id,
             update_schema=benefit_request_update,
             current_user=current_user,
             background_tasks=background_tasks,
         )
+
+        await send_users_benefit_request_updated_email(
+            current_user.email,
+            current_user.firstname,
+            updated_benefit_request.status,
+            updated_benefit_request.benefit.id,
+            updated_benefit_request.benefit.name,
+            updated_benefit_request.benefit.coins_cost,
+            updated_benefit_request.benefit.images[0].image_url
+            if updated_benefit_request.benefit.images
+            else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
+            background_tasks,
+        )
+
         return updated_benefit_request
     except EntityNotFoundError:
         raise HTTPException(

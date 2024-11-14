@@ -1,4 +1,4 @@
-from typing import Generic, Optional, Sequence, Type, TypeVar, Union, cast
+from typing import Generic, Optional, Sequence, Type, TypeVar, Union
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,13 +50,13 @@ class SQLAlchemyRepository(Generic[T]):
     model: Type[T]
     primary_key: str = "id"
 
-    async def create(self, data: dict, session: Optional[AsyncSession] = None) -> T:
+    async def create(self, session: AsyncSession, data: dict) -> T:
         """
         Add a single entity to the data store.
 
         Args:
+            session: An external AsyncSession.
             data: A dictionary representing the entity to be added.
-            session_external: An optional external AsyncSession.
 
         Returns:
             The newly created entity.
@@ -70,21 +70,13 @@ class SQLAlchemyRepository(Generic[T]):
             session = async_session_factory()
 
         try:
-            if not session_provided:
-                async with session.begin():
-                    # Start a transaction if session was created here
-                    instance = self.model(**data)
-                    session.add(instance)
-                    await session.flush()
-                    await session.refresh(instance)
-            else:
-                # If transaction is already started
-                instance = self.model(**data)
-                session.add(instance)
-                await session.flush()
-                await session.refresh(instance)
+            instance = self.model(**data)
+            session.add(instance)
+            await session.flush()
+            await session.refresh(instance)
+
             logger.info(
-                f"Created {self.model.__name__} with ID: {getattr(instance, self.primary_key)}"
+                f"Created {self.model} with ID: {getattr(instance, self.primary_key)}"
             )
             return instance
         except Exception as e:
@@ -95,14 +87,14 @@ class SQLAlchemyRepository(Generic[T]):
                 await session.close()
 
     async def create_many(
-        self, data_list: list[dict], session: Optional[AsyncSession] = None
+        self, session: AsyncSession, data_list: list[dict]
     ) -> list[T]:
         """
         Add multiple entities to the data store.
 
         Args:
+            session: An AsyncSession instance.
             data_list: A list of dictionaries representing the entities to be added.
-            session: An optional external AsyncSession.
 
         Returns:
             A list of the newly created entities.
@@ -110,39 +102,27 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityCreateError: If there is an error while creating the entities.
         """
-        session_provided = session is not None
-
-        if not session_provided:
-            session = async_session_factory()
-
         try:
-            if not session_provided:
-                async with session.begin():
-                    instances = [self.model(**data) for data in data_list]
-                    session.add_all(instances)
-                    await session.flush()
-                    for instance in instances:
-                        await session.refresh(instance)
-                    logger.info(
-                        f"Created {len(instances)} {self.model.__name__} entities"
-                    )
-                    return instances
+            instances = [self.model(**data) for data in data_list]
+            session.add_all(instances)
+            await session.flush()
+            for instance in instances:
+                await session.refresh(instance)
+            logger.info(f"Created {len(instances)} {self.model.__name__} entities")
+            return instances
         except Exception as e:
             logger.error(f"Error creating multiple {self.model.__name__} entities: {e}")
             raise EntityCreateError(self.model.__name__, str(e))
-        finally:
-            if not session_provided:
-                await session.close()
 
     async def read_by_id(
-        self, entity_id: Union[int, str], session: Optional[AsyncSession] = None
+        self, session: AsyncSession, entity_id: Union[int, str]
     ) -> Optional[T]:
         """
         Retrieve a single entity from the data store by its unique identifier.
 
         Args:
+            session: An AsyncSession instance.
             entity_id: The unique identifier of the entity to retrieve.
-            session: An optional external AsyncSession.
 
         Returns:
             The entity if found, or None if no entity with the given ID exists.
@@ -150,12 +130,6 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityReadError: If there is an error while reading the entity.
         """
-
-        session_provided = session is not None
-
-        if not session_provided:
-            session = async_session_factory()
-
         try:
             result = await session.execute(
                 select(self.model).where(
@@ -171,20 +145,17 @@ class SQLAlchemyRepository(Generic[T]):
         except Exception as e:
             logger.error(f"Error reading {self.model.__name__} by ID: {entity_id}: {e}")
             raise EntityReadError(self.model.__name__, entity_id, str(e))
-        finally:
-            if not session_provided:
-                await session.close()
 
     async def read_all(
-        self, page: int = 1, limit: int = 10, session: Optional[AsyncSession] = None
+        self, session: AsyncSession, page: int = 1, limit: int = 10
     ) -> Sequence[T]:
         """
         Retrieve all entities from the data store.
 
         Args:
+            session: An AsyncSession instance.
             page: The page number for pagination.
             limit: The number of entities per page.
-            session: An optional external AsyncSession.
 
         Returns:
             A list of entities matching the query.
@@ -192,10 +163,6 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityReadError: If there is an error while reading entities.
         """
-        session_provided = session is not None
-        if not session_provided:
-            session = async_session_factory()
-
         try:
             result = await session.execute(
                 select(self.model).offset((page - 1) * limit).limit(limit)
@@ -206,39 +173,32 @@ class SQLAlchemyRepository(Generic[T]):
         except Exception as e:
             logger.error(f"Error reading all {self.model.__name__} entities: {e}")
             raise EntityReadError(self.model.__name__, "", str(e))
-        finally:
-            if not session_provided:
-                await session.close()
 
     async def update_by_id(
-        self,
-        entity_id: Union[int, str],
-        data: dict,
-        session: Optional[AsyncSession] = None,
+        self, session: AsyncSession, entity_id: Union[int, str], data: dict
     ) -> bool:
-        session_provided = session is not None
-        if not session_provided:
-            session = async_session_factory()
+        """
+        Update a single entity in the data store by its unique identifier.
 
+        Args:
+            session: An AsyncSession instance.
+            entity_id: The unique identifier of the entity to update.
+            data: A dictionary representing the updates.
+
+        Returns:
+            True if the update was successful, False otherwise.
+
+        Raises:
+            EntityUpdateError: If there is an error while updating the entity.
+        """
         try:
-            if not session_provided:
-                async with session.begin():
-                    result = await session.execute(
-                        update(self.model)
-                        .where(getattr(self.model, self.primary_key) == entity_id)
-                        .values(**data)
-                    )
-                    await session.flush()
-            else:
-                result = await session.execute(
-                    update(self.model)
-                    .where(getattr(self.model, self.primary_key) == entity_id)
-                    .values(**data)
-                )
-                await session.flush()
-
-            rowcount: int = cast(int, result.rowcount)
-            if rowcount > 0:
+            result = await session.execute(
+                update(self.model)
+                .where(getattr(self.model, self.primary_key) == entity_id)
+                .values(**data)
+            )
+            await session.flush()
+            if result.rowcount() > 0:
                 logger.info(f"Updated {self.model.__name__} with ID: {entity_id}")
                 return True
             else:
@@ -251,21 +211,16 @@ class SQLAlchemyRepository(Generic[T]):
                 f"Error updating {self.model.__name__} with ID: {entity_id}: {e}"
             )
             raise EntityUpdateError(self.model.__name__, entity_id, str(e))
-        finally:
-            if not session_provided:
-                await session.close()
 
     async def delete_by_id(
-        self,
-        entity_id: Union[int, str],
-        session: Optional[AsyncSession] = None,
+        self, session: AsyncSession, entity_id: Union[int, str]
     ) -> bool:
         """
         Delete a single entity from the data store by its unique identifier.
 
         Args:
+            session: An AsyncSession instance.
             entity_id: The unique identifier of the entity to delete.
-            session: An optional external AsyncSession.
 
         Returns:
             True if the deletion was successful, False otherwise.
@@ -273,31 +228,22 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityDeleteError: If there is an error while deleting the entity.
         """
-        session_provided = session is not None
-        if not session_provided:
-            session = async_session_factory()
-
         try:
-            async with session.begin():
-                result = await session.execute(
-                    delete(self.model).where(
-                        getattr(self.model, self.primary_key) == entity_id
-                    )
+            result = await session.execute(
+                delete(self.model).where(
+                    getattr(self.model, self.primary_key) == entity_id
                 )
-                rowcount: int = cast(int, result.rowcount)
-                if rowcount > 0:
-                    logger.info(f"Deleted {self.model.__name__} with ID: {entity_id}")
-                    return True
-                else:
-                    logger.warning(
-                        f"No {self.model.__name__} found with ID: {entity_id} for deletion"
-                    )
-                    return False
+            )
+            if result.rowcount() > 0:
+                logger.info(f"Deleted {self.model.__name__} with ID: {entity_id}")
+                return True
+            else:
+                logger.warning(
+                    f"No {self.model.__name__} found with ID: {entity_id} for deletion"
+                )
+                return False
         except Exception as e:
             logger.error(
                 f"Error deleting {self.model.__name__} with ID: {entity_id}: {e}"
             )
             raise EntityDeleteError(self.model.__name__, entity_id, str(e))
-        finally:
-            if not session_provided:
-                await session.close()

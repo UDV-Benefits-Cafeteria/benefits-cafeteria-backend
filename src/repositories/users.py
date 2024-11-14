@@ -4,7 +4,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import logger
-from src.db.db import async_session_factory
 from src.models.users import User
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
@@ -14,30 +13,29 @@ from src.utils.elastic_index import SearchService, es
 class UsersRepository(SQLAlchemyRepository[User]):
     model = User
 
-    async def create(self, data: dict, session: Optional[AsyncSession] = None) -> User:
-        user = await super().create(data, session)
+    async def create(self, session: AsyncSession, data: dict) -> User:
+        user = await super().create(session, data)
         await self.index_user(user)
         return user
 
     async def update_by_id(
-        self, entity_id: int, data: dict, session: Optional[AsyncSession] = None
+        self, session: AsyncSession, entity_id: int, data: dict
     ) -> bool:
-        success = await super().update_by_id(entity_id, data, session)
+        success = await super().update_by_id(session, entity_id, data)
         if success:
-            user = await self.read_by_id(entity_id)
+            user = await self.read_by_id(session, entity_id)
             if user:
                 await self.index_user(user)
         return success
 
-    async def delete_by_id(
-        self, entity_id: int, session: Optional[AsyncSession] = None
-    ) -> bool:
-        success = await super().delete_by_id(entity_id, session)
+    async def delete_by_id(self, session: AsyncSession, entity_id: int) -> bool:
+        success = await super().delete_by_id(session, entity_id)
         if success:
             await self.delete_user_from_index(entity_id)
         return success
 
-    async def index_user(self, user: User):
+    @staticmethod
+    async def index_user(user: User):
         user_data = {
             "id": user.id,
             "email": user.email,
@@ -129,27 +127,27 @@ class UsersRepository(SQLAlchemyRepository[User]):
             logger.error(f"Error searching users in Elasticsearch: {e}")
             raise EntityReadError(self.model.__name__, "", str(e))
 
-    async def delete_user_from_index(self, user_id: int):
+    @staticmethod
+    async def delete_user_from_index(user_id: int):
         try:
             await es.delete(index=SearchService.users_index_name, id=user_id)
         except Exception as e:
             logger.error(f"Error deleting user {user_id} from Elasticsearch: {e}")
 
-    async def read_by_email(self, email: str) -> Optional[User]:
-        async with async_session_factory() as session:
-            try:
-                result = await session.execute(
-                    select(self.model).where(self.model.email == email)
-                )
-                user = result.scalar_one_or_none()
+    async def read_by_email(self, session: AsyncSession, email: str) -> Optional[User]:
+        try:
+            result = await session.execute(
+                select(self.model).where(self.model.email == email)
+            )
+            user = result.scalar_one_or_none()
 
-                if user:
-                    logger.info(f"Found User with email: {email}")
-                else:
-                    logger.warning(f"No User found with email: {email}")
+            if user:
+                logger.info(f"Found User with email: {email}")
+            else:
+                logger.warning(f"No User found with email: {email}")
 
-                return user
+            return user
 
-            except Exception as e:
-                logger.error(f"Error reading User by email '{email}': {e}")
-                raise EntityReadError(self.model.__name__, email, str(e))
+        except Exception as e:
+            logger.error(f"Error reading User by email '{email}': {e}")
+            raise EntityReadError(self.model.__name__, email, str(e))

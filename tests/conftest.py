@@ -12,7 +12,7 @@ from src.main import app
 from src.models import Category, LegalEntity, User
 from src.models.base import Base
 from src.services.sessions import SessionsService
-from src.utils.email import fm
+from src.utils.email_sender.base import fm
 
 pytest_plugins = ["pytest_asyncio"]
 

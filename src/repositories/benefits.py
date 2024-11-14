@@ -14,35 +14,34 @@ settings = get_settings()
 class BenefitsRepository(SQLAlchemyRepository[Benefit]):
     model = Benefit
 
-    async def create(
-        self, data: dict, session: Optional[AsyncSession] = None
-    ) -> Benefit:
-        benefit = await super().create(data, session=session)
+    async def create(self, session: AsyncSession, data: dict) -> Benefit:
+        benefit = await super().create(session, data)
         await self.index_benefit(benefit)
         return benefit
 
     async def update_by_id(
         self,
+        session: AsyncSession,
         entity_id: Union[int, str],
         data: dict,
-        session: Optional[AsyncSession] = None,
     ) -> bool:
-        success = await super().update_by_id(entity_id, data, session=session)
-        if success:
-            benefit = await self.read_by_id(entity_id, session=session)
+        is_updated = await super().update_by_id(session, entity_id, data)
+        if is_updated:
+            benefit = await self.read_by_id(session, entity_id)
             if benefit:
                 await self.index_benefit(benefit)
-        return success
+        return is_updated
 
     async def delete_by_id(
-        self, entity_id: Union[int, str], session: Optional[AsyncSession] = None
+        self, session: AsyncSession, entity_id: Union[int, str]
     ) -> bool:
-        success = await super().delete_by_id(entity_id, session=session)
-        if success:
+        is_deleted = await super().delete_by_id(session, entity_id)
+        if is_deleted:
             await self.delete_benefit_from_index(entity_id)
-        return success
+        return is_deleted
 
-    async def index_benefit(self, benefit: Benefit):
+    @staticmethod
+    async def index_benefit(benefit: Benefit):
         benefit_data = {
             "id": benefit.id,
             "name": benefit.name,
@@ -73,7 +72,8 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             logger.error(f"Error indexing benefit {benefit.id} in Elasticsearch: {e}")
             raise EntityUpdateError("Benefit", benefit.id, str(e))
 
-    async def delete_benefit_from_index(self, benefit_id: int):
+    @staticmethod
+    async def delete_benefit_from_index(benefit_id: int):
         try:
             await es.delete(index=SearchService.benefits_index_name, id=benefit_id)
         except Exception as e:
