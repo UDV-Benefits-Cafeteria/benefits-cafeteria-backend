@@ -35,9 +35,12 @@ jobs:
             git pull;
             
             echo '--- Turning off service ---';
-            docker compose -f docker-compose-prod.yml down;
+            docker compose -f docker-compose-prod.yml down app;
             
-            echo '--- Updating and turning on service ---';
-            docker compose -f docker-compose-prod.yml up -d --build;
+            echo '--- Updating service ---';
+            docker compose -f docker-compose-prod.yml build app;
+            
+            echo '--- Turning on service ---';
+            docker compose -f docker-compose-prod.yml up --no-deps -d app;
 
             echo '--- Success! ---';
