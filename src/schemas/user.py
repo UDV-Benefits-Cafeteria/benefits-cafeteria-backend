@@ -89,7 +89,8 @@ class UserBase(BaseModel):
         return name
 
     @field_validator("hired_at")
-    def check_hired_at(self, value: date):
+    @classmethod
+    def check_hired_at(cls, value: date):
         if value > date.today():
             raise ValueError("Hire date cannot be in the future.")
         return value
