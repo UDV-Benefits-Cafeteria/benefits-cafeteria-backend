@@ -67,7 +67,7 @@ class UserBase(BaseModel):
     position_id: Optional[int] = None
     legal_entity_id: Optional[int] = None
     role: UserRole
-    hired_at: date = Field(..., le=date.today())
+    hired_at: date = Field(...)
     is_active: bool = True
     is_verified: bool = False
     is_adapted: bool = False
@@ -87,6 +87,12 @@ class UserBase(BaseModel):
                     f"{info.field_name} contains characters that do not pass validation"
                 )
         return name
+
+    @field_validator("hired_at")
+    def check_hired_at(self, value: date):
+        if value > date.today():
+            raise ValueError("Hire date cannot be in the future.")
+        return value
 
 
 class UserRegister(BaseModel):
