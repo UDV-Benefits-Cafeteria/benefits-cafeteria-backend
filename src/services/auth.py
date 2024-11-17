@@ -30,27 +30,28 @@ class AuthService:
             Optional[UserAuth]: An instance of UserAuth if found, otherwise None.
         """
         async with async_session_factory() as session:
-            try:
-                if email:
-                    user = await self.users_repo.read_by_email(session, email)
-                elif user_id:
-                    user = await self.users_repo.read_by_id(session, user_id)
-                else:
+            async with session.begin():
+                try:
+                    if email:
+                        user = await self.users_repo.read_by_email(session, email)
+                    elif user_id:
+                        user = await self.users_repo.read_by_id(session, user_id)
+                    else:
+                        raise EntityReadError(
+                            self.__repr__(), "", "No user_id or email provided"
+                        )
+
+                    if user is not None:
+                        return user_schemas.UserAuth.model_validate(user)
+                    else:
+                        raise EntityNotFoundError(
+                            self.__repr__(), email if email else user_id
+                        )
+
+                except repo_exceptions.EntityReadError:
                     raise EntityReadError(
-                        self.__repr__(), "", "No user_id or email provided"
+                        self.__repr__(), email or user_id, "Cannot read user"
                     )
-
-                if user is not None:
-                    return user_schemas.UserAuth.model_validate(user)
-                else:
-                    raise EntityNotFoundError(
-                        self.__repr__(), email if email else user_id
-                    )
-
-            except repo_exceptions.EntityReadError:
-                raise EntityReadError(
-                    self.__repr__(), email or user_id, "Cannot read user"
-                )
 
     async def update_password(self, user_id: int, password: str) -> bool:
         """
@@ -64,9 +65,10 @@ class AuthService:
             bool: True if the password was successfully updated, otherwise False.
         """
         async with async_session_factory() as session:
-            hashed_password = hash_password(password)
-            data = {"password": hashed_password}
-            return await self.users_repo.update_by_id(session, user_id, data)
+            async with session.begin():
+                hashed_password = hash_password(password)
+                data = {"password": hashed_password}
+                return await self.users_repo.update_by_id(session, user_id, data)
 
     async def verify_user(self, user_id: int) -> bool:
         """
@@ -79,8 +81,9 @@ class AuthService:
             bool: True if the user was successfully verified, otherwise False.
         """
         async with async_session_factory() as session:
-            data = {"is_verified": True}
-            return await self.users_repo.update_by_id(session, user_id, data)
+            async with session.begin():
+                data = {"is_verified": True}
+                return await self.users_repo.update_by_id(session, user_id, data)
 
     @staticmethod
     async def verify_reset_password_data(

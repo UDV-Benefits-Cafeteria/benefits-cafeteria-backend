@@ -1,4 +1,4 @@
-from typing import Generic, Optional, Sequence, Type, TypeVar, Union
+from typing import Generic, Optional, Sequence, Type, TypeVar, Union, cast
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,9 +75,6 @@ class SQLAlchemyRepository(Generic[T]):
             await session.flush()
             await session.refresh(instance)
 
-            logger.info(
-                f"Created {self.model} with ID: {getattr(instance, self.primary_key)}"
-            )
             return instance
         except Exception as e:
             logger.error(f"Error creating {self.model.__name__}: {e}")
@@ -198,14 +195,19 @@ class SQLAlchemyRepository(Generic[T]):
                 .values(**data)
             )
             await session.flush()
-            if result.rowcount() > 0:
+
+            rowcount: int = cast(int, result.rowcount)
+            if rowcount > 0:
                 logger.info(f"Updated {self.model.__name__} with ID: {entity_id}")
+
                 return True
+
             else:
                 logger.warning(
                     f"No {self.model.__name__} found with ID: {entity_id} for update"
                 )
                 return False
+
         except Exception as e:
             logger.error(
                 f"Error updating {self.model.__name__} with ID: {entity_id}: {e}"
@@ -234,7 +236,8 @@ class SQLAlchemyRepository(Generic[T]):
                     getattr(self.model, self.primary_key) == entity_id
                 )
             )
-            if result.rowcount() > 0:
+            rowcount: int = cast(int, result.rowcount)
+            if rowcount > 0:
                 logger.info(f"Deleted {self.model.__name__} with ID: {entity_id}")
                 return True
             else:

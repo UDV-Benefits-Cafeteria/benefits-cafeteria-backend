@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import cast
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +29,8 @@ class SessionsRepository(SQLAlchemyRepository[Session]):
 
             await session.commit()
 
-            return result.rowcount()
+            rowcount: int = cast(int, result.rowcount)
+            return rowcount
         except Exception as e:
             logger.error(f"Error deleting expired sessions: {e}")
             raise EntityDeleteError(self.model.__name__, "expired sessions", str(e))

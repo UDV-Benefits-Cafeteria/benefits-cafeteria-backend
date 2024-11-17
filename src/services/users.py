@@ -80,10 +80,12 @@ class UsersService(
         hr_error = self._validate_hr_permissions(
             user_create=create_schema, current_user=current_user
         )
-        if hr_error is not None:
-            raise service_exceptions.PermissionDeniedError(hr_error)
+        async with async_session_factory() as session:
+            async with session.begin():
+                if hr_error is not None:
+                    raise service_exceptions.PermissionDeniedError(hr_error)
 
-        return await super().create(create_schema)
+                return await super().create(create_schema)
 
     async def update_by_id(
         self,
@@ -93,44 +95,73 @@ class UsersService(
         background_tasks: BackgroundTasks = None,
         session: Optional[AsyncSession] = None,
     ) -> schemas.UserRead:
+        allowed_fields = [
+            "firstname",
+            "lastname",
+            "middlename",
+            "image_url",
+        ]
+
         async with async_session_factory() as session:
-            user_to_update = await self.repo.read_by_id(session, entity_id)
-            if not user_to_update:
-                raise service_exceptions.EntityNotFoundError("User", entity_id)
-
-            if current_user:
-                if current_user.role == schemas.UserRole.HR.value:
-                    if user_to_update.legal_entity_id != current_user.legal_entity_id:
-                        raise service_exceptions.PermissionDeniedError(
-                            "HR users cannot update users outside their own legal entity."
-                        )
-                elif current_user.role == schemas.UserRole.EMPLOYEE:
-                    if user_to_update.id != current_user.id:
-                        raise service_exceptions.PermissionDeniedError(
-                            "You can only change yourself"
-                        )
-
             try:
-                data: dict = update_schema.model_dump(exclude_unset=True)
+                async with session.begin():
+                    user_to_update = await self.repo.read_by_id(session, entity_id)
+                    if not user_to_update:
+                        raise service_exceptions.EntityNotFoundError("User", entity_id)
 
-                is_updated: bool = await self.repo.update_by_id(
-                    session, entity_id, data
-                )
-                if not is_updated:
-                    logger.warning(
-                        f"{self.read_schema.__name__} with ID {entity_id} not found for update."
+                    if current_user is not None:
+                        if current_user.role == schemas.UserRole.HR:
+                            if (
+                                user_to_update.legal_entity_id
+                                != current_user.legal_entity_id
+                            ):
+                                raise service_exceptions.PermissionDeniedError(
+                                    "HR users cannot update users outside their own legal entity."
+                                )
+                            if (
+                                update_schema.role == "admin"
+                                or user_to_update.role == "admin"
+                            ):
+                                raise service_exceptions.PermissionDeniedError(
+                                    "HR user cannot update admins."
+                                )
+
+                        elif current_user.role == schemas.UserRole.EMPLOYEE:
+                            if user_to_update.id != current_user.id:
+                                raise service_exceptions.PermissionDeniedError(
+                                    "You can only change yourself."
+                                )
+                            for key, _ in update_schema.model_dump(
+                                exclude_unset=True
+                            ).items():
+                                if key not in allowed_fields:
+                                    raise service_exceptions.PermissionDeniedError(
+                                        f"You cannot update {key}."
+                                    )
+                    else:
+                        raise service_exceptions.PermissionDeniedError("Unauthorized")
+
+                    data: dict = update_schema.model_dump(exclude_unset=True)
+
+                    is_updated: bool = await self.repo.update_by_id(
+                        session, entity_id, data
                     )
-                    raise service_exceptions.EntityNotFoundError(
-                        self.read_schema.__name__, entity_id
+                    if not is_updated:
+                        logger.warning(
+                            f"{self.read_schema.__name__} with ID {entity_id} not found for update."
+                        )
+                        raise service_exceptions.EntityNotFoundError(
+                            self.read_schema.__name__, entity_id
+                        )
+
+                    logger.info(
+                        f"Successfully updated {self.read_schema.__name__} with ID: {entity_id}"
                     )
 
-                logger.info(
-                    f"Successfully updated {self.read_schema.__name__} with ID: {entity_id}"
-                )
+                    entity = await self.repo.read_by_id(session, entity_id)
 
-                entity = await self.repo.read_by_id(session, entity_id)
+                    return self.read_schema.model_validate(entity)
 
-                return self.read_schema.model_validate(entity)
             except repo_exceptions.EntityUpdateError as e:
                 logger.error(
                     f"Failed to update {self.read_schema.__name__} with ID {entity_id}: {str(e)}"
@@ -142,20 +173,21 @@ class UsersService(
     async def read_by_email(self, email: str) -> Optional[schemas.UserRead]:
         async with async_session_factory() as session:
             try:
-                entity = await self.repo.read_by_email(session, email)
-                if not entity:
-                    logger.warning(
-                        f"{self.read_schema.__name__} with email {email} not found."
-                    )
-                    raise service_exceptions.EntityNotFoundError(
-                        self.read_schema.__name__, email
-                    )
+                async with session.begin():
+                    entity = await self.repo.read_by_email(session, email)
+                    if not entity:
+                        logger.warning(
+                            f"{self.read_schema.__name__} with email {email} not found."
+                        )
+                        raise service_exceptions.EntityNotFoundError(
+                            self.read_schema.__name__, email
+                        )
 
-                validated_entity = self.read_schema.model_validate(entity)
-                logger.info(
-                    f"Successfully retrieved {self.read_schema.__name__} with email: {email}"
-                )
-                return validated_entity
+                    validated_entity = self.read_schema.model_validate(entity)
+                    logger.info(
+                        f"Successfully retrieved {self.read_schema.__name__} with email: {email}"
+                    )
+                    return validated_entity
             except repo_exceptions.EntityReadError as e:
                 logger.error(
                     f"Error reading {self.read_schema.__name__} with email {email}: {str(e)}"
@@ -405,21 +437,22 @@ class UsersService(
 
             async with async_session_factory() as session:
                 try:
-                    is_updated = await self.repo.update_by_id(
-                        session, user_id, {"image_url": image}
-                    )
-                    if not is_updated:
-                        logger.warning(
-                            f"{self.read_schema.__name__} with ID {user_id} not found for update."
+                    async with session.begin():
+                        is_updated = await self.repo.update_by_id(
+                            session, user_id, {"image_url": image}
                         )
-                        raise service_exceptions.EntityNotFoundError(
-                            self.read_schema.__name__, user_id
-                        )
+                        if not is_updated:
+                            logger.warning(
+                                f"{self.read_schema.__name__} with ID {user_id} not found for update."
+                            )
+                            raise service_exceptions.EntityNotFoundError(
+                                self.read_schema.__name__, user_id
+                            )
 
-                    logger.info(
-                        f"Successfully updated {self.read_schema.__name__} with ID: {user_id}"
-                    )
-                    return await self.read_by_id(user_id)
+                        logger.info(
+                            f"Successfully updated {self.read_schema.__name__} with ID: {user_id}"
+                        )
+                        return await self.read_by_id(user_id)
                 except repo_exceptions.EntityUpdateError as e:
                     logger.error(
                         f"Failed to update {self.read_schema.__name__} with ID {user_id}: {str(e)}"
@@ -427,3 +460,10 @@ class UsersService(
                     raise service_exceptions.EntityUpdateError(
                         self.read_schema.__name__, e.read_param, str(e)
                     )
+
+    """
+    async def reindex_user(self, user_id: int) -> None:
+        async with async_session_factory() as session:
+            user = await self.repo.read_by_id(session, user_id)
+            await self.repo.index_user(user)
+    """

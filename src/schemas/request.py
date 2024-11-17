@@ -26,9 +26,10 @@ class BenefitRequestBase(BaseModel):
     comment: Optional[str] = None
 
 
-class BenefitRequestCreate(BenefitRequestBase):
+class BenefitRequestCreate(BaseModel):
+    user_id: Optional[int] = None
     benefit_id: int
-    user_id: int
+    status: BenefitStatus = BenefitStatus.PENDING
 
 
 class BenefitRequestUpdate(BaseModel):

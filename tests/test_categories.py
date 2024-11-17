@@ -2,6 +2,8 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.services.categories import CategoriesService
+
 
 @pytest.mark.asyncio
 async def test_create_category_valid(admin_client: AsyncClient):
@@ -12,6 +14,8 @@ async def test_create_category_valid(admin_client: AsyncClient):
     assert response.status_code == status.HTTP_201_CREATED
     category = response.json()
     assert category["name"] == category_data["name"]
+    category_read = await CategoriesService().read_by_id(category["id"])
+    assert category_read is not None
 
 
 @pytest.mark.asyncio
@@ -72,6 +76,14 @@ async def test_update_category_valid(admin_client: AsyncClient, category):
     assert response.status_code == status.HTTP_200_OK
     updated_category = response.json()
     assert updated_category["name"] == update_data["name"]
+
+    category_find = await CategoriesService().read_by_id(updated_category["id"])
+    assert category_find is not None
+
+    response = await admin_client.get(f"/categories/{category.id}")
+    assert response.status_code == status.HTTP_200_OK
+    response_data = response.json()
+    assert response_data["name"] == "Updated Category Name"
 
 
 @pytest.mark.asyncio

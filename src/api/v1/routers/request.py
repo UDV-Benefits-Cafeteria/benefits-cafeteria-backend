@@ -57,14 +57,8 @@ async def create_benefit_request(
     - **BenefitRequestCreate**: The created benefit request data.
     """
     try:
-        if current_user.id != benefit_request.user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Permission denied. You can create only your own requests.",
-            )
-
         created_benefit_request = await service.create(
-            benefit_request, background_tasks
+            create_schema=benefit_request, current_user=current_user
         )
 
         await send_users_benefit_request_created_email(
@@ -320,16 +314,6 @@ async def update_benefit_request(
     - **BenefitRequestUpdate**: The updated benefit request data.
     """
     try:
-        if (
-            current_user.id != benefit_request_update.user_id
-            and current_user.role
-            not in [user_schemas.UserRole.ADMIN, user_schemas.UserRole.HR]
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Permission denied. Your role cannot get update other users' requests.",
-            )
-
         updated_benefit_request = await service.update_by_id(
             entity_id=request_id,
             update_schema=benefit_request_update,

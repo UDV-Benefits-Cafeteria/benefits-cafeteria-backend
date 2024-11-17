@@ -7,6 +7,8 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.services.users import UsersService
+
 
 def create_excel_file(
     rows: list[dict[str, Any]],
@@ -181,6 +183,12 @@ async def test_upload_users(hr_client: AsyncClient, test_case):
                 len(bulk_create_data["created_users"])
                 == test_case["created_users_count"]
             ), f"Test '{test_case['name']}' failed: expected {test_case['created_users_count']} created users, got {len(bulk_create_data['created_users'])}"
+
+            user = await UsersService().read_by_id(
+                bulk_create_data["created_users"][0]["id"]
+            )
+
+            assert user is not None
 
             assert (
                 len(bulk_create_data["errors"]) == test_case["bulk_errors_count"]

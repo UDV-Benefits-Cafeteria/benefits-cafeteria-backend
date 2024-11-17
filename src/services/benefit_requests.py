@@ -73,8 +73,6 @@ class BenefitRequestsService(
                 raise service_exceptions.EntityReadError(
                     self.read_schema.__name__, e.read_param, str(e)
                 )
-            finally:
-                await session.close()
 
     async def read_by_user_id(
         self, user_id: int
@@ -94,38 +92,36 @@ class BenefitRequestsService(
                 raise service_exceptions.EntityReadError(
                     self.read_schema.__name__, user_id, str(e)
                 )
-            finally:
-                await session.close()
 
     async def create(
-        self, create_schema: schemas.BenefitRequestCreate
+        self,
+        create_schema: schemas.BenefitRequestCreate,
+        current_user: user_schemas.UserRead = None,
     ) -> schemas.BenefitRequestRead:
         async with async_session_factory() as session:
             try:
                 async with session.begin():
+                    request_data = create_schema.model_dump(exclude_unset=True)
+                    request_data["user_id"] = current_user.id
+
                     benefits_repo = BenefitsRepository()
                     users_repo = UsersRepository()
 
-                    created_request = await self.repo.create(
-                        session, create_schema.model_dump(exclude_unset=True)
-                    )
                     benefit = await benefits_repo.read_by_id(
                         session, create_schema.benefit_id
                     )
-                    user = await users_repo.read_by_id(session, create_schema.user_id)
-
-                    if benefit.amount is not None:
-                        new_amount = benefit.amount - 1
-
-                        if new_amount < 0:
-                            raise service_exceptions.EntityUpdateError(
-                                "Benefit", benefit.id, "Insufficient benefit amount"
-                            )
-
-                        await benefits_repo.update_by_id(
-                            session, benefit.id, {"amount": new_amount}
+                    if benefit is None:
+                        raise service_exceptions.EntityNotFoundError(
+                            "Benefit", create_schema.benefit_id
                         )
 
+                    user = await users_repo.read_by_id(session, request_data["user_id"])
+                    if user is None:
+                        raise service_exceptions.EntityNotFoundError(
+                            "User", request_data["user_id"]
+                        )
+
+                    # Perform validations
                     if benefit.adaptation_required and not user.is_adapted:
                         raise service_exceptions.EntityCreateError(
                             "Benefit Request", "User has not passed adaptation period"
@@ -141,19 +137,37 @@ class BenefitRequestsService(
                             "Benefit Request", "User does not have required level"
                         )
 
+                    if benefit.amount is not None:
+                        new_amount = benefit.amount - 1
+                        if new_amount < 0:
+                            raise service_exceptions.EntityUpdateError(
+                                "Benefit", benefit.id, "Insufficient benefit amount"
+                            )
+                        # Decrement benefit amount
+                        await benefits_repo.update_by_id(
+                            session, benefit.id, {"amount": new_amount}
+                        )
+
+                    # Decrement user's coins
                     new_coins = user.coins - benefit.coins_cost
                     await users_repo.update_by_id(
                         session, user.id, {"coins": new_coins}
                     )
 
-                    return self.read_schema.model_validate(created_request)
-            except Exception as e:
+                    # Set status
+                    if current_user.role == user_schemas.UserRole.EMPLOYEE:
+                        request_data["status"] = schemas.BenefitStatus.PENDING
+
+                    # Create the benefit request
+                    created_request = await self.repo.create(session, request_data)
+
+                return self.read_schema.model_validate(created_request)
+
+            except repo_exceptions.RepositoryError as e:
                 logger.error(f"Error creating benefit request: {e}")
                 raise service_exceptions.EntityCreateError(
                     self.create_schema.__name__, str(e)
                 )
-            finally:
-                await session.close()
 
     async def update_by_id(
         self,
@@ -164,75 +178,73 @@ class BenefitRequestsService(
     ) -> Optional[schemas.BenefitRequestRead]:
         async with async_session_factory() as session:
             try:
-                benefits_repo = BenefitsRepository()
-                users_repo = UsersRepository()
+                async with session.begin():
+                    benefits_repo = BenefitsRepository()
+                    users_repo = UsersRepository()
 
-                existing_request = await self.repo.read_by_id(session, entity_id)
-                if not existing_request:
-                    raise service_exceptions.EntityNotFoundError(
-                        self.read_schema.__name__, entity_id
-                    )
-
-                benefit = await benefits_repo.read_by_id(
-                    session, existing_request.benefit_id
-                )
-                user = await users_repo.read_by_id(session, existing_request.user_id)
-
-                old_status = existing_request.status
-                new_status = update_schema.status or old_status
-
-                if old_status.value in [
-                    schemas.BenefitStatus.DECLINED,
-                    schemas.BenefitStatus.APPROVED,
-                ]:
-                    raise service_exceptions.EntityUpdateError(
-                        self.read_schema.__name__,
-                        entity_id,
-                        "You cannot update declined or approved benefit request",
-                    )
-                elif new_status.value == schemas.BenefitStatus.DECLINED:
-                    if (
-                        current_user.id == existing_request.user_id
-                        or current_user.role
-                        in [
-                            user_schemas.UserRole.HR.value,
-                            user_schemas.UserRole.ADMIN.value,
-                        ]
-                    ):
-                        if benefit.amount is not None:
-                            new_amount = benefit.amount + 1
-
-                            if new_amount < 0:
-                                raise service_exceptions.EntityUpdateError(
-                                    "Benefit", benefit.id, "Insufficient benefit amount"
-                                )
-
-                            await benefits_repo.update_by_id(
-                                session, benefit.id, {"amount": new_amount}
-                            )
-
-                        new_coins = user.coins + benefit.coins_cost
-                        await users_repo.update_by_id(
-                            session, user.id, {"coins": new_coins}
+                    existing_request = await self.repo.read_by_id(session, entity_id)
+                    if not existing_request:
+                        raise service_exceptions.EntityNotFoundError(
+                            self.read_schema.__name__, entity_id
                         )
-                    else:
+
+                    benefit = await benefits_repo.read_by_id(
+                        session, existing_request.benefit_id
+                    )
+                    user = await users_repo.read_by_id(
+                        session, existing_request.user_id
+                    )
+
+                    old_status = existing_request.status
+                    new_status = update_schema.status or old_status
+
+                    if old_status.value in [
+                        schemas.BenefitStatus.DECLINED,
+                        schemas.BenefitStatus.APPROVED,
+                    ]:
                         raise service_exceptions.EntityUpdateError(
                             self.read_schema.__name__,
                             entity_id,
-                            "You cannot decline this benefit request",
+                            "You cannot update declined or approved benefit request",
+                        )
+                    if new_status.value == schemas.BenefitStatus.DECLINED:
+                        if (
+                            current_user.id == existing_request.user_id
+                            or current_user.role
+                            in [
+                                user_schemas.UserRole.HR.value,
+                                user_schemas.UserRole.ADMIN.value,
+                            ]
+                        ):
+                            if benefit.amount is not None:
+                                new_amount = benefit.amount + 1
+
+                                await benefits_repo.update_by_id(
+                                    session, benefit.id, {"amount": new_amount}
+                                )
+
+                            new_coins = user.coins + benefit.coins_cost
+                            await users_repo.update_by_id(
+                                session, user.id, {"coins": new_coins}
+                            )
+                        else:
+                            raise service_exceptions.EntityUpdateError(
+                                self.read_schema.__name__,
+                                entity_id,
+                                "You cannot decline this benefit request",
+                            )
+
+                    is_updated: bool = await self.repo.update_by_id(
+                        session,
+                        entity_id,
+                        update_schema.model_dump(),
+                    )
+                    if not is_updated:
+                        raise service_exceptions.EntityNotFoundError(
+                            self.read_schema.__name__, entity_id
                         )
 
-                is_updated: bool = await self.repo.update_by_id(
-                    session,
-                    entity_id,
-                    update_schema.model_dump(),
-                )
-                if not is_updated:
-                    raise service_exceptions.EntityNotFoundError(
-                        self.read_schema.__name__, entity_id
-                    )
-
-                entity = await self.repo.read_by_id(session, entity_id)
+                    entity = await self.repo.read_by_id(session, entity_id)
 
                 return self.read_schema.model_validate(entity)
 

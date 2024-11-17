@@ -264,7 +264,6 @@ async def logout(
 
     try:
         # Delete the session from the service
-
         await sessions_service.delete_session(session_id)
     # Session already does not exist
     except EntityNotFoundError:

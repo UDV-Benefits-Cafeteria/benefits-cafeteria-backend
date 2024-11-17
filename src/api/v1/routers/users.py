@@ -85,10 +85,17 @@ async def get_users(
             }.items()
             if value is not None
         }
-
         if current_user.role == schemas.UserRole.HR:
-            filters["legal_entity_id"] = current_user.legal_entity_id
-
+            if (
+                legal_entity_id is None
+                or legal_entity_id == current_user.legal_entity_id
+            ):
+                filters["legal_entity_id"] = current_user.legal_entity_id
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You cannot search for users outside your legal entity",
+                )
         users = await service.search_users(
             query=query,
             filters=filters,

@@ -65,42 +65,36 @@ class BenefitsService(
         - service_exceptions.EntityCreateError: If an error occurs while creating one of the images in the repository.
         """
         async with async_session_factory() as session:
-            for image_data in images:
-                image_data.filename = (
-                    f"benefit/{benefit_id}/{uuid.uuid4()}_" + image_data.filename
-                )
-                image = {
-                    "benefit_id": benefit_id,
-                    "image_url": image_data,
-                    "is_primary": True,
-                }
+            try:
+                async with session.begin():
+                    for image_data in images:
+                        image_data.filename = (
+                            f"benefit/{benefit_id}/{uuid.uuid4()}_"
+                            + image_data.filename
+                        )
+                        image = {
+                            "benefit_id": benefit_id,
+                            "image_url": image_data,
+                            "is_primary": True,
+                        }
 
-                try:
-                    await BenefitImagesRepository().create(session, image)
+                        await BenefitImagesRepository().create(session, image)
 
-                except repo_exceptions.EntityCreateError as e:
-                    logger.error(
-                        f"Failed to create image {image_data.filename}: {str(e)}"
-                    )
-                    raise service_exceptions.EntityCreateError(
-                        image_data.filename, str(e)
-                    )
+                    try:
+                        benefit = await self.repo.read_by_id(session, benefit_id)
 
-                try:
-                    benefit = await self.repo.read_by_id(session, benefit_id)
+                    except repo_exceptions.EntityReadError as e:
+                        raise service_exceptions.EntityReadError(
+                            "Benefit", benefit_id, str(e)
+                        )
+            except repo_exceptions.EntityCreateError as e:
+                logger.error(f"Failed to create image {image_data.filename}: {str(e)}")
+                raise service_exceptions.EntityCreateError(image_data.filename, str(e))
+        try:
+            await self.repo.index_benefit(benefit)
 
-                except repo_exceptions.EntityReadError as e:
-                    raise service_exceptions.EntityReadError(
-                        "Benefit", benefit_id, str(e)
-                    )
-
-                try:
-                    await self.repo.index_benefit(benefit)
-
-                except repo_exceptions.EntityCreateError as e:
-                    raise service_exceptions.EntityUpdateError(
-                        "Benefit", benefit_id, str(e)
-                    )
+        except repo_exceptions.EntityUpdateError as e:
+            raise service_exceptions.EntityUpdateError("Benefit", benefit_id, str(e))
 
     async def remove_images(self, images: list[int]):
         """
@@ -116,17 +110,33 @@ class BenefitsService(
         - None: Indicates successful deletion of images.
         """
         async with async_session_factory() as session:
-            for image_id in images:
-                try:
-                    image = await BenefitImagesRepository().read_by_id(
-                        session, image_id
-                    )
-                    benefit_id = image.benefit_id
-                    await BenefitImagesRepository().delete_by_id(session, image_id)
-                    benefit = await self.repo.read_by_id(session, benefit_id)
-                    await self.repo.index_benefit(benefit)
-                except repo_exceptions.EntityDeleteError as e:
-                    logger.error(f"Failed to delete image {image_id}: {str(e)}")
-                    raise service_exceptions.EntityDeletionError(
-                        str(image_id), image_id, str(e)
-                    )
+            try:
+                async with session.begin():
+                    for image_id in images:
+                        image = await BenefitImagesRepository().read_by_id(
+                            session, image_id
+                        )
+                        benefit_id = image.benefit_id
+
+                        await BenefitImagesRepository().delete_by_id(session, image_id)
+                        benefit = await self.repo.read_by_id(session, benefit_id)
+
+            except repo_exceptions.EntityDeleteError as e:
+                logger.error(f"Failed to delete image {image_id}: {str(e)}")
+                raise service_exceptions.EntityDeletionError(
+                    str(image_id), image_id, str(e)
+                )
+
+            try:
+                await self.repo.index_benefit(benefit)
+            except repo_exceptions.EntityUpdateError as e:
+                raise service_exceptions.EntityUpdateError(
+                    "Benefit", benefit_id, str(e)
+                )
+
+    """
+    async def reindex_benefit(self, benefit_id: int) -> None:
+        async with async_session_factory() as session:
+            benefit = await self.repo.read_by_id(session, benefit_id)
+            await self.repo.index_benefit(benefit)
+    """
