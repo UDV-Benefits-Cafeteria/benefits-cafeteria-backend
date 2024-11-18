@@ -5,12 +5,12 @@ from fastapi import UploadFile
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.benefit as schemas
+import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
 from src.config import logger
 from src.db.db import async_session_factory
 from src.repositories.benefit_images import BenefitImagesRepository
 from src.repositories.benefits import BenefitsRepository
-from src.schemas.user import UserRead, UserRole
 from src.services.base import BaseService
 
 
@@ -24,7 +24,7 @@ class BenefitsService(
 
     async def search_benefits(
         self,
-        current_user: UserRead,
+        current_user: user_schemas.UserRead,
         query: Optional[str],
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
@@ -43,7 +43,10 @@ class BenefitsService(
             )
             benefits = []
             for data in search_results:
-                if current_user.role in [UserRole.HR.value, UserRole.ADMIN.value]:
+                if current_user.role in [
+                    user_schemas.UserRole.HR,
+                    user_schemas.UserRole.ADMIN,
+                ]:
                     benefit = schemas.BenefitReadShortPrivate.model_validate(data)
                 else:
                     benefit = schemas.BenefitReadShortPublic.model_validate(data)
@@ -52,6 +55,19 @@ class BenefitsService(
         except repo_exceptions.EntityReadError as e:
             logger.error(f"Error searching benefits: {e}")
             raise service_exceptions.EntityReadError("Benefit", "", str(e))
+
+    async def read_by_id(
+        self, entity_id: int, current_user: user_schemas.UserRead = None
+    ) -> Union[schemas.BenefitRead, schemas.BenefitReadPublic]:
+        benefit: schemas.BenefitRead = await super().read_by_id(entity_id)
+        if current_user is not None:
+            if current_user.role in [
+                user_schemas.UserRole.HR,
+                user_schemas.UserRole.ADMIN,
+            ]:
+                return benefit
+
+        return schemas.BenefitReadPublic.model_validate(benefit)
 
     async def add_images(self, images: list[UploadFile], benefit_id: int):
         """

@@ -111,15 +111,18 @@ async def get_benefits(
 
 @router.get(
     "/{benefit_id}",
-    dependencies=[Depends(get_active_user)],
-    response_model=schemas.BenefitRead,
+    response_model=Union[schemas.BenefitRead, schemas.BenefitReadPublic],
     responses={
         200: {"description": "Benefit successfully retrieved"},
         404: {"description": "Benefit not found"},
         400: {"description": "Failed to read benefit"},
     },
 )
-async def get_benefit(benefit_id: int, service: BenefitsServiceDependency):
+async def get_benefit(
+    current_user: Annotated[user_schemas.UserRead, Depends(get_active_user)],
+    benefit_id: int,
+    service: BenefitsServiceDependency,
+):
     """
     Retrieve a benefit by its ID.
 
@@ -136,7 +139,7 @@ async def get_benefit(benefit_id: int, service: BenefitsServiceDependency):
         - 400: If there is an error reading the benefit.
     """
     try:
-        benefit = await service.read_by_id(benefit_id)
+        benefit = await service.read_by_id(benefit_id, current_user)
         return benefit
     except EntityNotFoundError:
         raise HTTPException(

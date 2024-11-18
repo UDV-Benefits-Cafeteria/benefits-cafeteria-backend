@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.schemas.benefit import BenefitRead
+from src.schemas.benefit import BenefitReadPublic
 from src.schemas.user import UserRead
 
 
@@ -27,7 +27,6 @@ class BenefitRequestBase(BaseModel):
 
 
 class BenefitRequestCreate(BaseModel):
-    user_id: Optional[int] = None
     benefit_id: int
     status: BenefitStatus = BenefitStatus.PENDING
 
@@ -43,7 +42,7 @@ class BenefitRequestUpdate(BaseModel):
 class BenefitRequestRead(BenefitRequestBase):
     id: int
     created_at: datetime.datetime
-    benefit: Optional["BenefitRead"] = None
+    benefit: Optional["BenefitReadPublic"] = None
     user: Optional["UserRead"] = None
     benefit_id: Optional[int] = Field(None, exclude=True)
     user_id: Optional[int] = Field(None, exclude=True)

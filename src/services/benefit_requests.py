@@ -37,7 +37,7 @@ class BenefitRequestsService(
         sort_order: str = "asc",
         page: int = 1,
         limit: int = 10,
-    ) -> list[schemas.BenefitRequestRead]:
+    ) -> list[read_schema]:
         async with async_session_factory() as session:
             try:
                 if current_user.role == user_schemas.UserRole.ADMIN.value:
@@ -64,9 +64,7 @@ class BenefitRequestsService(
                 validated_requests = []
 
                 for req in requests:
-                    validated_requests.append(
-                        schemas.BenefitRequestRead.model_validate(req)
-                    )
+                    validated_requests.append(self.read_schema.model_validate(req))
 
                 return validated_requests
             except repo_exceptions.EntityReadError as e:
@@ -74,9 +72,7 @@ class BenefitRequestsService(
                     self.read_schema.__name__, e.read_param, str(e)
                 )
 
-    async def read_by_user_id(
-        self, user_id: int
-    ) -> Optional[list[schemas.BenefitRequestRead]]:
+    async def read_by_user_id(self, user_id: int) -> Optional[list[read_schema]]:
         async with async_session_factory() as session:
             try:
                 entities = await self.repo.read_by_user_id(session, user_id)
@@ -97,7 +93,7 @@ class BenefitRequestsService(
         self,
         create_schema: schemas.BenefitRequestCreate,
         current_user: user_schemas.UserRead = None,
-    ) -> schemas.BenefitRequestRead:
+    ) -> read_schema:
         async with async_session_factory() as session:
             try:
                 async with session.begin():
@@ -175,7 +171,7 @@ class BenefitRequestsService(
         update_schema: schemas.BenefitRequestUpdate,
         current_user: user_schemas.UserRead = None,
         background_tasks: BackgroundTasks = None,
-    ) -> Optional[schemas.BenefitRequestRead]:
+    ) -> Optional[read_schema]:
         async with async_session_factory() as session:
             try:
                 async with session.begin():
