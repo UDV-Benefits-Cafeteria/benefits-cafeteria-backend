@@ -96,3 +96,7 @@ class BenefitRead(BenefitBase):
     category_id: Optional[int] = Field(None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class BenefitReadPublic(BenefitRead):
+    real_currency_cost: Annotated[Optional[Decimal], Field(exclude=True)] = None

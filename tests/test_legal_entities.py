@@ -2,6 +2,8 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.services.legal_entities import LegalEntitiesService
+
 
 @pytest.mark.asyncio
 async def test_get_legal_entity_not_found(employee_client: AsyncClient):
@@ -18,8 +20,12 @@ async def test_create_legal_entity_valid(hr_client: AsyncClient):
     response = await hr_client.post("/legal-entities/", json=valid_legal_entity_data)
     assert response.status_code == status.HTTP_201_CREATED
     legal_entity = response.json()
+
     assert "id" in legal_entity
     assert legal_entity["name"] == "Test Entity"
+
+    entity_in_db = await LegalEntitiesService().read_by_id(legal_entity["id"])
+    assert entity_in_db is not None
 
 
 @pytest.mark.asyncio
@@ -59,7 +65,20 @@ async def test_update_legal_entity_valid(hr_client: AsyncClient):
     )
     assert update_response.status_code == status.HTTP_200_OK
     updated_entity = update_response.json()
+
     assert updated_entity["name"] == "Updated Entity"
+
+    legal_entity_read = await LegalEntitiesService().read_by_id(updated_entity["id"])
+    assert legal_entity_read is not None
+
+    response = await hr_client.get(f"/legal-entities/{entity_id}")
+    assert response.status_code == status.HTTP_200_OK
+    response_data = response.json()
+    assert response_data["name"] == "Updated Entity"
+
+    entity_in_db = await LegalEntitiesService().read_by_id(entity_id)
+
+    assert entity_in_db.name == "Updated Entity"
 
 
 @pytest.mark.asyncio

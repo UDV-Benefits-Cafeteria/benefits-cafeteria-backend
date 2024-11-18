@@ -5,11 +5,12 @@ from fastapi import UploadFile
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.benefit as schemas
+import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
 from src.config import logger
+from src.db.db import async_session_factory
 from src.repositories.benefit_images import BenefitImagesRepository
 from src.repositories.benefits import BenefitsRepository
-from src.schemas.user import UserRead, UserRole
 from src.services.base import BaseService
 
 
@@ -23,7 +24,7 @@ class BenefitsService(
 
     async def search_benefits(
         self,
-        current_user: UserRead,
+        current_user: user_schemas.UserRead,
         query: Optional[str],
         filters: Optional[dict] = None,
         sort_by: Optional[str] = None,
@@ -42,7 +43,10 @@ class BenefitsService(
             )
             benefits = []
             for data in search_results:
-                if current_user.role in [UserRole.HR.value, UserRole.ADMIN.value]:
+                if current_user.role in [
+                    user_schemas.UserRole.HR,
+                    user_schemas.UserRole.ADMIN,
+                ]:
                     benefit = schemas.BenefitReadShortPrivate.model_validate(data)
                 else:
                     benefit = schemas.BenefitReadShortPublic.model_validate(data)
@@ -51,6 +55,19 @@ class BenefitsService(
         except repo_exceptions.EntityReadError as e:
             logger.error(f"Error searching benefits: {e}")
             raise service_exceptions.EntityReadError("Benefit", "", str(e))
+
+    async def read_by_id(
+        self, entity_id: int, current_user: user_schemas.UserRead = None
+    ) -> Union[schemas.BenefitRead, schemas.BenefitReadPublic]:
+        benefit: schemas.BenefitRead = await super().read_by_id(entity_id)
+        if current_user is not None:
+            if current_user.role in [
+                user_schemas.UserRole.HR,
+                user_schemas.UserRole.ADMIN,
+            ]:
+                return benefit
+
+        return schemas.BenefitReadPublic.model_validate(benefit)
 
     async def add_images(self, images: list[UploadFile], benefit_id: int):
         """
@@ -63,36 +80,37 @@ class BenefitsService(
         Raises:
         - service_exceptions.EntityCreateError: If an error occurs while creating one of the images in the repository.
         """
-        for image_data in images:
-            image_data.filename = (
-                f"benefit/{benefit_id}/{uuid.uuid4()}_" + image_data.filename
-            )
-            image = {
-                "benefit_id": benefit_id,
-                "image_url": image_data,
-                "is_primary": True,
-            }
-
+        async with async_session_factory() as session:
             try:
-                await BenefitImagesRepository().create(data=image)
+                async with session.begin():
+                    for image_data in images:
+                        image_data.filename = (
+                            f"benefit/{benefit_id}/{uuid.uuid4()}_"
+                            + image_data.filename
+                        )
+                        image = {
+                            "benefit_id": benefit_id,
+                            "image_url": image_data,
+                            "is_primary": True,
+                        }
 
+                        await BenefitImagesRepository().create(session, image)
+
+                    try:
+                        benefit = await self.repo.read_by_id(session, benefit_id)
+
+                    except repo_exceptions.EntityReadError as e:
+                        raise service_exceptions.EntityReadError(
+                            "Benefit", benefit_id, str(e)
+                        )
             except repo_exceptions.EntityCreateError as e:
                 logger.error(f"Failed to create image {image_data.filename}: {str(e)}")
                 raise service_exceptions.EntityCreateError(image_data.filename, str(e))
+        try:
+            await self.repo.index_benefit(benefit)
 
-            try:
-                benefit = await self.repo.read_by_id(benefit_id)
-
-            except repo_exceptions.EntityReadError as e:
-                raise service_exceptions.EntityReadError("Benefit", benefit_id, str(e))
-
-            try:
-                await self.repo.index_benefit(benefit)
-
-            except repo_exceptions.EntityCreateError as e:
-                raise service_exceptions.EntityUpdateError(
-                    "Benefit", benefit_id, str(e)
-                )
+        except repo_exceptions.EntityUpdateError as e:
+            raise service_exceptions.EntityUpdateError("Benefit", benefit_id, str(e))
 
     async def remove_images(self, images: list[int]):
         """
@@ -107,15 +125,34 @@ class BenefitsService(
         Returns:
         - None: Indicates successful deletion of images.
         """
-        for image_id in images:
+        async with async_session_factory() as session:
             try:
-                image = await BenefitImagesRepository().read_by_id(image_id)
-                benefit_id = image.benefit_id
-                await BenefitImagesRepository().delete_by_id(image_id)
-                benefit = await self.repo.read_by_id(benefit_id)
-                await self.repo.index_benefit(benefit)
+                async with session.begin():
+                    for image_id in images:
+                        image = await BenefitImagesRepository().read_by_id(
+                            session, image_id
+                        )
+                        benefit_id = image.benefit_id
+
+                        await BenefitImagesRepository().delete_by_id(session, image_id)
+                        benefit = await self.repo.read_by_id(session, benefit_id)
+
             except repo_exceptions.EntityDeleteError as e:
                 logger.error(f"Failed to delete image {image_id}: {str(e)}")
                 raise service_exceptions.EntityDeletionError(
                     str(image_id), image_id, str(e)
                 )
+
+            try:
+                await self.repo.index_benefit(benefit)
+            except repo_exceptions.EntityUpdateError as e:
+                raise service_exceptions.EntityUpdateError(
+                    "Benefit", benefit_id, str(e)
+                )
+
+    """
+    async def reindex_benefit(self, benefit_id: int) -> None:
+        async with async_session_factory() as session:
+            benefit = await self.repo.read_by_id(session, benefit_id)
+            await self.repo.index_benefit(benefit)
+    """

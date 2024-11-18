@@ -21,7 +21,7 @@ services:
     depends_on:
       tests_db:
         condition: service_healthy
-    restart: no
+    restart: "no"
 
   tests_db:
     container_name: db_for_tests
@@ -37,4 +37,4 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: no
+    restart: "no"

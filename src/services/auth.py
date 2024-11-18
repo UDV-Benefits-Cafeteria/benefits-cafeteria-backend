@@ -1,20 +1,14 @@
 from typing import Optional
 
-from fastapi import BackgroundTasks
 from pydantic import EmailStr
 
 import src.repositories.exceptions as repo_exceptions
-import src.schemas.email as email_schemas
+import src.schemas.user as user_schemas
 from src.config import get_settings
+from src.db.db import async_session_factory
 from src.repositories.users import UsersRepository
-from src.schemas.user import UserAuth, UserResetForgetPassword
 from src.services.exceptions import EntityNotFoundError, EntityReadError
-from src.utils.email import send_mail
-from src.utils.security import (
-    create_reset_password_token,
-    decode_reset_password_token,
-    hash_password,
-)
+from src.utils.security import decode_reset_password_token, hash_password
 
 settings = get_settings()
 
@@ -24,7 +18,7 @@ class AuthService:
 
     async def read_auth_data(
         self, email: Optional[str] = None, user_id: Optional[int] = None
-    ) -> Optional[UserAuth]:
+    ) -> Optional[user_schemas.UserAuth]:
         """
         Retrieve authentication data for a user by email or user ID.
 
@@ -35,23 +29,29 @@ class AuthService:
         Returns:
             Optional[UserAuth]: An instance of UserAuth if found, otherwise None.
         """
-        try:
-            if email:
-                user = await self.users_repo.read_by_email(email)
-            elif user_id:
-                user = await self.users_repo.read_by_id(user_id)
-            else:
-                raise EntityReadError(
-                    self.__repr__(), "", "No user_id or email provided"
-                )
+        async with async_session_factory() as session:
+            async with session.begin():
+                try:
+                    if email:
+                        user = await self.users_repo.read_by_email(session, email)
+                    elif user_id:
+                        user = await self.users_repo.read_by_id(session, user_id)
+                    else:
+                        raise EntityReadError(
+                            self.__repr__(), "", "No user_id or email provided"
+                        )
 
-            if user is not None:
-                return UserAuth.model_validate(user)
-            else:
-                raise EntityNotFoundError(self.__repr__(), email if email else user_id)
+                    if user is not None:
+                        return user_schemas.UserAuth.model_validate(user)
+                    else:
+                        raise EntityNotFoundError(
+                            self.__repr__(), email if email else user_id
+                        )
 
-        except repo_exceptions.EntityReadError:
-            raise EntityReadError(self.__repr__(), email or user_id, "Cannot read user")
+                except repo_exceptions.EntityReadError:
+                    raise EntityReadError(
+                        self.__repr__(), email or user_id, "Cannot read user"
+                    )
 
     async def update_password(self, user_id: int, password: str) -> bool:
         """
@@ -64,9 +64,11 @@ class AuthService:
         Returns:
             bool: True if the password was successfully updated, otherwise False.
         """
-        hashed_password = hash_password(password)
-        data = {"password": hashed_password}
-        return await self.users_repo.update_by_id(user_id, data)
+        async with async_session_factory() as session:
+            async with session.begin():
+                hashed_password = hash_password(password)
+                data = {"password": hashed_password}
+                return await self.users_repo.update_by_id(session, user_id, data)
 
     async def verify_user(self, user_id: int) -> bool:
         """
@@ -78,43 +80,14 @@ class AuthService:
         Returns:
             bool: True if the user was successfully verified, otherwise False.
         """
-        data = {"is_verified": True}
-        return await self.users_repo.update_by_id(user_id, data)
-
-    @staticmethod
-    async def send_forget_password_email(
-        email: EmailStr, background_tasks: BackgroundTasks
-    ):
-        """
-        Send a password reset email to the specified email address.
-
-        - email: The email address to which the password reset link will be sent.
-
-        Details:
-        - Generates a password reset token and includes it in a reset URL.
-        - Uses the background mail sending task to send an email with a reset link.
-        """
-        secret_token = create_reset_password_token(email=email)
-
-        email = email_schemas.EmailSchema.model_validate(
-            {
-                "email": [email],
-                "body": {
-                    "reset_url": f"https://{settings.DOMAIN}/reset-password?token={secret_token}",
-                },
-            }
-        )
-
-        background_tasks.add_task(
-            send_mail,
-            email.model_dump(),
-            f"Смена пароля на сайте {settings.APP_TITLE}",
-            "reset-password.html",
-        )
+        async with async_session_factory() as session:
+            async with session.begin():
+                data = {"is_verified": True}
+                return await self.users_repo.update_by_id(session, user_id, data)
 
     @staticmethod
     async def verify_reset_password_data(
-        rfp: UserResetForgetPassword,
+        rfp: user_schemas.UserResetForgetPassword,
     ) -> Optional[EmailStr]:
         """
         Verify the reset password token and password confirmation.

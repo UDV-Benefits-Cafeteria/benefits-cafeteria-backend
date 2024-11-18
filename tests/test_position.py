@@ -2,6 +2,8 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.services.positions import PositionsService
+
 
 @pytest.mark.asyncio
 async def test_get_position_not_found(employee_client: AsyncClient):
@@ -20,6 +22,10 @@ async def test_create_position_valid(hr_client: AsyncClient):
     position = response.json()
     assert "id" in position
     assert position["name"] == "Software Engineer"
+
+    position_in_db = await PositionsService().read_by_id(position["id"])
+
+    assert position_in_db.id == position["id"]
 
 
 @pytest.mark.asyncio
@@ -60,6 +66,10 @@ async def test_update_position_valid(hr_client: AsyncClient):
     assert update_response.status_code == status.HTTP_200_OK
     updated_position = update_response.json()
     assert updated_position["name"] == "Updated Position"
+
+    position_in_db = await PositionsService().read_by_id(position_id)
+
+    assert position_in_db.name == "Updated Position"
 
 
 @pytest.mark.asyncio
@@ -122,13 +132,6 @@ async def test_employee_cannot_create_position(employee_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_unauthenticated_access():
-    from httpx import ASGITransport
-
-    from src.main import app
-
-    async with AsyncClient(
-        transport=ASGITransport(app), base_url="http://test/api/v1"
-    ) as unauthenticated_client:
-        response = await unauthenticated_client.get("/positions/")
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+async def test_unauthenticated_access(auth_client: AsyncClient):
+    response = await auth_client.get("/positions/")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED

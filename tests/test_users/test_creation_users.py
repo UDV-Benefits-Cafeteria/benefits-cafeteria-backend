@@ -4,6 +4,8 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.services.users import UsersService
+
 
 async def create_user_test(client: AsyncClient, user_data: dict, expected_status: int):
     response = await client.post("/users/", json=user_data)
@@ -14,6 +16,13 @@ async def create_user_test(client: AsyncClient, user_data: dict, expected_status
         for key, value in user_data.items():
             if key in data and value is not None:
                 assert data[key] == value
+
+        user_service_data = await UsersService().read_by_id(data["id"])
+        user_data = (user_service_data).model_dump()
+        del user_data["hired_at"]
+        del data["hired_at"]
+
+        assert user_data == data
 
 
 user_data_cases_for_hr = [

@@ -27,6 +27,10 @@ from src.services.exceptions import (
     EntityUpdateError,
     PermissionDeniedError,
 )
+from src.utils.email_sender.users import (
+    send_user_coin_update_email,
+    send_user_greeting_email,
+)
 from src.utils.filter_parsers import range_filter_parser
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -81,10 +85,17 @@ async def get_users(
             }.items()
             if value is not None
         }
-
         if current_user.role == schemas.UserRole.HR:
-            filters["legal_entity_id"] = current_user.legal_entity_id
-
+            if (
+                legal_entity_id is None
+                or legal_entity_id == current_user.legal_entity_id
+            ):
+                filters["legal_entity_id"] = current_user.legal_entity_id
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You cannot search for users outside your legal entity",
+                )
         users = await service.search_users(
             query=query,
             filters=filters,
@@ -139,6 +150,11 @@ async def create_user(
             current_user=current_user,
             background_tasks=background_tasks,
         )
+
+        await send_user_greeting_email(
+            created_user.email, created_user.firstname, background_tasks
+        )
+
         return created_user
     except EntityCreateError:
         raise HTTPException(
@@ -211,6 +227,16 @@ async def update_user(
             current_user=current_user,
             background_tasks=background_tasks,
         )
+
+        if user_update.coins:
+            await send_user_coin_update_email(
+                updated_user.email,
+                updated_user.firstname,
+                updated_user.coins - current_user.coins,
+                updated_user.coins,
+                background_tasks,
+            )
+
         return updated_user
     except EntityNotFoundError:
         raise HTTPException(
@@ -268,7 +294,6 @@ async def get_user(
 
 @router.post(
     "/upload",
-    dependencies=[Depends(get_hr_user)],
     response_model=schemas.UserValidationResponse,
     responses={
         200: {"description": "Users validated successfully"},
@@ -280,6 +305,7 @@ async def upload_users(
     positions_service: PositionsServiceDependency,
     legal_entities_service: LegalEntitiesServiceDependency,
     file: UploadFile = File(...),
+    current_user: schemas.UserRead = Depends(get_hr_user),
 ):
     """
     Upload users from an Excel file for validation.
@@ -315,10 +341,12 @@ async def upload_users(
             contents,
             positions_service=positions_service,
             legal_entities_service=legal_entities_service,
+            current_user=current_user,
         )
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Error while parsing users"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error while parsing users. Some columns might be missing.",
         )
     except Exception:
         raise HTTPException(
@@ -364,7 +392,9 @@ async def bulk_create_users(
             user_data = schemas.UserCreate.model_validate(user_data)
 
             created_user = await service.create(
-                create_schema=user_data, current_user=current_user
+                create_schema=user_data,
+                current_user=current_user,
+                background_tasks=background_tasks,
             )
             created_users.append(created_user)
         except EntityCreateError:

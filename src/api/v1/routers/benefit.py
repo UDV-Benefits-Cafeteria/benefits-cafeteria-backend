@@ -2,6 +2,7 @@ from typing import Annotated, Any, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
+import src.schemas.user as user_schemas
 from src.api.v1.dependencies import (
     BenefitsServiceDependency,
     get_active_user,
@@ -10,8 +11,7 @@ from src.api.v1.dependencies import (
 from src.config import get_settings
 from src.repositories.exceptions import EntityDeleteError
 from src.schemas import benefit as schemas
-from src.schemas.benefit import BenefitSortFields, SortOrderField
-from src.schemas.user import UserRead
+from src.schemas.benefit import SortOrderField
 from src.services.exceptions import (
     EntityCreateError,
     EntityDeletionError,
@@ -37,7 +37,7 @@ settings = get_settings()
     },
 )
 async def get_benefits(
-    current_user: Annotated[UserRead, Depends(get_active_user)],
+    current_user: Annotated[user_schemas.UserRead, Depends(get_active_user)],
     service: BenefitsServiceDependency,
     query: Annotated[
         Optional[str], Query(description="Search query for benefit name")
@@ -65,7 +65,7 @@ async def get_benefits(
         ),
     ] = None,
     categories: Annotated[Optional[list[int]], Query()] = None,
-    sort_by: Annotated[Optional[BenefitSortFields], Query()] = None,
+    sort_by: Annotated[Optional[schemas.BenefitSortFields], Query()] = None,
     sort_order: Annotated[SortOrderField, Query()] = SortOrderField.ASCENDING,
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -111,15 +111,18 @@ async def get_benefits(
 
 @router.get(
     "/{benefit_id}",
-    dependencies=[Depends(get_active_user)],
-    response_model=schemas.BenefitRead,
+    response_model=Union[schemas.BenefitRead, schemas.BenefitReadPublic],
     responses={
         200: {"description": "Benefit successfully retrieved"},
         404: {"description": "Benefit not found"},
         400: {"description": "Failed to read benefit"},
     },
 )
-async def get_benefit(benefit_id: int, service: BenefitsServiceDependency):
+async def get_benefit(
+    current_user: Annotated[user_schemas.UserRead, Depends(get_active_user)],
+    benefit_id: int,
+    service: BenefitsServiceDependency,
+):
     """
     Retrieve a benefit by its ID.
 
@@ -136,7 +139,7 @@ async def get_benefit(benefit_id: int, service: BenefitsServiceDependency):
         - 400: If there is an error reading the benefit.
     """
     try:
-        benefit = await service.read_by_id(benefit_id)
+        benefit = await service.read_by_id(benefit_id, current_user)
         return benefit
     except EntityNotFoundError:
         raise HTTPException(
