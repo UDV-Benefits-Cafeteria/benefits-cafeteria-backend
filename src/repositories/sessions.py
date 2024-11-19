@@ -4,7 +4,6 @@ from typing import cast
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import logger
 from src.models import Session
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityDeleteError
@@ -28,9 +27,13 @@ class SessionsRepository(SQLAlchemyRepository[Session]):
             )
 
             await session.commit()
-
-            rowcount: int = cast(int, result.rowcount)
-            return rowcount
         except Exception as e:
-            logger.error(f"Error deleting expired sessions: {e}")
-            raise EntityDeleteError(self.model.__name__, "expired sessions", str(e))
+            raise EntityDeleteError(
+                self.__class__.__name__,
+                self.model.__tablename__,
+                "expired: True",
+                str(e),
+            )
+
+        rowcount: int = cast(int, result.rowcount)
+        return rowcount

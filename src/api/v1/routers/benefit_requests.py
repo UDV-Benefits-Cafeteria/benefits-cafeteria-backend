@@ -14,7 +14,7 @@ from src.schemas.benefit import SortOrderField
 from src.schemas.request import BenefitRequestSortFields
 from src.services.exceptions import (
     EntityCreateError,
-    EntityDeletionError,
+    EntityDeleteError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
@@ -386,7 +386,7 @@ async def delete_benefit_request(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit request not found"
         )
-    except EntityDeletionError:
+    except EntityDeleteError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to delete benefit request",

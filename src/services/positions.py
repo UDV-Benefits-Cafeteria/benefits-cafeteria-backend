@@ -32,10 +32,12 @@ class PositionsService(
 
             except repo_exceptions.EntityReadError as e:
                 raise service_exceptions.EntityReadError(
-                    "Position", f"name: {name}", str(e)
+                    self.__class__.__name__, str(e)
                 )
 
         if entity is None:
-            raise service_exceptions.EntityNotFoundError("Position", f"name: {name}")
+            raise service_exceptions.EntityNotFoundError(
+                self.__class__.__name__, f"name: {name}"
+            )
 
         return self.read_schema.model_validate(entity)

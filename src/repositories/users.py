@@ -3,7 +3,6 @@ from typing import Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import logger
 from src.models.users import User
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
@@ -56,12 +55,9 @@ class UsersRepository(SQLAlchemyRepository[User]):
             "image_url": user.image_url,
         }
 
-        try:
-            await es.index(
-                index=SearchService.users_index_name, id=user.id, document=user_data
-            )
-        except Exception as e:
-            logger.error(f"Error indexing user {user.id} in Elasticsearch: {e}")
+        await es.index(
+            index=SearchService.users_index_name, id=user.id, document=user_data
+        )
 
     async def search_users(
         self,
@@ -122,17 +118,16 @@ class UsersRepository(SQLAlchemyRepository[User]):
             )
             hits = response["hits"]["hits"]
             results = [hit["_source"] for hit in hits]
-            return results
         except Exception as e:
-            logger.error(f"Error searching users in Elasticsearch: {e}")
-            raise EntityReadError(self.model.__name__, "", str(e))
+            raise EntityReadError(
+                self.__class__.__name__, self.model.__tablename__, str(filters), str(e)
+            )
+
+        return results
 
     @staticmethod
     async def delete_user_from_index(user_id: int):
-        try:
-            await es.delete(index=SearchService.users_index_name, id=user_id)
-        except Exception as e:
-            logger.error(f"Error deleting user {user_id} from Elasticsearch: {e}")
+        await es.delete(index=SearchService.users_index_name, id=user_id)
 
     async def read_by_email(self, session: AsyncSession, email: str) -> Optional[User]:
         try:
@@ -140,14 +135,12 @@ class UsersRepository(SQLAlchemyRepository[User]):
                 select(self.model).where(self.model.email == email)
             )
             user = result.scalar_one_or_none()
-
-            if user:
-                logger.info(f"Found User with email: {email}")
-            else:
-                logger.warning(f"No User found with email: {email}")
-
-            return user
-
         except Exception as e:
-            logger.error(f"Error reading User by email '{email}': {e}")
-            raise EntityReadError(self.model.__name__, email, str(e))
+            raise EntityReadError(
+                self.__class__.__name__,
+                self.model.__tablename__,
+                f"email: {email}",
+                str(e),
+            )
+
+        return user

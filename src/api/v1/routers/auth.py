@@ -10,7 +10,7 @@ from src.api.v1.dependencies import (
 from src.config import get_settings
 from src.services.exceptions import (
     EntityCreateError,
-    EntityDeletionError,
+    EntityDeleteError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
@@ -97,7 +97,7 @@ async def signup(
     - **dict**: A dictionary indicating success or failure of the operation.
     """
     try:
-        user = await auth_service.read_auth_data(user_id=user_register.id)
+        user = await auth_service.read_auth_data_by_id(user_id=user_register.id)
 
         if user.is_verified:
             raise HTTPException(
@@ -162,7 +162,7 @@ async def signin(
     """
     try:
         # Retrieve user data based on email
-        user = await auth_service.read_auth_data(email=user_login.email)
+        user = await auth_service.read_auth_data_by_email(email=user_login.email)
 
         if not user.is_verified:
             raise HTTPException(
@@ -268,7 +268,7 @@ async def logout(
     # Session already does not exist
     except EntityNotFoundError:
         pass
-    except EntityDeletionError:
+    except EntityDeleteError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to log out",

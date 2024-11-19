@@ -2,10 +2,10 @@ from typing import Any, Optional, Union
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import get_settings, logger
+from src.config import get_settings
 from src.models import Benefit
 from src.repositories.base import SQLAlchemyRepository
-from src.repositories.exceptions import EntityReadError, EntityUpdateError
+from src.repositories.exceptions import EntityReadError
 from src.utils.elastic_index import SearchService, es
 
 settings = get_settings()
@@ -62,22 +62,15 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
         else:
             benefit_data["primary_image_url"] = None
 
-        try:
-            await es.index(
-                index=SearchService.benefits_index_name,
-                id=benefit.id,
-                document=benefit_data,
-            )
-        except Exception as e:
-            logger.error(f"Error indexing benefit {benefit.id} in Elasticsearch: {e}")
-            raise EntityUpdateError("Benefit", benefit.id, str(e))
+        await es.index(
+            index=SearchService.benefits_index_name,
+            id=benefit.id,
+            document=benefit_data,
+        )
 
     @staticmethod
     async def delete_benefit_from_index(benefit_id: int):
-        try:
-            await es.delete(index=SearchService.benefits_index_name, id=benefit_id)
-        except Exception as e:
-            logger.error(f"Error deleting benefit {benefit_id} from Elasticsearch: {e}")
+        await es.delete(index=SearchService.benefits_index_name, id=benefit_id)
 
     async def search_benefits(
         self,
@@ -144,5 +137,6 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             results = [hit["_source"] for hit in hits]
             return results
         except Exception as e:
-            logger.error(f"Error searching benefits in Elasticsearch: {e}")
-            raise EntityReadError(self.model.__name__, "", str(e))
+            raise EntityReadError(
+                self.__class__.__name__, self.model.__tablename__, str(filters), str(e)
+            )

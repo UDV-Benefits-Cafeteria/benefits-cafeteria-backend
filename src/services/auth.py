@@ -4,10 +4,10 @@ from pydantic import EmailStr
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.user as user_schemas
+import src.services.exceptions as service_exceptions
 from src.config import get_settings
 from src.db.db import async_session_factory
 from src.repositories.users import UsersRepository
-from src.services.exceptions import EntityNotFoundError, EntityReadError
 from src.utils.security import decode_reset_password_token, hash_password
 
 settings = get_settings()
@@ -16,15 +16,14 @@ settings = get_settings()
 class AuthService:
     users_repo = UsersRepository()
 
-    async def read_auth_data(
-        self, email: Optional[str] = None, user_id: Optional[int] = None
+    async def read_auth_data_by_id(
+        self, user_id: int
     ) -> Optional[user_schemas.UserAuth]:
         """
-        Retrieve authentication data for a user by email or user ID.
+        Retrieve authentication data for a user by user ID.
 
         Args:
-            email (Optional[str]): The email of the user to look up.
-            user_id (Optional[int]): The ID of the user to look up.
+            user_id (int): The ID of the user to look up.
 
         Returns:
             Optional[UserAuth]: An instance of UserAuth if found, otherwise None.
@@ -32,26 +31,46 @@ class AuthService:
         async with async_session_factory() as session:
             async with session.begin():
                 try:
-                    if email:
-                        user = await self.users_repo.read_by_email(session, email)
-                    elif user_id:
-                        user = await self.users_repo.read_by_id(session, user_id)
-                    else:
-                        raise EntityReadError(
-                            self.__repr__(), "", "No user_id or email provided"
-                        )
-
-                    if user is not None:
-                        return user_schemas.UserAuth.model_validate(user)
-                    else:
-                        raise EntityNotFoundError(
-                            self.__repr__(), email if email else user_id
-                        )
-
-                except repo_exceptions.EntityReadError:
-                    raise EntityReadError(
-                        self.__repr__(), email or user_id, "Cannot read user"
+                    user = await self.users_repo.read_by_id(session, user_id)
+                except repo_exceptions.EntityReadError as e:
+                    raise service_exceptions.EntityReadError(
+                        self.__class__.__name__, str(e)
                     )
+
+        if not user:
+            raise service_exceptions.EntityNotFoundError(
+                self.__class__.__name__, f"user_id: {user_id}"
+            )
+
+        return user_schemas.UserAuth.model_validate(user)
+
+    async def read_auth_data_by_email(
+        self, email: Optional[str] = None
+    ) -> Optional[user_schemas.UserAuth]:
+        """
+        Retrieve authentication data for a user by email or user ID.
+
+        Args:
+            email (str): The email of the user to look up.
+
+        Returns:
+            Optional[UserAuth]: An instance of UserAuth if found, otherwise None.
+        """
+        async with async_session_factory() as session:
+            async with session.begin():
+                try:
+                    user = await self.users_repo.read_by_email(session, email)
+                except repo_exceptions.EntityReadError as e:
+                    raise service_exceptions.EntityReadError(
+                        self.__class__.__name__, str(e)
+                    )
+
+        if not user:
+            raise service_exceptions.EntityNotFoundError(
+                self.__class__.__name__, f"email: {email}"
+            )
+
+        return user_schemas.UserAuth.model_validate(user)
 
     async def update_password(self, user_id: int, password: str) -> bool:
         """

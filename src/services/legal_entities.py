@@ -34,12 +34,12 @@ class LegalEntitiesService(
 
             except repo_exceptions.EntityReadError as e:
                 raise service_exceptions.EntityReadError(
-                    "Legal Entity", f"name: {name}", str(e)
+                    self.__class__.__name__, str(e)
                 )
 
         if entity is None:
             raise service_exceptions.EntityNotFoundError(
-                "Legal Entity", f"name: {name}"
+                self.__class__.__name__, f"name: {name}"
             )
 
         return self.read_schema.model_validate(entity)

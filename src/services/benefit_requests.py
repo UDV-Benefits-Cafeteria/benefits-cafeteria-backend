@@ -7,7 +7,7 @@ import src.repositories.exceptions as repo_exceptions
 import src.schemas.request as schemas
 import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
-from src.config import get_settings, logger
+from src.config import get_settings
 from src.db.db import async_session_factory
 from src.repositories.benefit_requests import BenefitRequestsRepository
 from src.repositories.benefits import BenefitsRepository
@@ -46,75 +46,71 @@ class BenefitRequestsService(
                     legal_entity_id = current_user.legal_entity_id
                     if legal_entity_id is None:
                         raise service_exceptions.EntityReadError(
-                            "BenefitRequest",
-                            "legal_entity_id",
+                            self.__class__.__name__,
                             "HR user has no legal_entity_id",
                         )
                 else:
                     raise service_exceptions.EntityReadError(
-                        "BenefitRequest",
-                        "role",
+                        self.__class__.__name__,
                         "User does not have access to benefit requests",
                     )
 
                 requests = await self.repo.read_all(
                     session, status, sort_by, sort_order, page, limit, legal_entity_id
                 )
-
-                validated_requests = []
-
-                for req in requests:
-                    validated_requests.append(self.read_schema.model_validate(req))
-
-                return validated_requests
             except repo_exceptions.EntityReadError as e:
                 raise service_exceptions.EntityReadError(
-                    self.read_schema.__name__, e.read_param, str(e)
+                    self.__class__.__name__, str(e)
                 )
+
+            validated_requests = []
+
+            for req in requests:
+                validated_requests.append(self.read_schema.model_validate(req))
+
+            return validated_requests
 
     async def read_by_user_id(self, user_id: int) -> Optional[list[read_schema]]:
         async with async_session_factory() as session:
             try:
                 entities = await self.repo.read_by_user_id(session, user_id)
-                if entities:
-                    return [
-                        self.read_schema.model_validate(entity) for entity in entities
-                    ]
-                return []
             except Exception as e:
-                logger.error(
-                    f"Error reading benefit requests by user ID {user_id}: {e}"
-                )
                 raise service_exceptions.EntityReadError(
-                    self.read_schema.__name__, user_id, str(e)
+                    self.__class__.__name__, str(e)
                 )
+
+            if entities:
+                return [self.read_schema.model_validate(entity) for entity in entities]
+            return []
 
     async def create(
         self,
         create_schema: schemas.BenefitRequestCreate,
         current_user: user_schemas.UserRead = None,
     ) -> read_schema:
+        request_data = create_schema.model_dump(exclude_unset=True)
+        request_data["user_id"] = current_user.id
+
+        benefits_repo = BenefitsRepository()
+        users_repo = UsersRepository()
+
         async with async_session_factory() as session:
             try:
                 async with session.begin():
-                    request_data = create_schema.model_dump(exclude_unset=True)
-                    request_data["user_id"] = current_user.id
-
-                    benefits_repo = BenefitsRepository()
-                    users_repo = UsersRepository()
-
                     benefit = await benefits_repo.read_by_id(
                         session, create_schema.benefit_id
                     )
                     if benefit is None:
                         raise service_exceptions.EntityNotFoundError(
-                            "Benefit", create_schema.benefit_id
+                            self.__class__.__name__,
+                            f"benefit_id: {create_schema.benefit_id}",
                         )
 
                     user = await users_repo.read_by_id(session, request_data["user_id"])
                     if user is None:
                         raise service_exceptions.EntityNotFoundError(
-                            "User", request_data["user_id"]
+                            self.__class__.__name__,
+                            f"user_id: {request_data['user_id']}",
                         )
 
                     # Perform validations
@@ -137,7 +133,7 @@ class BenefitRequestsService(
                         new_amount = benefit.amount - 1
                         if new_amount < 0:
                             raise service_exceptions.EntityUpdateError(
-                                "Benefit", benefit.id, "Insufficient benefit amount"
+                                self.__class__.__name__, "Insufficient benefit amount"
                             )
                         # Decrement benefit amount
                         await benefits_repo.update_by_id(
@@ -157,13 +153,12 @@ class BenefitRequestsService(
                     # Create the benefit request
                     created_request = await self.repo.create(session, request_data)
 
-                return self.read_schema.model_validate(created_request)
-
             except repo_exceptions.RepositoryError as e:
-                logger.error(f"Error creating benefit request: {e}")
                 raise service_exceptions.EntityCreateError(
                     self.create_schema.__name__, str(e)
                 )
+
+        return self.read_schema.model_validate(created_request)
 
     async def update_by_id(
         self,
@@ -172,16 +167,16 @@ class BenefitRequestsService(
         current_user: user_schemas.UserRead = None,
         background_tasks: BackgroundTasks = None,
     ) -> Optional[read_schema]:
+        benefits_repo = BenefitsRepository()
+        users_repo = UsersRepository()
+
         async with async_session_factory() as session:
             try:
                 async with session.begin():
-                    benefits_repo = BenefitsRepository()
-                    users_repo = UsersRepository()
-
                     existing_request = await self.repo.read_by_id(session, entity_id)
                     if not existing_request:
                         raise service_exceptions.EntityNotFoundError(
-                            self.read_schema.__name__, entity_id
+                            self.__class__.__name__, f"entity_id: {entity_id}"
                         )
 
                     benefit = await benefits_repo.read_by_id(
@@ -199,8 +194,7 @@ class BenefitRequestsService(
                         schemas.BenefitStatus.APPROVED,
                     ]:
                         raise service_exceptions.EntityUpdateError(
-                            self.read_schema.__name__,
-                            entity_id,
+                            self.__class__.__name__,
                             "You cannot update declined or approved benefit request",
                         )
                     if new_status.value == schemas.BenefitStatus.DECLINED:
@@ -225,43 +219,41 @@ class BenefitRequestsService(
                             )
                         else:
                             raise service_exceptions.EntityUpdateError(
-                                self.read_schema.__name__,
-                                entity_id,
+                                self.__class__.__name__,
                                 "You cannot decline this benefit request",
                             )
 
-                    is_updated: bool = await self.repo.update_by_id(
+                    is_updated = await self.repo.update_by_id(
                         session,
                         entity_id,
                         update_schema.model_dump(),
                     )
                     if not is_updated:
                         raise service_exceptions.EntityNotFoundError(
-                            self.read_schema.__name__, entity_id
+                            self.__class__.__name__, f"entity_id: {entity_id}"
                         )
 
                     entity = await self.repo.read_by_id(session, entity_id)
 
-                return self.read_schema.model_validate(entity)
-
             except Exception as e:
-                logger.error(f"Error updating benefit request: {e}")
                 raise service_exceptions.EntityUpdateError(
-                    self.read_schema.__name__, entity_id, str(e)
+                    self.__class__.__name__, str(e)
                 )
+
+        return self.read_schema.model_validate(entity)
 
     async def delete_by_id(
         self, entity_id: int, session: Optional[AsyncSession] = None
     ) -> bool:
+        benefits_repo = BenefitsRepository()
+        users_repo = UsersRepository()
+
         async with async_session_factory() as session:
             try:
-                benefits_repo = BenefitsRepository()
-                users_repo = UsersRepository()
-
                 existing_request = await self.repo.read_by_id(session, entity_id)
                 if not existing_request:
                     raise service_exceptions.EntityNotFoundError(
-                        self.read_schema.__name__, entity_id
+                        self.__class__.__name__, f"entity_id {entity_id}"
                     )
 
                 benefit = await benefits_repo.read_by_id(
@@ -274,7 +266,7 @@ class BenefitRequestsService(
 
                     if new_amount < 0:
                         raise service_exceptions.EntityUpdateError(
-                            "Benefit", benefit.id, "Insufficient benefit amount"
+                            self.__class__.__name__, "Insufficient benefit amount"
                         )
 
                     await benefits_repo.update_by_id(
@@ -284,14 +276,14 @@ class BenefitRequestsService(
                 new_coins = user.coins + benefit.coins_cost
                 await users_repo.update_by_id(session, user.id, {"coins": new_coins})
 
-                deleted = await self.repo.delete_by_id(session, entity_id=entity_id)
-                if not deleted:
-                    raise service_exceptions.EntityDeletionError(
-                        "Benefit Request", entity_id, "Failed to delete request"
+                is_deleted = await self.repo.delete_by_id(session, entity_id=entity_id)
+                if not is_deleted:
+                    raise service_exceptions.EntityNotFoundError(
+                        self.__class__.__name__, f"entity_id {entity_id}"
                     )
-                return deleted
             except Exception as e:
-                logger.error(f"Error deleting benefit request: {e}")
-                raise service_exceptions.EntityDeletionError(
-                    "Benefit Request", entity_id, str(e)
+                raise service_exceptions.EntityDeleteError(
+                    self.__class__.__name__, str(e)
                 )
+
+        return is_deleted

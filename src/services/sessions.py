@@ -36,13 +36,17 @@ class SessionsService:
             "expires_at": expires_at,
             "csrf_token": csrf_token,
         }
+
         async with async_session_factory() as async_session:
             try:
                 async with async_session.begin():
                     session = await self.repo.create(session=async_session, data=data)
-                    return session.session_id
             except repo_exceptions.EntityCreateError as e:
-                raise service_exceptions.EntityCreateError("Session", str(e))
+                raise service_exceptions.EntityCreateError(
+                    self.__class__.__name__, str(e)
+                )
+
+        return session.session_id
 
     async def get_session(self, session_id: str) -> Optional[SessionRead]:
         """
@@ -61,11 +65,14 @@ class SessionsService:
             try:
                 async with async_session.begin():
                     session = await self.repo.read_by_id(async_session, session_id)
-                    if not session or session.expires_at <= datetime.now(timezone.utc):
-                        return None
-                    return SessionRead.model_validate(session)
             except repo_exceptions.EntityReadError as e:
-                raise service_exceptions.EntityReadError("Session", session_id, str(e))
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__, str(e)
+                )
+
+        if not session or session.expires_at <= datetime.now(timezone.utc):
+            return None
+        return SessionRead.model_validate(session)
 
     async def update_session_expiration(
         self, session_id: str, new_expires_at: datetime, new_csrf_token: str
@@ -91,30 +98,32 @@ class SessionsService:
                     is_updated = await self.repo.update_by_id(
                         async_session, session_id, data
                     )
-                    if not is_updated:
-                        raise service_exceptions.EntityNotFoundError(
-                            "Session", session_id
-                        )
-                    return True
             except repo_exceptions.EntityUpdateError as e:
                 raise service_exceptions.EntityUpdateError(
-                    "Session", session_id, str(e)
+                    self.__class__.__name__, str(e)
                 )
+
+        if not is_updated:
+            raise service_exceptions.EntityNotFoundError(
+                self.__class__.__name__, f"session_id: {session_id}"
+            )
+        return True
 
     async def delete_session(self, session_id: str) -> bool:
         async with async_session_factory() as async_session:
             try:
                 async with async_session.begin():
                     is_deleted = await self.repo.delete_by_id(async_session, session_id)
-                    if not is_deleted:
-                        raise service_exceptions.EntityNotFoundError(
-                            "Session", session_id
-                        )
-                    return True
             except repo_exceptions.EntityDeleteError as e:
-                raise service_exceptions.EntityDeletionError(
-                    "Session", session_id, str(e)
+                raise service_exceptions.EntityDeleteError(
+                    self.__class__.__name__, str(e)
                 )
+
+        if not is_deleted:
+            raise service_exceptions.EntityNotFoundError(
+                self.__class__.__name__, f"session_id: {session_id}"
+            )
+        return True
 
     async def get_csrf_token(self, session_id: str) -> Optional[str]:
         """
