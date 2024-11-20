@@ -181,6 +181,7 @@ class BenefitRequest(Base):
         id (int): The unique identifier for the request.
         benefit_id (Optional[int]): The ID of the requested benefit.
         user_id (Optional[int]): The ID of the user making the request.
+        performer_id (Optional[int]): The ID of the user performing the request.
         status (BenefitStatus): The current status of the benefit request.
         content (Optional[str]): Any additional content related to the request.
         comment (Optional[str]): Comments on the request.
@@ -195,6 +196,9 @@ class BenefitRequest(Base):
         ForeignKey("benefits.id", ondelete="SET NULL"), nullable=True
     )
     user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    performer_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     status: Mapped[BenefitStatus] = mapped_column(
@@ -218,7 +222,13 @@ class BenefitRequest(Base):
     )
     user: Mapped[Optional["User"]] = relationship(
         "User",
+        foreign_keys=[user_id],  
         back_populates="benefit_requests",
+        lazy="selectin",
+    )
+    performer: Mapped[Optional["User"]] = relationship(
+        "User",
+        foreign_keys=[performer_id],  
         lazy="selectin",
     )
 
