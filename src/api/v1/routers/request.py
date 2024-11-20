@@ -318,7 +318,6 @@ async def update_benefit_request(
             entity_id=request_id,
             update_schema=benefit_request_update,
             current_user=current_user,
-            background_tasks=background_tasks,
         )
 
         await send_users_benefit_request_updated_email(

@@ -170,7 +170,6 @@ class BenefitRequestsService(
         entity_id: int,
         update_schema: schemas.BenefitRequestUpdate,
         current_user: user_schemas.UserRead = None,
-        background_tasks: BackgroundTasks = None,
     ) -> Optional[read_schema]:
         async with async_session_factory() as session:
             try:
