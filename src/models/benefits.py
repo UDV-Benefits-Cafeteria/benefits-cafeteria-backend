@@ -222,13 +222,13 @@ class BenefitRequest(Base):
     )
     user: Mapped[Optional["User"]] = relationship(
         "User",
-        foreign_keys=[user_id],  
+        foreign_keys=[user_id],
         back_populates="benefit_requests",
         lazy="selectin",
     )
     performer: Mapped[Optional["User"]] = relationship(
         "User",
-        foreign_keys=[performer_id],  
+        foreign_keys=[performer_id],
         lazy="selectin",
     )
 

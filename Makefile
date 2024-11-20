@@ -17,7 +17,6 @@ build:
 restart:
 	@echo "🔄 Перезапуск приложения..."
 	$(MAKE) down
-	$(MAKE) build
 	$(MAKE) up
 
 upapp:
