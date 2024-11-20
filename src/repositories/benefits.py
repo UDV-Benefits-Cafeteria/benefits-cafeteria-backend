@@ -16,7 +16,8 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
 
     async def create(self, session: AsyncSession, data: dict) -> Benefit:
         benefit = await super().create(session, data)
-        await self.index_benefit(benefit)
+        if benefit is not None:
+            await self.index_benefit(benefit)
         return benefit
 
     async def update_by_id(

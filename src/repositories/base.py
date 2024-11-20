@@ -200,11 +200,8 @@ class SQLAlchemyRepository(Generic[T]):
                 str(e),
             )
 
-        rowcount: int = cast(int, result.rowcount)
-        if rowcount > 0:
-            return True
-        else:
-            return False
+        rows_affected: int = cast(int, result.rowcount)
+        return rows_affected > 0
 
     async def delete_by_id(
         self, session: AsyncSession, entity_id: Union[int, str]
@@ -236,8 +233,5 @@ class SQLAlchemyRepository(Generic[T]):
                 str(e),
             )
 
-        rowcount: int = cast(int, result.rowcount)
-        if rowcount > 0:
-            return True
-        else:
-            return False
+        rows_affected: int = cast(int, result.rowcount)
+        return rows_affected > 0

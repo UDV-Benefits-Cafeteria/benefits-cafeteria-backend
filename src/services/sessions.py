@@ -5,7 +5,7 @@ from typing import Optional
 
 import src.repositories.exceptions as repo_exceptions
 import src.services.exceptions as service_exceptions
-from src.db.db import async_session_factory
+from src.db.db import async_session_factory, get_transaction_session
 from src.repositories.sessions import SessionsRepository
 from src.schemas.session import SessionRead
 
@@ -37,10 +37,10 @@ class SessionsService:
             "csrf_token": csrf_token,
         }
 
-        async with async_session_factory() as async_session:
+        async with get_transaction_session() as async_session:
             try:
-                async with async_session.begin():
-                    session = await self.repo.create(session=async_session, data=data)
+                session = await self.repo.create(session=async_session, data=data)
+
             except repo_exceptions.EntityCreateError as e:
                 raise service_exceptions.EntityCreateError(
                     self.__class__.__name__, str(e)
@@ -63,8 +63,8 @@ class SessionsService:
         """
         async with async_session_factory() as async_session:
             try:
-                async with async_session.begin():
-                    session = await self.repo.read_by_id(async_session, session_id)
+                session = await self.repo.read_by_id(async_session, session_id)
+
             except repo_exceptions.EntityReadError as e:
                 raise service_exceptions.EntityReadError(
                     self.__class__.__name__, str(e)
@@ -72,6 +72,7 @@ class SessionsService:
 
         if not session or session.expires_at <= datetime.now(timezone.utc):
             return None
+
         return SessionRead.model_validate(session)
 
     async def update_session_expiration(
@@ -92,12 +93,11 @@ class SessionsService:
             bool: True if the update was successful, False otherwise.
         """
         data = {"expires_at": new_expires_at, "csrf_token": new_csrf_token}
-        async with async_session_factory() as async_session:
+        async with get_transaction_session() as async_session:
             try:
-                async with async_session.begin():
-                    is_updated = await self.repo.update_by_id(
-                        async_session, session_id, data
-                    )
+                is_updated = await self.repo.update_by_id(
+                    async_session, session_id, data
+                )
             except repo_exceptions.EntityUpdateError as e:
                 raise service_exceptions.EntityUpdateError(
                     self.__class__.__name__, str(e)
@@ -110,10 +110,10 @@ class SessionsService:
         return True
 
     async def delete_session(self, session_id: str) -> bool:
-        async with async_session_factory() as async_session:
+        async with get_transaction_session() as async_session:
             try:
-                async with async_session.begin():
-                    is_deleted = await self.repo.delete_by_id(async_session, session_id)
+                is_deleted = await self.repo.delete_by_id(async_session, session_id)
+
             except repo_exceptions.EntityDeleteError as e:
                 raise service_exceptions.EntityDeleteError(
                     self.__class__.__name__, str(e)
@@ -126,17 +126,12 @@ class SessionsService:
         return True
 
     async def get_csrf_token(self, session_id: str) -> Optional[str]:
-        """
-        Get the CSRF token for a given session ID.
-        Retrieves the session and returns the associated CSRF token if the session
-        is valid.
-        Args:
-            session_id (str): The ID of the session for which to retrieve the CSRF token.
-        Returns:
-            Optional[str]: The CSRF token if the session is valid, None otherwise.
-        """
+        try:
+            session = await self.get_session(session_id)
 
-        session = await self.get_session(session_id)
+        except Exception:
+            raise
+
         return session.csrf_token
 
     async def cleanup_expired_sessions(self) -> int:
@@ -145,9 +140,13 @@ class SessionsService:
         :return: Number of deleted sessions.
         """
         current_time = datetime.now(timezone.utc)
-        async with async_session_factory() as async_session:
-            async with async_session.begin():
+        async with get_transaction_session() as async_session:
+            try:
                 deleted_count = await self.repo.delete_expired_sessions(
                     async_session, current_time
                 )
+
+            except repo_exceptions.EntityDeleteError as e:
+                raise service_exceptions.EntityDeleteError("SessionService", str(e))
+
         return deleted_count

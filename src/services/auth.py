@@ -6,7 +6,7 @@ import src.repositories.exceptions as repo_exceptions
 import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
 from src.config import get_settings
-from src.db.db import async_session_factory
+from src.db.db import async_session_factory, get_transaction_session
 from src.repositories.users import UsersRepository
 from src.utils.security import decode_reset_password_token, hash_password
 
@@ -29,13 +29,12 @@ class AuthService:
             Optional[UserAuth]: An instance of UserAuth if found, otherwise None.
         """
         async with async_session_factory() as session:
-            async with session.begin():
-                try:
-                    user = await self.users_repo.read_by_id(session, user_id)
-                except repo_exceptions.EntityReadError as e:
-                    raise service_exceptions.EntityReadError(
-                        self.__class__.__name__, str(e)
-                    )
+            try:
+                user = await self.users_repo.read_by_id(session, user_id)
+            except repo_exceptions.EntityReadError as e:
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__, str(e)
+                )
 
         if not user:
             raise service_exceptions.EntityNotFoundError(
@@ -57,13 +56,12 @@ class AuthService:
             Optional[UserAuth]: An instance of UserAuth if found, otherwise None.
         """
         async with async_session_factory() as session:
-            async with session.begin():
-                try:
-                    user = await self.users_repo.read_by_email(session, email)
-                except repo_exceptions.EntityReadError as e:
-                    raise service_exceptions.EntityReadError(
-                        self.__class__.__name__, str(e)
-                    )
+            try:
+                user = await self.users_repo.read_by_email(session, email)
+            except repo_exceptions.EntityReadError as e:
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__, str(e)
+                )
 
         if not user:
             raise service_exceptions.EntityNotFoundError(
@@ -83,11 +81,21 @@ class AuthService:
         Returns:
             bool: True if the password was successfully updated, otherwise False.
         """
-        async with async_session_factory() as session:
-            async with session.begin():
+        async with get_transaction_session() as session:
+            try:
                 hashed_password = hash_password(password)
                 data = {"password": hashed_password}
-                return await self.users_repo.update_by_id(session, user_id, data)
+                updated_user = await self.users_repo.update_by_id(
+                    session, user_id, data
+                )
+
+            except repo_exceptions.EntityUpdateError as e:
+                raise service_exceptions.EntityUpdateError(
+                    "AuthService",
+                    f"Failed to update password for user with id {user_id}, error: {str(e)}",
+                )
+
+            return updated_user
 
     async def verify_user(self, user_id: int) -> bool:
         """
@@ -99,10 +107,20 @@ class AuthService:
         Returns:
             bool: True if the user was successfully verified, otherwise False.
         """
-        async with async_session_factory() as session:
-            async with session.begin():
+        async with get_transaction_session() as session:
+            try:
                 data = {"is_verified": True}
-                return await self.users_repo.update_by_id(session, user_id, data)
+                updated_user = await self.users_repo.update_by_id(
+                    session, user_id, data
+                )
+
+            except repo_exceptions.EntityUpdateError as e:
+                raise service_exceptions.EntityUpdateError(
+                    "AuthService",
+                    f"Failed to set is_verified to True for user with id {user_id}, error: {str(e)}",
+                )
+
+            return updated_user
 
     @staticmethod
     async def verify_reset_password_data(

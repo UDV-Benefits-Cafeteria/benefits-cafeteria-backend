@@ -177,9 +177,7 @@ async def test_employee_update(admin_user: User, field, value, expected_status):
     if expected_status == status.HTTP_200_OK:
         user = await UsersService().read_by_id(user_id)
 
-        user_data = user.model_dump()
-
-        assert value == user_data[field]
+        assert value == getattr(user, field)
 
     await UsersService().delete_by_id(user_id)
 
@@ -272,6 +270,9 @@ async def test_user_auth(auth_client: AsyncClient, admin_user: User):
         "password": "securepassword",
         "re_password": "securepassword",
     }
+
+    user = await UsersService().read_by_id(user_id)
+    assert user.is_verified is False
 
     register_response = await auth_client.post("/auth/signup", json=register_data)
     assert register_response.status_code == status.HTTP_200_OK

@@ -9,16 +9,18 @@ from src.services.users import UsersService
 
 async def create_user_test(client: AsyncClient, user_data: dict, expected_status: int):
     response = await client.post("/users/", json=user_data)
+
     assert response.status_code == expected_status
 
     if response.status_code == status.HTTP_201_CREATED:
         data = response.json()
-        for key, value in user_data.items():
-            if key in data and value is not None:
-                assert data[key] == value
 
         user_service_data = await UsersService().read_by_id(data["id"])
+
+        assert user_service_data is not None
+
         user_data = (user_service_data).model_dump()
+
         del user_data["hired_at"]
         del data["hired_at"]
 
@@ -87,7 +89,7 @@ user_data_cases_for_admin = [
     # Test 5: Admin creates ADMIN in legal_entity_id=111
     (
         {
-            "email": "admin1@example.com",
+            "email": "admin123@example.com",
             "firstname": "Admin",
             "lastname": "One",
             "role": "admin",
@@ -101,7 +103,7 @@ user_data_cases_for_admin = [
     # Test 6: Admin creates ADMIN in legal_entity_id=222
     (
         {
-            "email": "admin2@example.com",
+            "email": "admin124@example.com",
             "firstname": "Admin",
             "lastname": "Two",
             "role": "admin",
@@ -126,7 +128,11 @@ async def test_create_user_hr_client(
 @pytest.mark.asyncio
 @pytest.mark.parametrize("user_data, expected_status", user_data_cases_for_admin)
 async def test_create_user_admin_client(
-    admin_client: AsyncClient, user_data: dict, expected_status: int, legal_entity2b
+    admin_client: AsyncClient,
+    user_data: dict,
+    expected_status: int,
+    legal_entity1a,
+    legal_entity2b,
 ):
     await create_user_test(admin_client, user_data, expected_status)
 

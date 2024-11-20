@@ -35,5 +35,5 @@ class SessionsRepository(SQLAlchemyRepository[Session]):
                 str(e),
             )
 
-        rowcount: int = cast(int, result.rowcount)
-        return rowcount
+        rows_affected: int = cast(int, result.rowcount)
+        return rows_affected

@@ -9,7 +9,7 @@ import src.repositories.exceptions as repo_exceptions
 import src.schemas.user as schemas
 import src.services.exceptions as service_exceptions
 from src.config import get_settings
-from src.db.db import async_session_factory
+from src.db.db import async_session_factory, get_transaction_session
 from src.repositories.users import UsersRepository
 from src.services.base import BaseService
 from src.services.legal_entities import LegalEntitiesService
@@ -80,6 +80,7 @@ class UsersService(
         hr_error = self._validate_hr_permissions(
             user_create=create_schema, current_user=current_user
         )
+
         if hr_error is not None:
             raise service_exceptions.PermissionDeniedError(
                 self.__class__.__name__, hr_error
@@ -102,63 +103,63 @@ class UsersService(
             "image_url",
         ]
 
-        async with async_session_factory() as session:
+        async with get_transaction_session() as session:
             try:
-                async with session.begin():
-                    user_to_update = await self.repo.read_by_id(session, entity_id)
-                    if not user_to_update:
-                        raise service_exceptions.EntityNotFoundError(
-                            self.__class__.__name__, f"entity_id: {entity_id}"
-                        )
+                user_to_update = await self.repo.read_by_id(session, entity_id)
+                if not user_to_update:
+                    raise service_exceptions.EntityNotFoundError(
+                        self.__class__.__name__, f"entity_id: {entity_id}"
+                    )
 
-                    if current_user is not None:
-                        if current_user.role == schemas.UserRole.HR:
-                            if (
-                                user_to_update.legal_entity_id
-                                != current_user.legal_entity_id
-                            ):
+                if current_user is not None:
+                    if current_user.role == schemas.UserRole.HR:
+                        if (
+                            user_to_update.legal_entity_id
+                            != current_user.legal_entity_id
+                        ):
+                            raise service_exceptions.PermissionDeniedError(
+                                self.__class__.__name__,
+                                "HR users cannot update users outside their own legal entity.",
+                            )
+
+                        if (
+                            update_schema.role == "admin"
+                            or user_to_update.role == "admin"
+                        ):
+                            raise service_exceptions.PermissionDeniedError(
+                                self.__class__.__name__,
+                                "HR user cannot update admins.",
+                            )
+
+                    elif current_user.role == schemas.UserRole.EMPLOYEE:
+                        if user_to_update.id != current_user.id:
+                            raise service_exceptions.PermissionDeniedError(
+                                self.__class__.__name__,
+                                "You can only change yourself.",
+                            )
+                        for key, _ in update_schema.model_dump(
+                            exclude_unset=True
+                        ).items():
+                            if key not in allowed_fields:
                                 raise service_exceptions.PermissionDeniedError(
                                     self.__class__.__name__,
-                                    "HR users cannot update users outside their own legal entity.",
+                                    f"You cannot update {key}.",
                                 )
 
-                            if (
-                                update_schema.role == "admin"
-                                or user_to_update.role == "admin"
-                            ):
-                                raise service_exceptions.PermissionDeniedError(
-                                    self.__class__.__name__,
-                                    "HR user cannot update admins.",
-                                )
+                else:
+                    raise service_exceptions.PermissionDeniedError(
+                        self.__class__.__name__, "Unauthorized"
+                    )
 
-                        elif current_user.role == schemas.UserRole.EMPLOYEE:
-                            if user_to_update.id != current_user.id:
-                                raise service_exceptions.PermissionDeniedError(
-                                    self.__class__.__name__,
-                                    "You can only change yourself.",
-                                )
-                            for key, _ in update_schema.model_dump(
-                                exclude_unset=True
-                            ).items():
-                                if key not in allowed_fields:
-                                    raise service_exceptions.PermissionDeniedError(
-                                        self.__class__.__name__,
-                                        f"You cannot update {key}.",
-                                    )
-                    else:
-                        raise service_exceptions.PermissionDeniedError(
-                            self.__class__.__name__, "Unauthorized"
-                        )
+                data = update_schema.model_dump(exclude_unset=True)
 
-                    data = update_schema.model_dump(exclude_unset=True)
+                is_updated = await self.repo.update_by_id(session, entity_id, data)
+                if not is_updated:
+                    raise service_exceptions.EntityNotFoundError(
+                        self.__class__.__name__, f"entity_id: {entity_id}"
+                    )
 
-                    is_updated = await self.repo.update_by_id(session, entity_id, data)
-                    if not is_updated:
-                        raise service_exceptions.EntityNotFoundError(
-                            self.__class__.__name__, f"entity_id: {entity_id}"
-                        )
-
-                    entity = await self.repo.read_by_id(session, entity_id)
+                entity = await self.repo.read_by_id(session, entity_id)
 
             except repo_exceptions.EntityUpdateError as e:
                 raise service_exceptions.EntityUpdateError(
@@ -170,8 +171,7 @@ class UsersService(
     async def read_by_email(self, email: str) -> Optional[schemas.UserRead]:
         async with async_session_factory() as session:
             try:
-                async with session.begin():
-                    entity = await self.repo.read_by_email(session, email)
+                entity = await self.repo.read_by_email(session, email)
             except repo_exceptions.EntityReadError as e:
                 raise service_exceptions.EntityReadError(
                     self.__class__.__name__, str(e)
@@ -423,12 +423,11 @@ class UsersService(
             _, extension = os.path.splitext(image.filename)
             image.filename = f"userdata/{user_id}/user_image" + extension
 
-            async with async_session_factory() as session:
+            async with get_transaction_session() as session:
                 try:
-                    async with session.begin():
-                        is_updated = await self.repo.update_by_id(
-                            session, user_id, {"image_url": image}
-                        )
+                    is_updated = await self.repo.update_by_id(
+                        session, user_id, {"image_url": image}
+                    )
                 except repo_exceptions.EntityUpdateError as e:
                     raise service_exceptions.EntityUpdateError(
                         self.__class__.__name__, str(e)

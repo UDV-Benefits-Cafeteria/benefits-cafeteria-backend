@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 import src.repositories.exceptions as repo_exceptions
 import src.services.exceptions as service_exceptions
-from src.db.db import async_session_factory
+from src.db.db import async_session_factory, get_transaction_session
 from src.repositories.base import SQLAlchemyRepository
 
 TCreate = TypeVar("TCreate", bound=BaseModel)
@@ -80,10 +80,10 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         """
         data = create_schema.model_dump(exclude_unset=True)
 
-        async with async_session_factory() as session:
+        async with get_transaction_session() as session:
             try:
-                async with session.begin():
-                    entity = await self.repo.create(session, data)
+                entity = await self.repo.create(session, data)
+
             except repo_exceptions.EntityCreateError as e:
                 raise service_exceptions.EntityCreateError(
                     self.__class__.__name__, str(e)
@@ -101,10 +101,10 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         """
         data = [schema.model_dump(exclude_unset=True) for schema in create_schemas]
 
-        async with async_session_factory() as session:
+        async with get_transaction_session() as session:
             try:
-                async with session.begin():
-                    entities = await self.repo.create_many(session, data)
+                entities = await self.repo.create_many(session, data)
+
             except repo_exceptions.EntityCreateError as e:
                 raise service_exceptions.EntityCreateError(
                     self.__class__.__name__, str(e)
@@ -127,8 +127,8 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         """
         async with async_session_factory() as session:
             try:
-                async with session.begin():
-                    entity = await self.repo.read_by_id(session, entity_id)
+                entity = await self.repo.read_by_id(session, entity_id)
+
             except repo_exceptions.EntityReadError as e:
                 raise service_exceptions.EntityReadError(
                     self.__class__.__name__, str(e)
@@ -150,8 +150,8 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         """
         async with async_session_factory() as session:
             try:
-                async with session.begin():
-                    entities = await self.repo.read_all(session, page, limit)
+                entities = await self.repo.read_all(session, page, limit)
+
             except repo_exceptions.EntityReadError as e:
                 raise service_exceptions.EntityReadError(
                     self.__class__.__name__, str(e)
@@ -172,19 +172,19 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         :raises service_exceptions.EntityNotFoundError: Raised when the entity to be updated is not found.
         :raises service_exceptions.EntityUpdateError: Raised when the entity update fails.
         """
+
         data = update_schema.model_dump(exclude_unset=True)
 
-        async with async_session_factory() as session:
+        async with get_transaction_session() as session:
             try:
-                async with session.begin():
-                    is_updated = await self.repo.update_by_id(session, entity_id, data)
+                is_updated = await self.repo.update_by_id(session, entity_id, data)
 
-                    if not is_updated:
-                        raise service_exceptions.EntityNotFoundError(
-                            self.__class__.__name__, f"entity_id: {entity_id}"
-                        )
+                if not is_updated:
+                    raise service_exceptions.EntityNotFoundError(
+                        self.__class__.__name__, f"entity_id: {entity_id}"
+                    )
 
-                    entity = await self.repo.read_by_id(session, entity_id)
+                entity = await self.repo.read_by_id(session, entity_id)
 
             except repo_exceptions.EntityUpdateError as e:
                 raise service_exceptions.EntityUpdateError(
@@ -202,10 +202,10 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
         :raises service_exceptions.EntityNotFoundError: Raised when the entity to be deleted is not found.
         :raises service_exceptions.EntityDeleteError: Raised when the entity deletion fails.
         """
-        async with async_session_factory() as session:
+        async with get_transaction_session() as session:
             try:
-                async with session.begin():
-                    is_deleted = await self.repo.delete_by_id(session, entity_id)
+                is_deleted = await self.repo.delete_by_id(session, entity_id)
+
             except repo_exceptions.EntityDeleteError as e:
                 raise service_exceptions.EntityDeleteError(
                     self.__class__.__name__, str(e)

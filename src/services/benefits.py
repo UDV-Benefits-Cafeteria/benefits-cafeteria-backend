@@ -7,7 +7,7 @@ import src.repositories.exceptions as repo_exceptions
 import src.schemas.benefit as schemas
 import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
-from src.db.db import async_session_factory
+from src.db.db import get_transaction_session
 from src.repositories.benefit_images import BenefitImagesRepository
 from src.repositories.benefits import BenefitsRepository
 from src.services.base import BaseService
@@ -79,29 +79,27 @@ class BenefitsService(
         Raises:
         - service_exceptions.EntityCreateError: If an error occurs while creating one of the images in the repository.
         """
-        async with async_session_factory() as session:
+        async with get_transaction_session() as session:
             try:
-                async with session.begin():
-                    for image_data in images:
-                        image_data.filename = (
-                            f"benefit/{benefit_id}/{uuid.uuid4()}_"
-                            + image_data.filename
-                        )
-                        image = {
-                            "benefit_id": benefit_id,
-                            "image_url": image_data,
-                            "is_primary": True,
-                        }
+                for image_data in images:
+                    image_data.filename = (
+                        f"benefit/{benefit_id}/{uuid.uuid4()}_" + image_data.filename
+                    )
+                    image = {
+                        "benefit_id": benefit_id,
+                        "image_url": image_data,
+                        "is_primary": True,
+                    }
 
-                        await BenefitImagesRepository().create(session, image)
+                    await BenefitImagesRepository().create(session, image)
 
-                    try:
-                        benefit = await self.repo.read_by_id(session, benefit_id)
+                try:
+                    benefit = await self.repo.read_by_id(session, benefit_id)
 
-                    except repo_exceptions.EntityReadError as e:
-                        raise service_exceptions.EntityReadError(
-                            self.__class__.__name__, str(e)
-                        )
+                except repo_exceptions.EntityReadError as e:
+                    raise service_exceptions.EntityReadError(
+                        self.__class__.__name__, str(e)
+                    )
             except repo_exceptions.EntityCreateError as e:
                 raise service_exceptions.EntityCreateError(
                     self.__class__.__name__, str(e)
@@ -122,17 +120,16 @@ class BenefitsService(
         Returns:
         - None: Indicates successful deletion of images.
         """
-        async with async_session_factory() as session:
+        async with get_transaction_session() as session:
             try:
-                async with session.begin():
-                    for image_id in images:
-                        image = await BenefitImagesRepository().read_by_id(
-                            session, image_id
-                        )
-                        benefit_id = image.benefit_id
+                for image_id in images:
+                    image = await BenefitImagesRepository().read_by_id(
+                        session, image_id
+                    )
+                    benefit_id = image.benefit_id
 
-                        await BenefitImagesRepository().delete_by_id(session, image_id)
-                        benefit = await self.repo.read_by_id(session, benefit_id)
+                    await BenefitImagesRepository().delete_by_id(session, image_id)
+                    benefit = await self.repo.read_by_id(session, benefit_id)
 
             except repo_exceptions.EntityDeleteError as e:
                 raise service_exceptions.EntityDeleteError(
