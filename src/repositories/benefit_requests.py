@@ -43,6 +43,7 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
         try:
             query = select(self.model)
 
+            # HR cannot see user requests outside of its legal entity so we join tables on legal_entity_id field
             if legal_entity_id is not None:
                 query = query.join(self.model.user).where(
                     self.model.user.has(legal_entity_id=legal_entity_id)

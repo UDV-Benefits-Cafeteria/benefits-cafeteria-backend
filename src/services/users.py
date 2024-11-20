@@ -388,7 +388,9 @@ class UsersService(
                 user_create.legal_entity_id is not None
                 and user_create.legal_entity_id != current_user.legal_entity_id
             ):
-                return "HR пользователи не могут создавать пользователей вне своего юридического лица."
+                return (
+                    "HR не может создавать пользователей вне своего юридического лица."
+                )
 
             if user_create.legal_entity_id is None:
                 user_create.legal_entity_id = current_user.legal_entity_id

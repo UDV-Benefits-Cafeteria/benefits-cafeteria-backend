@@ -40,20 +40,15 @@ class BenefitRequestsService(
     ) -> list[read_schema]:
         async with async_session_factory() as session:
             try:
-                if current_user.role == user_schemas.UserRole.ADMIN.value:
+                if current_user.role == user_schemas.UserRole.ADMIN:
                     legal_entity_id = None
-                elif current_user.role == user_schemas.UserRole.HR.value:
+                elif current_user.role == user_schemas.UserRole.HR:
                     legal_entity_id = current_user.legal_entity_id
                     if legal_entity_id is None:
                         raise service_exceptions.EntityReadError(
                             self.__class__.__name__,
                             "HR user has no legal_entity_id",
                         )
-                else:
-                    raise service_exceptions.EntityReadError(
-                        self.__class__.__name__,
-                        "User does not have access to benefit requests",
-                    )
 
                 requests = await self.repo.read_all(
                     session, status, sort_by, sort_order, page, limit, legal_entity_id
@@ -74,6 +69,7 @@ class BenefitRequestsService(
         async with async_session_factory() as session:
             try:
                 entities = await self.repo.read_by_user_id(session, user_id)
+
             except Exception as e:
                 raise service_exceptions.EntityReadError(
                     self.__class__.__name__, str(e)
@@ -191,6 +187,8 @@ class BenefitRequestsService(
                         self.__class__.__name__,
                         "You cannot update declined or approved benefit request",
                     )
+
+                # Declining benefit request
                 if new_status.value == schemas.BenefitStatus.DECLINED:
                     if (
                         current_user.id == existing_request.user_id
@@ -200,6 +198,7 @@ class BenefitRequestsService(
                             user_schemas.UserRole.ADMIN.value,
                         ]
                     ):
+                        # Restore amount
                         if benefit.amount is not None:
                             new_amount = benefit.amount + 1
 
@@ -207,6 +206,7 @@ class BenefitRequestsService(
                                 session, benefit.id, {"amount": new_amount}
                             )
 
+                        # Restore user's coins
                         new_coins = user.coins + benefit.coins_cost
                         await users_repo.update_by_id(
                             session, user.id, {"coins": new_coins}

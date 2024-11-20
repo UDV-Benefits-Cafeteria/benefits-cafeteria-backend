@@ -45,6 +45,7 @@ class BenefitsService(
 
         benefits = []
         for data in search_results:
+            # Hide unsafe data from employees
             if current_user.role in [
                 user_schemas.UserRole.HR,
                 user_schemas.UserRole.ADMIN,

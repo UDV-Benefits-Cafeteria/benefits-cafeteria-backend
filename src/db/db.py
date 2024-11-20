@@ -9,10 +9,10 @@ settings = get_settings()
 # Create a SQLAlchemy engine for asynchronous operations.
 if settings.DEBUG:
     engine = create_async_engine(
-        settings.DATABASE_URL, echo=settings.DEBUG, poolclass=NullPool, future=True
+        settings.DATABASE_URL, echo=False, poolclass=NullPool, future=True
     )
 else:
-    engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG)
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
 # Create an async session factory using the configured engine.
 async_session_factory = async_sessionmaker(

@@ -18,7 +18,7 @@ class SessionsService:
         Create a new session for a user.
 
         Generates a unique session ID and CSRF token, sets an expiration time
-        based on the provided duration, and stores the session data in the repository.
+        based on the provided duration, and stores the session data in the database.
 
         Args:
             user_id (int): The ID of the user for whom the session is created.
@@ -49,18 +49,6 @@ class SessionsService:
         return session.session_id
 
     async def get_session(self, session_id: str) -> Optional[SessionRead]:
-        """
-        Retrieve a session by its ID.
-
-        Checks if the session exists and has not expired. If valid, returns
-        the session data.
-
-        Args:
-            session_id (str): The ID of the session to retrieve.
-
-        Returns:
-            Optional[SessionRead]: The session data if found and valid, None otherwise.
-        """
         async with async_session_factory() as async_session:
             try:
                 session = await self.repo.read_by_id(async_session, session_id)
