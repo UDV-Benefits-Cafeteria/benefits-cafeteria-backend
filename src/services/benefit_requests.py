@@ -1,6 +1,5 @@
 from typing import Optional
 
-from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.repositories.exceptions as repo_exceptions
