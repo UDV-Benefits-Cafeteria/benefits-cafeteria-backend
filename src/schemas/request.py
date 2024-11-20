@@ -10,6 +10,7 @@ from src.schemas.user import UserRead
 
 class BenefitStatus(str, Enum):
     PENDING = "pending"  # В ожидании
+    PROCESSING = "processing"  # В процессе
     APPROVED = "approved"  # Одобрен
     DECLINED = "declined"  # Отклонен
 

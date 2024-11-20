@@ -161,11 +161,13 @@ class BenefitStatus(enum.Enum):
 
     Attributes:
         PENDING: The request is awaiting approval.
+        PROCESSING: The request is being processed
         APPROVED: The request has been approved.
         DECLINED: The request has been declined.
     """
 
     PENDING = "pending"  # В ожидании
+    PROCESSING = "processing"  # В обработке
     APPROVED = "approved"  # Одобрен
     DECLINED = "declined"  # Отклонен
 
