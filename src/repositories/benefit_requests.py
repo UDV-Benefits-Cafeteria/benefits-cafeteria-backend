@@ -3,6 +3,7 @@ from typing import Optional, Sequence
 from sqlalchemy import asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.logger import repository_logger
 from src.models.benefits import BenefitRequest
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
@@ -40,6 +41,11 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
         Raises:
             EntityReadError: If there's an error reading entities.
         """
+        repository_logger.info(
+            f"Fetching BenefitRequests: status={status}, sort_by={sort_by}, sort_order={sort_order}, "
+            f"page={page}, limit={limit}, legal_entity_id={legal_entity_id}."
+        )
+
         try:
             query = select(self.model)
 
@@ -65,6 +71,10 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
             result = await session.execute(query)
             entities = result.scalars().all()
         except Exception as e:
+            repository_logger.error(
+                f"Error fetching BenefitRequests: status={status}, page={page}, limit={limit}, "
+                f"legal_entity_id={legal_entity_id}: {e}"
+            )
             raise EntityReadError(
                 self.__class__.__name__,
                 self.model.__tablename__,
@@ -72,6 +82,10 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
                 str(e),
             )
 
+        repository_logger.info(
+            f"Successfully fetched BenefitRequests: status={status}, page={page}, limit={limit}, "
+            f"legal_entity_id={legal_entity_id}."
+        )
         return entities
 
     async def read_by_user_id(
@@ -90,12 +104,17 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
         Raises:
             EntityReadError: If there's an error reading the entities.
         """
+        repository_logger.info(f"Fetching BenefitRequests for user_id={user_id}.")
+
         try:
             result = await session.execute(
                 select(self.model).where(self.model.user_id == user_id)
             )
             entities = result.scalars().all()
         except Exception as e:
+            repository_logger.error(
+                f"Error fetching BenefitRequests for user_id={user_id}: {e}"
+            )
             raise EntityReadError(
                 self.__class__.__name__,
                 self.model.__tablename__,
@@ -103,4 +122,7 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
                 str(e),
             )
 
+        repository_logger.info(
+            f"Successfully fetched BenefitRequests for user_id={user_id}."
+        )
         return entities

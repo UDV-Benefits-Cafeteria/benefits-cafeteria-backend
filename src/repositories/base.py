@@ -3,7 +3,7 @@ from typing import Generic, Optional, Sequence, Type, TypeVar, Union, cast
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import logger
+from src.logger import repository_logger
 from src.repositories.exceptions import (
     EntityCreateError,
     EntityDeleteError,
@@ -63,6 +63,7 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityCreateError: If there is an error while creating the entity.
         """
+        repository_logger.info(f"Creating a new {self.model.__name__}: {data}")
 
         try:
             instance = self.model(**data)
@@ -70,10 +71,17 @@ class SQLAlchemyRepository(Generic[T]):
             await session.flush()
             await session.refresh(instance)
         except Exception as e:
+            repository_logger.error(
+                f"Error creating {self.model.__name__}: {data}, Error: {e}",
+                exc_info=True,
+            )
             raise EntityCreateError(
                 self.__class__.__name__, self.model.__tablename__, str(e)
             )
 
+        repository_logger.info(
+            f"Successfully created {self.model.__name__}: {instance}"
+        )
         return instance
 
     async def create_many(
@@ -92,6 +100,8 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityCreateError: If there is an error while creating the entities.
         """
+        repository_logger.info(f"Creating multiple {self.model.__name__} entities")
+
         try:
             instances = [self.model(**data) for data in data_list]
             session.add_all(instances)
@@ -99,10 +109,17 @@ class SQLAlchemyRepository(Generic[T]):
             for instance in instances:
                 await session.refresh(instance)
         except Exception as e:
+            repository_logger.error(
+                f"Error creating multiple {self.model.__name__} entities: {e}",
+                exc_info=True,
+            )
             raise EntityCreateError(
                 self.__class__.__name__, self.model.__tablename__, str(e)
             )
 
+        repository_logger.info(
+            f"Successfully created multiple {self.model.__name__} entities"
+        )
         return instances
 
     async def read_by_id(
@@ -121,6 +138,8 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityReadError: If there is an error while reading the entity.
         """
+        repository_logger.info(f"Fetching {self.model.__name__} by ID: {entity_id}")
+
         try:
             result = await session.execute(
                 select(self.model).where(
@@ -129,12 +148,22 @@ class SQLAlchemyRepository(Generic[T]):
             )
             entity = result.scalar_one_or_none()
         except Exception as e:
-            logger.error(f"Error reading {self.model.__name__} by ID: {entity_id}: {e}")
+            repository_logger.error(
+                f"Error fetching {self.model.__name__} with ID: {entity_id}, Error: {e}",
+                exc_info=True,
+            )
             raise EntityReadError(
                 self.__class__.__name__,
                 self.model.__tablename__,
                 f"entity_id: {entity_id}",
                 str(e),
+            )
+
+        if entity:
+            repository_logger.info(f"Found {self.model.__name__} with ID: {entity_id}")
+        else:
+            repository_logger.warning(
+                f"No {self.model.__name__} found with ID: {entity_id}"
             )
 
         return entity
@@ -156,16 +185,27 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityReadError: If there is an error while reading entities.
         """
+        repository_logger.info(
+            f"Fetching all {self.model.__name__} entities. Page: {page}, Limit: {limit}"
+        )
+
         try:
             result = await session.execute(
                 select(self.model).offset((page - 1) * limit).limit(limit)
             )
             entities = result.scalars().all()
         except Exception as e:
+            repository_logger.error(
+                f"Error fetching all {self.model.__name__} entities, Error: {e}",
+                exc_info=True,
+            )
             raise EntityReadError(
                 self.__class__.__name__, self.model.__tablename__, "", str(e)
             )
 
+        repository_logger.info(
+            f"Fetched {len(entities)} {self.model.__name__} entities"
+        )
         return entities
 
     async def update_by_id(
@@ -185,6 +225,10 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityUpdateError: If there is an error while updating the entity.
         """
+        repository_logger.info(
+            f"Updating {self.model.__name__} with ID: {entity_id}, Data: {data}"
+        )
+
         try:
             result = await session.execute(
                 update(self.model)
@@ -193,6 +237,10 @@ class SQLAlchemyRepository(Generic[T]):
             )
             await session.flush()
         except Exception as e:
+            repository_logger.error(
+                f"Error updating {self.model.__name__} with ID: {entity_id}, Error: {e}",
+                exc_info=True,
+            )
             raise EntityUpdateError(
                 self.__class__.__name__,
                 self.model.__tablename__,
@@ -201,6 +249,14 @@ class SQLAlchemyRepository(Generic[T]):
             )
 
         rows_affected: int = cast(int, result.rowcount)
+        if rows_affected > 0:
+            repository_logger.info(
+                f"Successfully updated {self.model.__name__} with ID: {entity_id}"
+            )
+        else:
+            repository_logger.warning(
+                f"No {self.model.__name__} updated for ID: {entity_id}"
+            )
         return rows_affected > 0
 
     async def delete_by_id(
@@ -219,6 +275,8 @@ class SQLAlchemyRepository(Generic[T]):
         Raises:
             EntityDeleteError: If there is an error while deleting the entity.
         """
+        repository_logger.info(f"Deleting {self.model.__name__} with ID: {entity_id}")
+
         try:
             result = await session.execute(
                 delete(self.model).where(
@@ -226,6 +284,10 @@ class SQLAlchemyRepository(Generic[T]):
                 )
             )
         except Exception as e:
+            repository_logger.error(
+                f"Error deleting {self.model.__name__} with ID: {entity_id}, Error: {e}",
+                exc_info=True,
+            )
             raise EntityDeleteError(
                 self.__class__.__name__,
                 self.model.__tablename__,
@@ -234,4 +296,12 @@ class SQLAlchemyRepository(Generic[T]):
             )
 
         rows_affected: int = cast(int, result.rowcount)
+        if rows_affected > 0:
+            repository_logger.info(
+                f"Successfully deleted {self.model.__name__} with ID: {entity_id}"
+            )
+        else:
+            repository_logger.warning(
+                f"No {self.model.__name__} deleted for ID: {entity_id}"
+            )
         return rows_affected > 0
