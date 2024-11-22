@@ -127,7 +127,9 @@ class User(Base):
         foreign_keys="CoinPayment.payer_id",
     )
     benefit_requests: Mapped[List["BenefitRequest"]] = relationship(
-        "BenefitRequest", back_populates="user"
+        "BenefitRequest",
+        back_populates="user",
+        foreign_keys="BenefitRequest.user_id",
     )
     questions: Mapped[List["Question"]] = relationship(
         "Question", back_populates="user"
