@@ -8,6 +8,7 @@ import src.schemas.benefit as schemas
 import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
 from src.db.db import get_transaction_session
+from src.logger import service_logger
 from src.repositories.benefit_images import BenefitImagesRepository
 from src.repositories.benefits import BenefitsRepository
 from src.services.base import BaseService
@@ -31,6 +32,8 @@ class BenefitsService(
         limit: int = 10,
         offset: int = 0,
     ) -> list[Union[schemas.BenefitReadShortPublic, schemas.BenefitReadShortPrivate]]:
+        service_logger.info("Searching benefits", extra={"user_id": current_user.id})
+
         try:
             search_results = await self.repo.search_benefits(
                 query=query,
@@ -41,6 +44,9 @@ class BenefitsService(
                 offset=offset,
             )
         except repo_exceptions.EntityReadError as e:
+            service_logger.error(
+                f"Error searching benefits: {e}", extra={"user_id": current_user.id}
+            )
             raise service_exceptions.EntityReadError(self.__class__.__name__, str(e))
 
         benefits = []
@@ -54,6 +60,10 @@ class BenefitsService(
             else:
                 benefit = schemas.BenefitReadShortPublic.model_validate(data)
             benefits.append(benefit)
+
+        service_logger.info(
+            f"Found {len(benefits)} benefits", extra={"user_id": current_user.id}
+        )
         return benefits
 
     async def read_by_id(
@@ -80,6 +90,11 @@ class BenefitsService(
         Raises:
         - service_exceptions.EntityCreateError: If an error occurs while creating one of the images in the repository.
         """
+        service_logger.info(
+            "Adding images to benefit",
+            extra={"benefit_id": benefit_id, "image_count": len(images)},
+        )
+
         async with get_transaction_session() as session:
             try:
                 for image_data in images:
@@ -93,20 +108,29 @@ class BenefitsService(
                     }
 
                     await BenefitImagesRepository().create(session, image)
+                    service_logger.info(
+                        "Image added",
+                        extra={"benefit_id": benefit_id},
+                    )
 
                 try:
                     benefit = await self.repo.read_by_id(session, benefit_id)
-
+                    await self.repo.index_benefit(benefit)
+                    service_logger.info(
+                        "Benefit re-indexed after adding images",
+                        extra={"benefit_id": benefit_id},
+                    )
                 except repo_exceptions.EntityReadError as e:
                     raise service_exceptions.EntityReadError(
                         self.__class__.__name__, str(e)
                     )
             except repo_exceptions.EntityCreateError as e:
+                service_logger.error(
+                    f"Error adding images: {e}", extra={"benefit_id": benefit_id}
+                )
                 raise service_exceptions.EntityCreateError(
                     self.__class__.__name__, str(e)
                 )
-
-        await self.repo.index_benefit(benefit)
 
     async def remove_images(self, images: list[int]):
         """
@@ -121,20 +145,33 @@ class BenefitsService(
         Returns:
         - None: Indicates successful deletion of images.
         """
+        service_logger.info("Removing images", extra={"image_ids": images})
+
         async with get_transaction_session() as session:
             try:
                 for image_id in images:
                     image = await BenefitImagesRepository().read_by_id(
                         session, image_id
                     )
-                    benefit_id = image.benefit_id
 
-                    await BenefitImagesRepository().delete_by_id(session, image_id)
-                    benefit = await self.repo.read_by_id(session, benefit_id)
+                    if image:
+                        await BenefitImagesRepository().delete_by_id(
+                            session, image.benefit_id
+                        )
+                        service_logger.info(
+                            "Image removed",
+                            extra={
+                                "image_id": image_id,
+                                "benefit_id": image.benefit_id,
+                            },
+                        )
+                        benefit = await self.repo.read_by_id(session, image.benefit_id)
+                        await self.repo.index_benefit(benefit)
 
             except repo_exceptions.EntityDeleteError as e:
+                service_logger.error(
+                    f"Error removing images: {e}", extra={"image_ids": images}
+                )
                 raise service_exceptions.EntityDeleteError(
                     self.__class__.__name__, str(e)
                 )
-
-            await self.repo.index_benefit(benefit)

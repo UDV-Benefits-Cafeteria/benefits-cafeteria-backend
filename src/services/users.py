@@ -10,6 +10,7 @@ import src.schemas.user as schemas
 import src.services.exceptions as service_exceptions
 from src.config import get_settings
 from src.db.db import async_session_factory, get_transaction_session
+from src.logger import service_logger
 from src.repositories.users import UsersRepository
 from src.services.base import BaseService
 from src.services.legal_entities import LegalEntitiesService
@@ -42,6 +43,7 @@ class UsersService(
         limit: int,
         offset: int,
     ) -> list[schemas.UserRead]:
+        service_logger.info("Searching users")
         try:
             search_results = await self.repo.search_users(
                 query=query,
@@ -52,6 +54,7 @@ class UsersService(
                 offset=offset,
             )
         except service_exceptions.EntityReadError as e:
+            service_logger.error(f"Error searching users: {e}")
             raise service_exceptions.EntityReadError(self.__class__.__name__, str(e))
 
         for data in search_results:
@@ -68,6 +71,7 @@ class UsersService(
                 data["position"] = position_data
 
         users = [self.read_schema.model_validate(data) for data in search_results]
+        service_logger.info(f"Found {len(users)} benefits")
         return users
 
     async def create(
