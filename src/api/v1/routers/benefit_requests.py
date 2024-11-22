@@ -61,19 +61,6 @@ async def create_benefit_request(
             create_schema=benefit_request, current_user=current_user
         )
 
-        await send_users_benefit_request_created_email(
-            current_user.email,
-            current_user.firstname,
-            created_benefit_request.benefit.id,
-            created_benefit_request.benefit.name,
-            created_benefit_request.benefit.coins_cost,
-            created_benefit_request.benefit.images[0].image_url
-            if created_benefit_request.benefit.images
-            else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
-            background_tasks,
-        )
-
-        return created_benefit_request
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -83,14 +70,24 @@ async def create_benefit_request(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Amount cannot be negative"
         )
-    except EntityReadError:
+    except (EntityNotFoundError, EntityReadError):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit or user not found"
         )
-    except EntityNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Benefit or user not found"
-        )
+
+    await send_users_benefit_request_created_email(
+        current_user.email,
+        current_user.firstname,
+        created_benefit_request.benefit.id,
+        created_benefit_request.benefit.name,
+        created_benefit_request.benefit.coins_cost,
+        created_benefit_request.benefit.images[0].image_url
+        if created_benefit_request.benefit.images
+        else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
+        background_tasks,
+    )
+
+    return created_benefit_request
 
 
 @router.get(
@@ -134,12 +131,13 @@ async def get_benefit_requests_by_user(
 
     try:
         benefit_requests = await service.read_by_user_id(user_id)
-        return benefit_requests
     except EntityReadError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read benefit requests",
         )
+
+    return benefit_requests
 
 
 @router.get(
@@ -170,12 +168,14 @@ async def get_benefit_requests_of_current_user(
     """
     try:
         benefit_requests = await service.read_by_user_id(current_user.id)
-        return benefit_requests
+
     except EntityReadError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read benefit requests",
         )
+
+    return benefit_requests
 
 
 @router.get(
@@ -275,12 +275,14 @@ async def get_benefit_requests(
             page=page,
             limit=limit,
         )
-        return benefit_requests
+
     except EntityReadError:
         raise HTTPException(
             status_code=400,
             detail="Failed to read benefit requests.",
         )
+
+    return benefit_requests
 
 
 @router.patch(
@@ -321,20 +323,6 @@ async def update_benefit_request(
             background_tasks=background_tasks,
         )
 
-        await send_users_benefit_request_updated_email(
-            current_user.email,
-            current_user.firstname,
-            updated_benefit_request.status,
-            updated_benefit_request.benefit.id,
-            updated_benefit_request.benefit.name,
-            updated_benefit_request.benefit.coins_cost,
-            updated_benefit_request.benefit.images[0].image_url
-            if updated_benefit_request.benefit.images
-            else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
-            background_tasks,
-        )
-
-        return updated_benefit_request
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit request not found"
@@ -353,6 +341,21 @@ async def update_benefit_request(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit or user not found"
         )
+
+    await send_users_benefit_request_updated_email(
+        current_user.email,
+        current_user.firstname,
+        updated_benefit_request.status,
+        updated_benefit_request.benefit.id,
+        updated_benefit_request.benefit.name,
+        updated_benefit_request.benefit.coins_cost,
+        updated_benefit_request.benefit.images[0].image_url
+        if updated_benefit_request.benefit.images
+        else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
+        background_tasks,
+    )
+
+    return updated_benefit_request
 
 
 @router.delete(
@@ -381,7 +384,7 @@ async def delete_benefit_request(
     """
     try:
         benefit_request_deleted = await service.delete_by_id(request_id)
-        return {"is_success": benefit_request_deleted}
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit request not found"
@@ -391,3 +394,5 @@ async def delete_benefit_request(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to delete benefit request",
         )
+
+    return {"is_success": benefit_request_deleted}

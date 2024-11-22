@@ -44,7 +44,7 @@ async def get_position(position_id: int, service: PositionsServiceDependency):
     """
     try:
         position = await service.read_by_id(position_id)
-        return position
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Position not found"
@@ -53,6 +53,8 @@ async def get_position(position_id: int, service: PositionsServiceDependency):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to read position"
         )
+
+    return position
 
 
 @router.post(
@@ -82,11 +84,13 @@ async def create_position(
     """
     try:
         created_position = await service.create(position)
-        return created_position
+
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create position"
         )
+
+    return created_position
 
 
 @router.patch(
@@ -120,7 +124,7 @@ async def update_position(
     """
     try:
         updated_position = await service.update_by_id(position_id, position_update)
-        return updated_position
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Position not found"
@@ -129,6 +133,8 @@ async def update_position(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update position"
         )
+
+    return updated_position
 
 
 @router.delete(
@@ -155,7 +161,7 @@ async def delete_position(position_id: int, service: PositionsServiceDependency)
     """
     try:
         position_deleted = await service.delete_by_id(position_id)
-        return {"is_success": position_deleted}
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Position not found"
@@ -164,6 +170,8 @@ async def delete_position(position_id: int, service: PositionsServiceDependency)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete position"
         )
+
+    return {"is_success": position_deleted}
 
 
 @router.get(
@@ -195,9 +203,11 @@ async def get_positions(
     """
     try:
         positions = await service.read_all(page, limit)
-        return positions
+
     except EntityReadError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read positions",
         )
+
+    return positions

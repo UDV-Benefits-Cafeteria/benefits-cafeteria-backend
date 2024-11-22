@@ -68,9 +68,6 @@ async def test_update_legal_entity_valid(hr_client: AsyncClient):
 
     assert updated_entity["name"] == "Updated Entity"
 
-    legal_entity_read = await LegalEntitiesService().read_by_id(updated_entity["id"])
-    assert legal_entity_read is not None
-
     response = await hr_client.get(f"/legal-entities/{entity_id}")
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()

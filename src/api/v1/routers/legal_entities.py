@@ -44,7 +44,7 @@ async def get_legal_entity(entity_id: int, service: LegalEntitiesServiceDependen
     """
     try:
         legal_entity = await service.read_by_id(entity_id)
-        return legal_entity
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Legal entity not found"
@@ -54,6 +54,8 @@ async def get_legal_entity(entity_id: int, service: LegalEntitiesServiceDependen
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read legal entity",
         )
+
+    return legal_entity
 
 
 @router.post(
@@ -83,12 +85,14 @@ async def create_legal_entity(
     """
     try:
         created_legal_entity = await service.create(legal_entity)
-        return created_legal_entity
+
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to create legal entity",
         )
+
+    return created_legal_entity
 
 
 @router.patch(
@@ -124,7 +128,7 @@ async def update_legal_entity(
         updated_legal_entity = await service.update_by_id(
             entity_id, legal_entity_update
         )
-        return updated_legal_entity
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Legal entity not found"
@@ -134,6 +138,8 @@ async def update_legal_entity(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to update legal entity",
         )
+
+    return updated_legal_entity
 
 
 @router.delete(
@@ -160,7 +166,7 @@ async def delete_legal_entity(entity_id: int, service: LegalEntitiesServiceDepen
     """
     try:
         legal_entity_deleted = await service.delete_by_id(entity_id)
-        return {"is_success": legal_entity_deleted}
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Legal entity not found"
@@ -170,6 +176,8 @@ async def delete_legal_entity(entity_id: int, service: LegalEntitiesServiceDepen
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to delete legal entity",
         )
+
+    return {"is_success": legal_entity_deleted}
 
 
 @router.get(
@@ -201,9 +209,11 @@ async def get_legal_entities(
     """
     try:
         legal_entities = await service.read_all(page, limit)
-        return legal_entities
+
     except EntityReadError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read legal entities",
         )
+
+    return legal_entities
