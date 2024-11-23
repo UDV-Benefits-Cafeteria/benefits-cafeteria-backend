@@ -203,7 +203,11 @@ class BenefitRequestsService(
                         and current_user
                         and (
                             current_user.role.value not in [user_schemas.UserRole.ADMIN]
-                            or current_user.id != existing_request.performer_id
+                            or current_user.id
+                            not in [
+                                existing_request.performer_id,
+                                existing_request.user_id,
+                            ]
                         )
                     ):
                         raise service_exceptions.EntityUpdateError(
