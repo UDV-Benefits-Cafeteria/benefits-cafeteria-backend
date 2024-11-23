@@ -168,7 +168,7 @@ class BenefitRequestsService(
         self,
         entity_id: int,
         update_schema: schemas.BenefitRequestUpdate,
-        current_user: user_schemas.UserRead = None,
+        current_user: user_schemas.UserRead,
     ) -> Optional[read_schema]:
         async with async_session_factory() as session:
             try:
@@ -200,7 +200,6 @@ class BenefitRequestsService(
                             schemas.BenefitStatus.APPROVED,
                             schemas.BenefitStatus.DECLINED,
                         ]
-                        and current_user
                         and (
                             current_user.role.value not in [user_schemas.UserRole.ADMIN]
                             or current_user.id
