@@ -34,7 +34,7 @@ async def setup_db_schema() -> None:
 @pytest.fixture(scope="session")
 async def db_session() -> AsyncSession:
     """
-    Provides a transactional database session for tests. Rolls back after each test.
+    Provides a database session for tests.
     """
     async with async_session_factory() as session:
         yield session
@@ -113,7 +113,7 @@ async def hr_user(db_session: AsyncSession, legal_entity1a) -> User:
 
 @pytest.fixture(scope="session")
 async def employee_user(db_session: AsyncSession, legal_entity1a) -> User:
-    """Create a regular employee user with legal_entity_id=1."""
+    """Create a regular employee user with legal_entity_id=111."""
     user = User(
         id=444,
         email="user@example.com",
