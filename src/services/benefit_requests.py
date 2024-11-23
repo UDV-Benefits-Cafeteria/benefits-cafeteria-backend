@@ -194,25 +194,26 @@ class BenefitRequestsService(
                     old_status = existing_request.status
                     new_status = update_schema.status or old_status
 
-                    if new_status.value == schemas.BenefitStatus.PROCESSING:
+                    if (
+                        new_status.value == schemas.BenefitStatus.PROCESSING
+                        and update_schema.performer_id is None
+                    ):
                         update_schema.performer_id = current_user.id
 
                     if new_status.value in [
                         schemas.BenefitStatus.APPROVED,
                         schemas.BenefitStatus.DECLINED,
-                    ] and (
-                        current_user.role.value not in [user_schemas.UserRole.ADMIN]
-                        or current_user.id
-                        not in [
-                            existing_request.performer_id,
-                            existing_request.user_id,
-                        ]
-                    ):
-                        raise service_exceptions.EntityUpdateError(
-                            self.read_schema.__name__,
-                            entity_id,
-                            "You do not have permission to edit this request",
-                        )
+                    ]:
+                        if current_user.role.value not in [user_schemas.UserRole.ADMIN]:
+                            if current_user.id not in [
+                                existing_request.performer_id,
+                                existing_request.user_id,
+                            ]:
+                                raise service_exceptions.EntityUpdateError(
+                                    self.read_schema.__name__,
+                                    entity_id,
+                                    "You do not have permission to edit this request",
+                                )
 
                     if old_status.value in [
                         schemas.BenefitStatus.DECLINED,
