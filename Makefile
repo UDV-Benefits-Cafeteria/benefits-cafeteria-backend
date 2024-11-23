@@ -43,7 +43,11 @@ logs:
 
 test:
 	@echo "🧪 Запуск тестов..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE_TESTS) up -d --build 
+	docker-compose -f $(DOCKER_COMPOSE_FILE_TESTS) up -d --build
+
+testdown:
+	@echo "🧪 Остановка тестов..."
+	docker-compose -f $(DOCKER_COMPOSE_FILE_TESTS) down --volumes --remove-orphans
 
 shell:
 	@echo "💻 Подключение к контейнеру приложения..."
