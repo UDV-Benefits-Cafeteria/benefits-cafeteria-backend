@@ -176,7 +176,9 @@ class BenefitRequestsService(
                     benefits_repo = BenefitsRepository()
                     users_repo = UsersRepository()
 
-                    existing_request = await self.repo.read_by_id(session, entity_id)
+                    existing_request: schemas.BenefitRequestRead = (
+                        await self.repo.read_by_id(session, entity_id)
+                    )
                     if not existing_request:
                         raise service_exceptions.EntityNotFoundError(
                             self.read_schema.__name__, entity_id
@@ -191,6 +193,24 @@ class BenefitRequestsService(
 
                     old_status = existing_request.status
                     new_status = update_schema.status or old_status
+
+                    if (
+                        new_status.value
+                        in [
+                            schemas.BenefitStatus.APPROVED,
+                            schemas.BenefitStatus.DECLINED,
+                        ]
+                        and current_user
+                        and (
+                            current_user.role.value not in [user_schemas.UserRole.ADMIN]
+                            or current_user.id != existing_request.performer_id
+                        )
+                    ):
+                        raise service_exceptions.EntityUpdateError(
+                            self.read_schema.__name__,
+                            entity_id,
+                            "You do not have permission to edit this request",
+                        )
 
                     if old_status.value in [
                         schemas.BenefitStatus.DECLINED,
