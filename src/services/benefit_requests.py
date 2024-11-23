@@ -168,7 +168,7 @@ class BenefitRequestsService(
         self,
         entity_id: int,
         update_schema: schemas.BenefitRequestUpdate,
-        current_user: user_schemas.UserRead,
+        current_user: user_schemas.UserRead = None,
     ) -> Optional[read_schema]:
         async with async_session_factory() as session:
             try:
@@ -176,9 +176,8 @@ class BenefitRequestsService(
                     benefits_repo = BenefitsRepository()
                     users_repo = UsersRepository()
 
-                    existing_request: schemas.BenefitRequestRead = (
-                        await self.repo.read_by_id(session, entity_id)
-                    )
+                    existing_request = await self.repo.read_by_id(session, entity_id)
+
                     if not existing_request:
                         raise service_exceptions.EntityNotFoundError(
                             self.read_schema.__name__, entity_id
@@ -194,27 +193,6 @@ class BenefitRequestsService(
                     old_status = existing_request.status
                     new_status = update_schema.status or old_status
 
-                    if (
-                        new_status.value == schemas.BenefitStatus.PROCESSING
-                        and update_schema.performer_id is None
-                    ):
-                        update_schema.performer_id = current_user.id
-
-                    if new_status.value in [
-                        schemas.BenefitStatus.APPROVED,
-                        schemas.BenefitStatus.DECLINED,
-                    ]:
-                        if current_user.role.value not in [user_schemas.UserRole.ADMIN]:
-                            if current_user.id not in [
-                                existing_request.performer_id,
-                                existing_request.user_id,
-                            ]:
-                                raise service_exceptions.EntityUpdateError(
-                                    self.read_schema.__name__,
-                                    entity_id,
-                                    "You do not have permission to edit this request",
-                                )
-
                     if old_status.value in [
                         schemas.BenefitStatus.DECLINED,
                         schemas.BenefitStatus.APPROVED,
@@ -224,13 +202,37 @@ class BenefitRequestsService(
                             entity_id,
                             "You cannot update declined or approved benefit request",
                         )
+
+                    # If old status is 'pending' then the request was just created and needs performer_id to be set
+                    if (
+                        old_status.value == schemas.BenefitStatus.PENDING
+                        and update_schema.performer_id is None
+                    ):
+                        update_schema.performer_id = current_user.id
+
+                    # These users have permission to edit the request:
+                    # Admin,
+                    # HR whose id == performer_id,
+                    # User if we change status from 'pending' to 'declined'.
+                    if current_user.role not in [user_schemas.UserRole.ADMIN]:
+                        if current_user.id not in [
+                            existing_request.performer_id,
+                            existing_request.user_id,
+                        ]:
+                            raise service_exceptions.EntityUpdateError(
+                                self.read_schema.__name__,
+                                entity_id,
+                                "You do not have permission to edit this request",
+                            )
+
                     if new_status.value == schemas.BenefitStatus.DECLINED:
+                        # Handle the case where employee user declines its own request
                         if (
                             current_user.id == existing_request.user_id
                             or current_user.role
                             in [
-                                user_schemas.UserRole.HR.value,
-                                user_schemas.UserRole.ADMIN.value,
+                                user_schemas.UserRole.HR,
+                                user_schemas.UserRole.ADMIN,
                             ]
                         ):
                             if benefit.amount is not None:
