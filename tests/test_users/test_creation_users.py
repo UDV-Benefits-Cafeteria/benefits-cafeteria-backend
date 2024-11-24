@@ -89,7 +89,7 @@ user_data_cases_for_admin = [
     # Test 5: Admin creates ADMIN in legal_entity_id=111
     (
         {
-            "email": "admin123@example.com",
+            "email": "admin999@example.com",
             "firstname": "Admin",
             "lastname": "One",
             "role": "admin",
@@ -103,7 +103,7 @@ user_data_cases_for_admin = [
     # Test 6: Admin creates ADMIN in legal_entity_id=222
     (
         {
-            "email": "admin124@example.com",
+            "email": "admin999@example.com",
             "firstname": "Admin",
             "lastname": "Two",
             "role": "admin",

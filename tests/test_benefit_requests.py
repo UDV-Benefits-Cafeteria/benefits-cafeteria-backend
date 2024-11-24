@@ -348,6 +348,8 @@ async def test_cancel_benefit_request_restores_coins_and_amount(
     response = await employee_client.patch(
         f"/benefit-requests/{request_id}", json=update_data
     )
+    with pytest.raises(KeyError):
+        assert response.json()["detail"] is None
 
     assert response.status_code == status.HTTP_200_OK
 

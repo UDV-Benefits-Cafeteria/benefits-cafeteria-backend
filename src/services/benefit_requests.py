@@ -42,23 +42,6 @@ class BenefitRequestsService(
         service_logger.info(
             f"Reading all {self.read_schema.__name__} entities (Page: {page}, Limit: {limit})"
         )
-        """
-        Retrieve all benefit requests with optional filtering, sorting, and pagination.
-
-        Args:
-            current_user (UserRead): The user requesting the data.
-            status (Optional[BenefitStatus]): Filter by request status.
-            sort_by (Optional[BenefitRequestSortFields]): Field to sort by.
-            sort_order (str): Order of sorting ('asc' or 'desc'). Default is 'asc'.
-            page (int): The page number for pagination. Default is 1.
-            limit (int): The number of records per page. Default is 10.
-
-        Returns:
-            List[BenefitRequestRead]: List of benefit request data.
-
-        Raises:
-            EntityReadError: If an error occurs during data retrieval.
-        """
 
         async with async_session_factory() as session:
             try:
@@ -239,21 +222,41 @@ class BenefitRequestsService(
                     schemas.BenefitStatus.APPROVED,
                 ]:
                     raise service_exceptions.EntityUpdateError(
-                        self.__class__.__name__,
+                        self.read_schema.__name__,
                         "You cannot update declined or approved benefit request",
                     )
 
-                # Declining benefit request
+                # If old status is 'pending' then the request was just created and needs performer_id to be set
+                if (
+                    old_status.value == schemas.BenefitStatus.PENDING
+                    and update_schema.performer_id is None
+                ):
+                    update_schema.performer_id = current_user.id
+
+                # These users have permission to edit the request:
+                # Admin,
+                # HR whose id == performer_id,
+                # User if we change status from 'pending' to 'declined'.
+                if current_user.role not in [user_schemas.UserRole.ADMIN]:
+                    if current_user.id not in [
+                        existing_request.performer_id,
+                        existing_request.user_id,
+                    ]:
+                        raise service_exceptions.EntityUpdateError(
+                            self.read_schema.__name__,
+                            "You do not have permission to edit this request",
+                        )
+
                 if new_status.value == schemas.BenefitStatus.DECLINED:
+                    # Handle the case where employee user declines its own request
                     if (
                         current_user.id == existing_request.user_id
                         or current_user.role
                         in [
-                            user_schemas.UserRole.HR.value,
-                            user_schemas.UserRole.ADMIN.value,
+                            user_schemas.UserRole.HR,
+                            user_schemas.UserRole.ADMIN,
                         ]
                     ):
-                        # Restore amount
                         if benefit.amount is not None:
                             new_amount = benefit.amount + 1
 
@@ -261,28 +264,24 @@ class BenefitRequestsService(
                                 session, benefit.id, {"amount": new_amount}
                             )
 
-                        # Restore user's coins
                         new_coins = user.coins + benefit.coins_cost
                         await users_repo.update_by_id(
                             session, user.id, {"coins": new_coins}
                         )
                     else:
                         raise service_exceptions.EntityUpdateError(
-                            self.__class__.__name__,
+                            self.read_schema.__name__,
                             "You cannot decline this benefit request",
                         )
 
-                is_updated = await self.repo.update_by_id(
+                is_updated: bool = await self.repo.update_by_id(
                     session,
                     entity_id,
                     update_schema.model_dump(),
                 )
                 if not is_updated:
-                    service_logger.error(
-                        f"Entity with ID {entity_id} not found for update."
-                    )
                     raise service_exceptions.EntityNotFoundError(
-                        self.__class__.__name__, f"entity_id: {entity_id}"
+                        self.read_schema.__name__, str(entity_id)
                     )
 
                 entity = await self.repo.read_by_id(session, entity_id)
@@ -298,6 +297,7 @@ class BenefitRequestsService(
         service_logger.info(
             f"Successfully updated {self.update_schema.__name__} with ID {entity_id}."
         )
+
         return self.read_schema.model_validate(entity)
 
     async def delete_by_id(

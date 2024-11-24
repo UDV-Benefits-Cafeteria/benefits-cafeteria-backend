@@ -19,7 +19,7 @@ pytest_plugins = ["pytest_asyncio"]
 settings = get_settings()
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 async def setup_db_schema() -> None:
     """
     Creates the test database schema before any tests and drops it afterward.
@@ -31,14 +31,27 @@ async def setup_db_schema() -> None:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function", autouse=True)
+async def clean_db(setup_db_schema, db_session) -> None:
+    """
+    Provides clean database before any tests with all the tables and their structure provided by setup_db_schema fixture
+    """
+    for table in reversed(
+        Base.metadata.sorted_tables
+    ):  # Reverse the order to avoid foreign key constraints
+        await db_session.execute(table.delete())
+
+
+@pytest.fixture(scope="function")
 async def db_session() -> AsyncSession:
+    """
+    Provides a database session for tests.
+    """
     async with async_session_factory() as session:
         yield session
-        await session.rollback()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def admin_user(db_session: AsyncSession) -> User:
     """Create a default admin user for testing."""
     admin = User(
@@ -59,7 +72,7 @@ async def admin_user(db_session: AsyncSession) -> User:
     return admin
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def legal_entity1a(db_session: AsyncSession):
     """Create the first legal entity for testing."""
     entity = LegalEntity(
@@ -72,7 +85,7 @@ async def legal_entity1a(db_session: AsyncSession):
     return entity
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def legal_entity2b(db_session: AsyncSession):
     """Create the second legal entity for testing."""
     entity = LegalEntity(
@@ -85,7 +98,7 @@ async def legal_entity2b(db_session: AsyncSession):
     return entity
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def hr_user(db_session: AsyncSession, legal_entity1a) -> User:
     """Create the first HR user with legal_entity_id=111."""
 
@@ -108,9 +121,9 @@ async def hr_user(db_session: AsyncSession, legal_entity1a) -> User:
     return hr1
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def employee_user(db_session: AsyncSession, legal_entity1a) -> User:
-    """Create a regular employee user with legal_entity_id=1."""
+    """Create a regular employee user with legal_entity_id=111."""
     user = User(
         id=444,
         email="user@example.com",
@@ -187,7 +200,7 @@ async def employee_client(employee_user: User):
         app.dependency_overrides = {}
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def auth_client():
     fm.config.SUPPRESS_SEND = 1
     with fm.record_messages():
@@ -197,7 +210,7 @@ async def auth_client():
             yield client
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def category(db_session: AsyncSession):
     """Create a category for testing."""
     category = Category(
