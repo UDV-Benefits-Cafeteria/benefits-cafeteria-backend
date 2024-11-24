@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import PlainTextResponse
 
-from src.config import get_settings, logger
+from src.config import get_settings
 from src.services.sessions import SessionsService
 
 settings = get_settings()
@@ -48,22 +48,18 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         session_id = request.cookies.get(settings.SESSION_COOKIE_NAME)
         if not session_id:
-            logger.error("Session ID not found in cookies.")
             response = await call_next(request)
             return response
 
         csrf_token = await self.sessions_service.get_csrf_token(session_id)
         if not csrf_token:
-            logger.error("CSRF token not found in session.")
             return PlainTextResponse("CSRF token missing", status_code=403)
 
         csrf_token_from_header = request.headers.get(self.csrf_header_name)
         if not csrf_token_from_header:
-            logger.error("CSRF token not found in headers.")
             return PlainTextResponse("CSRF token missing in headers", status_code=403)
 
         if csrf_token != csrf_token_from_header:
-            logger.error("Invalid CSRF token.")
             return PlainTextResponse("Forbidden", status_code=403)
 
         response = await call_next(request)

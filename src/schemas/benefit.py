@@ -75,7 +75,7 @@ class BenefitReadShortPublic(BaseModel):
     coins_cost: Annotated[int, Field(ge=0)]
     min_level_cost: Annotated[int, Field(ge=0)]
     amount: Annotated[Optional[int], Field(ge=0)] = None
-    primary_image_url: Optional[str]
+    primary_image_url: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -93,10 +93,10 @@ class BenefitRead(BenefitBase):
     images: Optional[list[BenefitImageRead]] = None
     category: Optional[CategoryRead] = None
     positions: Optional[list[PositionRead]] = None
-    category_id: Optional[int] = Field(None, exclude=True)
+    category_id: Annotated[Optional[int], Field(None, exclude=True)]
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class BenefitReadPublic(BenefitRead):
-    real_currency_cost: Annotated[Optional[Decimal], Field(exclude=True)] = None
+    real_currency_cost: Annotated[Optional[Decimal], Field(None, exclude=True)]

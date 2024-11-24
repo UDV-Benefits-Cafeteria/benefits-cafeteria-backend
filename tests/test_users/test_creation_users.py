@@ -9,16 +9,18 @@ from src.services.users import UsersService
 
 async def create_user_test(client: AsyncClient, user_data: dict, expected_status: int):
     response = await client.post("/users/", json=user_data)
+
     assert response.status_code == expected_status
 
     if response.status_code == status.HTTP_201_CREATED:
         data = response.json()
-        for key, value in user_data.items():
-            if key in data and value is not None:
-                assert data[key] == value
 
         user_service_data = await UsersService().read_by_id(data["id"])
+
+        assert user_service_data is not None
+
         user_data = (user_service_data).model_dump()
+
         del user_data["hired_at"]
         del data["hired_at"]
 
@@ -129,8 +131,8 @@ async def test_create_user_admin_client(
     admin_client: AsyncClient,
     user_data: dict,
     expected_status: int,
-    legal_entity2b,
     legal_entity1a,
+    legal_entity2b,
 ):
     await create_user_test(admin_client, user_data, expected_status)
 

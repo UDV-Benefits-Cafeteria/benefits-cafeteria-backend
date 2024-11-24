@@ -9,7 +9,7 @@ from src.api.v1.dependencies import (
 from src.schemas import category as schemas
 from src.services.exceptions import (
     EntityCreateError,
-    EntityDeletionError,
+    EntityDeleteError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
@@ -44,7 +44,7 @@ async def get_category(category_id: int, service: CategoriesServiceDependency):
     """
     try:
         category = await service.read_by_id(category_id)
-        return category
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
@@ -53,6 +53,8 @@ async def get_category(category_id: int, service: CategoriesServiceDependency):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to read category"
         )
+
+    return category
 
 
 @router.post(
@@ -82,11 +84,13 @@ async def create_category(
     """
     try:
         created_category = await service.create(category)
-        return created_category
+
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create category"
         )
+
+    return created_category
 
 
 @router.patch(
@@ -120,7 +124,7 @@ async def update_category(
     """
     try:
         updated_category = await service.update_by_id(category_id, category_update)
-        return updated_category
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
@@ -129,6 +133,8 @@ async def update_category(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update category"
         )
+
+    return updated_category
 
 
 @router.delete(
@@ -155,15 +161,17 @@ async def delete_category(category_id: int, service: CategoriesServiceDependency
     """
     try:
         category_deleted = await service.delete_by_id(category_id)
-        return {"is_success": category_deleted}
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
         )
-    except EntityDeletionError:
+    except EntityDeleteError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete category"
         )
+
+    return {"is_success": category_deleted}
 
 
 @router.get(
@@ -195,9 +203,11 @@ async def get_categories(
     """
     try:
         categories = await service.read_all(page=page, limit=limit)
-        return categories
+
     except EntityReadError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read categories",
         )
+
+    return categories

@@ -2,8 +2,6 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from src.config import logger
-
 
 class CatchServerErrorMiddleware(BaseHTTPMiddleware):
     """
@@ -15,8 +13,7 @@ class CatchServerErrorMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             return response
-        except Exception as exc:
-            logger.error(f"Internal Server Error: {exc}")
+        except Exception:
             return JSONResponse(
                 status_code=500,
                 content={"detail": "Internal Server Error. Please try again later."},

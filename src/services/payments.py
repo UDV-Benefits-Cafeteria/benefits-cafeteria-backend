@@ -1,3 +1,5 @@
+import warnings
+
 from fastapi import BackgroundTasks
 
 import src.repositories.exceptions as repo_exceptions
@@ -8,6 +10,8 @@ from src.config import logger
 from src.repositories.payments import CoinPaymentsRepository
 from src.services.base import BaseService
 from src.services.users import UsersService
+
+warnings.warn("This file is deprecated and should not be used.", DeprecationWarning)
 
 
 class CoinPaymentsService(

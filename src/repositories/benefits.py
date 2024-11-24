@@ -2,10 +2,11 @@ from typing import Any, Optional, Union
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import get_settings, logger
+from src.config import get_settings
+from src.logger import repository_logger
 from src.models import Benefit
 from src.repositories.base import SQLAlchemyRepository
-from src.repositories.exceptions import EntityReadError, EntityUpdateError
+from src.repositories.exceptions import EntityReadError
 from src.utils.elastic_index import SearchService, es
 
 settings = get_settings()
@@ -16,7 +17,8 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
 
     async def create(self, session: AsyncSession, data: dict) -> Benefit:
         benefit = await super().create(session, data)
-        await self.index_benefit(benefit)
+        if benefit is not None:
+            await self.index_benefit(benefit)
         return benefit
 
     async def update_by_id(
@@ -42,6 +44,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
 
     @staticmethod
     async def index_benefit(benefit: Benefit):
+        repository_logger.info(f"Indexing created Benefit with ID={benefit.id}")
         benefit_data = {
             "id": benefit.id,
             "name": benefit.name,
@@ -62,22 +65,20 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
         else:
             benefit_data["primary_image_url"] = None
 
-        try:
-            await es.index(
-                index=SearchService.benefits_index_name,
-                id=benefit.id,
-                document=benefit_data,
-            )
-        except Exception as e:
-            logger.error(f"Error indexing benefit {benefit.id} in Elasticsearch: {e}")
-            raise EntityUpdateError("Benefit", benefit.id, str(e))
+        await es.index(
+            index=SearchService.benefits_index_name,
+            id=benefit.id,
+            document=benefit_data,
+        )
+        repository_logger.info(f"Successfully indexed Benefit with ID={benefit.id}")
 
     @staticmethod
     async def delete_benefit_from_index(benefit_id: int):
-        try:
-            await es.delete(index=SearchService.benefits_index_name, id=benefit_id)
-        except Exception as e:
-            logger.error(f"Error deleting benefit {benefit_id} from Elasticsearch: {e}")
+        repository_logger.info(f"Deleting Benefit from index: ID={benefit_id}")
+        await es.delete(index=SearchService.benefits_index_name, id=benefit_id)
+        repository_logger.info(
+            f"Successfully deleted Benefit from index: ID={benefit_id}"
+        )
 
     async def search_benefits(
         self,
@@ -88,6 +89,11 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
         limit: int = 10,
         offset: int = 0,
     ) -> list[dict]:
+        repository_logger.info(
+            f"Searching Benefits: query='{query}', filters={filters}, sort_by={sort_by}, "
+            f"sort_order={sort_order}, limit={limit}, offset={offset}"
+        )
+
         es_query: dict[str, Any] = {
             "from": offset,
             "size": limit,
@@ -142,7 +148,14 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             )
             hits = response["hits"]["hits"]
             results = [hit["_source"] for hit in hits]
-            return results
         except Exception as e:
-            logger.error(f"Error searching benefits in Elasticsearch: {e}")
-            raise EntityReadError(self.model.__name__, "", str(e))
+            repository_logger.error(
+                f"Error searching Benefits: query='{query}', filters={filters}, sort_by={sort_by}, "
+                f"sort_order={sort_order}, limit={limit}, offset={offset}: {e}"
+            )
+            raise EntityReadError(
+                self.__class__.__name__, self.model.__tablename__, str(filters), str(e)
+            )
+
+        repository_logger.info(f"Found {len(results)} Benefits matching query: {query}")
+        return results

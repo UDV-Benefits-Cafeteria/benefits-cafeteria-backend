@@ -1,6 +1,3 @@
-from typing import Union
-
-
 class ServiceError(Exception):
     """Base exception class for service errors."""
 
@@ -10,49 +7,42 @@ class ServiceError(Exception):
 class EntityCreateError(ServiceError):
     """Raised when an entity cannot be created in the service layer."""
 
-    def __init__(self, entity_name: str, reason: str):
-        super().__init__(f"Failed to create {entity_name}. Reason: {reason}")
+    def __init__(self, service_name: str, reason: str):
+        super().__init__(f"{service_name} failed to create entity. Reason: {reason}")
 
 
 class EntityReadError(ServiceError):
     """Raised when an entity cannot be read in the service layer."""
 
-    def __init__(self, entity_name: str, entity_id: Union[int, str], reason: str):
-        super().__init__(
-            f"Failed to read {entity_name} with ID {entity_id}. Reason: {reason}"
-        )
+    def __init__(self, service_name: str, reason: str):
+        super().__init__(f"{service_name} failed to read entity. Reason: {reason}")
 
 
 class EntityNotFoundError(ServiceError):
     """Raised when an entity cannot be found for a given operation, such as update or delete."""
 
-    def __init__(self, entity_name: str, entity_id: Union[int, str]):
-        self.entity_id = entity_id
-        super().__init__(f"{entity_name} with ID {entity_id} was not found.")
+    def __init__(self, service_name: str, read_param: str):
+        super().__init__(
+            f"{service_name} couldn't find entity with reading parameters: {read_param}."
+        )
 
 
 class EntityUpdateError(ServiceError):
     """Raised when an entity cannot be updated in the service layer."""
 
-    def __init__(self, entity_name: str, entity_id: Union[int, str], reason: str):
-        self.entity_id = entity_id
-        super().__init__(
-            f"Failed to update {entity_name} with ID {entity_id}. Reason: {reason}"
-        )
+    def __init__(self, service_name: str, reason: str):
+        super().__init__(f"{service_name} failed to update entity. Reason: {reason}")
 
 
-class EntityDeletionError(ServiceError):
+class EntityDeleteError(ServiceError):
     """Raised when an entity cannot be deleted in the service layer."""
 
-    def __init__(self, entity_name: str, entity_id: Union[int, str], reason: str):
-        self.entity_id = entity_id
-        super().__init__(
-            f"Failed to delete {entity_name} with ID {entity_id}. Reason: {reason}"
-        )
+    def __init__(self, service_name: str, reason: str):
+        super().__init__(f"{service_name} failed to delete entity. Reason: {reason}")
 
 
 class PermissionDeniedError(ServiceError):
     """Raised when an action is forbidden for the user."""
 
-    def __init__(self, reason: str):
-        super().__init__(f"Forbidden. Reason: {reason}")
+    def __init__(self, service_name: str, reason: str):
+        super().__init__(f"Forbidden in {service_name}. Reason: {reason}")

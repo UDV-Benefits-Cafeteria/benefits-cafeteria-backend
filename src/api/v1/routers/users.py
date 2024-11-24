@@ -72,30 +72,28 @@ async def get_users(
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
+    filters: dict[str, Any] = {
+        field: value
+        for field, value in {
+            "is_active": is_active,
+            "is_adapted": is_adapted,
+            "is_verified": is_verified,
+            "role": role.value if role else None,
+            "hired_at": range_filter_parser(hired_at, "hired_at"),
+            "legal_entity_id": legal_entity_id,
+        }.items()
+        if value is not None
+    }
+
+    if current_user.role == schemas.UserRole.HR:
+        if legal_entity_id is None or legal_entity_id == current_user.legal_entity_id:
+            filters["legal_entity_id"] = current_user.legal_entity_id
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You cannot search for users outside your legal entity",
+            )
     try:
-        filters: dict[str, Any] = {
-            field: value
-            for field, value in {
-                "is_active": is_active,
-                "is_adapted": is_adapted,
-                "is_verified": is_verified,
-                "role": role.value if role else None,
-                "hired_at": range_filter_parser(hired_at, "hired_at"),
-                "legal_entity_id": legal_entity_id,
-            }.items()
-            if value is not None
-        }
-        if current_user.role == schemas.UserRole.HR:
-            if (
-                legal_entity_id is None
-                or legal_entity_id == current_user.legal_entity_id
-            ):
-                filters["legal_entity_id"] = current_user.legal_entity_id
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You cannot search for users outside your legal entity",
-                )
         users = await service.search_users(
             query=query,
             filters=filters,
@@ -104,7 +102,7 @@ async def get_users(
             limit=limit,
             offset=offset,
         )
-        return users
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -115,6 +113,8 @@ async def get_users(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to retrieve users",
         )
+
+    return users
 
 
 @router.post(
@@ -150,12 +150,6 @@ async def create_user(
             current_user=current_user,
             background_tasks=background_tasks,
         )
-
-        await send_user_greeting_email(
-            created_user.email, created_user.firstname, background_tasks
-        )
-
-        return created_user
     except EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create user"
@@ -164,6 +158,12 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
         )
+
+    await send_user_greeting_email(
+        created_user.email, created_user.firstname, background_tasks
+    )
+
+    return created_user
 
 
 @router.get(
@@ -177,16 +177,6 @@ async def create_user(
 async def get_current_user(
     current_user: Annotated[schemas.UserRead, Depends(get_active_user)],
 ):
-    """
-    Retrieve the current authenticated user's information.
-
-    Returns:
-    - **schemas.UserRead**: The current user's information.
-
-    Raises:
-    - **HTTPException**:
-        - 401: If the user is not authenticated.
-    """
     return current_user
 
 
@@ -228,16 +218,6 @@ async def update_user(
             background_tasks=background_tasks,
         )
 
-        if user_update.coins:
-            await send_user_coin_update_email(
-                updated_user.email,
-                updated_user.firstname,
-                updated_user.coins - current_user.coins,
-                updated_user.coins,
-                background_tasks,
-            )
-
-        return updated_user
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
@@ -250,6 +230,17 @@ async def update_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
         )
+
+    if user_update.coins:
+        await send_user_coin_update_email(
+            updated_user.email,
+            updated_user.firstname,
+            updated_user.coins - current_user.coins,
+            updated_user.coins,
+            background_tasks,
+        )
+
+    return updated_user
 
 
 @router.get(
@@ -281,7 +272,7 @@ async def get_user(
     """
     try:
         user = await service.read_by_id(user_id)
-        return user
+
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
@@ -290,6 +281,8 @@ async def get_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to read user"
         )
+
+    return user
 
 
 @router.post(
@@ -448,7 +441,7 @@ async def upload_image(
             )
     try:
         updated_user = await service.update_image(image, user_id)
-        return updated_user
+
     except EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -458,6 +451,8 @@ async def upload_image(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
+
+    return updated_user
 
 
 @router.delete(
@@ -498,7 +493,7 @@ async def delete_image(
             )
     try:
         updated_user = await service.update_image(None, user_id)
-        return updated_user
+
     except EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -508,3 +503,5 @@ async def delete_image(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
+
+    return updated_user

@@ -54,11 +54,13 @@ class ExcelParser:
             data = {}
             for excel_col, model_field in self.column_mappings.items():
                 value = row.get(excel_col, None)
+                # Check 'NaN' value (no value passed)
                 if pd.isna(value):
                     value = None
 
                 if model_field in self.field_parsers:
                     try:
+                        # If there is a parser specified for the field then we call parser with the given value
                         value = self.field_parsers[model_field](value)
                     except ValueError as e:
                         errors.append(
