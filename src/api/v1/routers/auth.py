@@ -10,7 +10,7 @@ from src.api.v1.dependencies import (
 from src.config import get_settings
 from src.services.exceptions import (
     EntityCreateError,
-    EntityDeletionError,
+    EntityDeleteError,
     EntityNotFoundError,
     EntityReadError,
     EntityUpdateError,
@@ -49,14 +49,6 @@ async def verify_email(
     """
     try:
         user = await service.read_by_email(email_data.email)
-
-        if not user.is_verified:
-            return schemas.UserVerified(id=user.id)
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"User with email '{email_data.email}' already verified",
-            )
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -66,6 +58,14 @@ async def verify_email(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read user",
+        )
+
+    if not user.is_verified:
+        return schemas.UserVerified(id=user.id)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"User with email '{email_data.email}' already verified",
         )
 
 
@@ -97,28 +97,8 @@ async def signup(
     - **dict**: A dictionary indicating success or failure of the operation.
     """
     try:
-        user = await auth_service.read_auth_data(user_id=user_register.id)
+        user = await auth_service.read_auth_data_by_id(user_id=user_register.id)
 
-        if user.is_verified:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="User already verified"
-            )
-        if user.password:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password already set for this user",
-            )
-
-        # Update password and verify user
-        try:
-            await auth_service.update_password(user.id, user_register.password)
-            await auth_service.verify_user(user.id)
-            return {"is_success": True}
-        except EntityUpdateError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to update user",
-            )
     except EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -129,6 +109,28 @@ async def signup(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read user",
         )
+
+    if user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User already verified"
+        )
+    if user.password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password already set for this user",
+        )
+
+    # Update password and verify user
+    try:
+        await auth_service.update_password(user.id, user_register.password)
+        await auth_service.verify_user(user.id)
+    except EntityUpdateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to update user",
+        )
+
+    return {"is_success": True}
 
 
 @router.post(
@@ -161,65 +163,7 @@ async def signin(
     - **dict**: A dictionary indicating success of the operation.
     """
     try:
-        # Retrieve user data based on email
-        user = await auth_service.read_auth_data(email=user_login.email)
-
-        if not user.is_verified:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User account is not verified",
-            )
-        if not user.password:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password not set for this user",
-            )
-
-        # Validate password
-        is_valid_password = verify_password(user_login.password, user.password)
-        if not is_valid_password:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid credentials"
-            )
-
-        # Create session for the user
-        try:
-            session_id = await sessions_service.create_session(
-                user.id, settings.SESSION_EXPIRE_TIME
-            )
-        except EntityCreateError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to create session",
-            )
-
-        try:
-            csrf_token = await sessions_service.get_csrf_token(session_id)
-        except (EntityNotFoundError, EntityReadError):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to retrieve CSRF token",
-            )
-
-        response.set_cookie(
-            key=settings.SESSION_COOKIE_NAME,
-            value=session_id,
-            max_age=settings.SESSION_EXPIRE_TIME,
-            httponly=True,
-            samesite="none",
-            secure=True,
-        )
-
-        response.set_cookie(
-            key=settings.CSRF_COOKIE_NAME,
-            value=csrf_token,
-            max_age=settings.CSRF_EXPIRE_TIME,
-            httponly=False,  # Accessible by JavaScript
-            samesite="lax",
-            secure=True,
-        )
-
-        return {"is_success": True}
+        user = await auth_service.read_auth_data_by_email(email=user_login.email)
 
     except EntityNotFoundError:
         raise HTTPException(
@@ -230,6 +174,63 @@ async def signin(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read user",
         )
+
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User account is not verified",
+        )
+    if not user.password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password not set for this user",
+        )
+
+    # Validate password
+    is_valid_password = verify_password(user_login.password, user.password)
+    if not is_valid_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid credentials"
+        )
+
+    # Create session for the user
+    try:
+        session_id = await sessions_service.create_session(
+            user.id, settings.SESSION_EXPIRE_TIME
+        )
+    except EntityCreateError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create session",
+        )
+
+    try:
+        csrf_token = await sessions_service.get_csrf_token(session_id)
+    except (EntityNotFoundError, EntityReadError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to retrieve CSRF token",
+        )
+
+    response.set_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        value=session_id,
+        max_age=settings.SESSION_EXPIRE_TIME,
+        httponly=True,
+        samesite="none",
+        secure=True,
+    )
+
+    response.set_cookie(
+        key=settings.CSRF_COOKIE_NAME,
+        value=csrf_token,
+        max_age=settings.CSRF_EXPIRE_TIME,
+        httponly=False,  # Accessible by JavaScript
+        samesite="lax",
+        secure=True,
+    )
+
+    return {"is_success": True}
 
 
 @router.post(
@@ -263,12 +264,11 @@ async def logout(
         )
 
     try:
-        # Delete the session from the service
         await sessions_service.delete_session(session_id)
-    # Session already does not exist
+    # Session already does not exist - success
     except EntityNotFoundError:
         pass
-    except EntityDeletionError:
+    except EntityDeleteError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to log out",

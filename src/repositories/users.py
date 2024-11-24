@@ -3,7 +3,7 @@ from typing import Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import logger
+from src.logger import repository_logger
 from src.models.users import User
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
@@ -36,6 +36,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
 
     @staticmethod
     async def index_user(user: User):
+        repository_logger.info(f"Indexing created User with ID={user.id}")
         user_data = {
             "id": user.id,
             "email": user.email,
@@ -56,12 +57,10 @@ class UsersRepository(SQLAlchemyRepository[User]):
             "image_url": user.image_url,
         }
 
-        try:
-            await es.index(
-                index=SearchService.users_index_name, id=user.id, document=user_data
-            )
-        except Exception as e:
-            logger.error(f"Error indexing user {user.id} in Elasticsearch: {e}")
+        await es.index(
+            index=SearchService.users_index_name, id=user.id, document=user_data
+        )
+        repository_logger.info(f"Successfully indexed User with ID={user.id}")
 
     async def search_users(
         self,
@@ -76,6 +75,10 @@ class UsersRepository(SQLAlchemyRepository[User]):
             "from": offset,
             "size": limit,
         }
+        repository_logger.info(
+            f"Searching Users: query='{query}', filters={filters}, sort_by={sort_by}, "
+            f"sort_order={sort_order}, limit={limit}, offset={offset}"
+        )
 
         if query:
             base_query = {
@@ -122,32 +125,62 @@ class UsersRepository(SQLAlchemyRepository[User]):
             )
             hits = response["hits"]["hits"]
             results = [hit["_source"] for hit in hits]
-            return results
         except Exception as e:
-            logger.error(f"Error searching users in Elasticsearch: {e}")
-            raise EntityReadError(self.model.__name__, "", str(e))
+            repository_logger.error(
+                f"Error searching Users: query='{query}', filters={filters}, sort_by={sort_by}, "
+                f"sort_order={sort_order}, limit={limit}, offset={offset}: {e}"
+            )
+            raise EntityReadError(
+                self.__class__.__name__, self.model.__tablename__, str(filters), str(e)
+            )
+
+        repository_logger.info(f"Found {len(results)} Users matching query: {query}")
+        return results
 
     @staticmethod
     async def delete_user_from_index(user_id: int):
-        try:
-            await es.delete(index=SearchService.users_index_name, id=user_id)
-        except Exception as e:
-            logger.error(f"Error deleting user {user_id} from Elasticsearch: {e}")
+        repository_logger.info(f"Deleting User from index: ID={user_id}")
+        await es.delete(index=SearchService.users_index_name, id=user_id)
+        repository_logger.info(f"Successfully deleted User from index: ID={user_id}")
 
     async def read_by_email(self, session: AsyncSession, email: str) -> Optional[User]:
+        """
+        Retrieve a User entity by email.
+
+        Args:
+            session: SQLAlchemy AsyncSession.
+            email: The email of the user to retrieve.
+
+        Returns:
+            A User entity if found, otherwise None.
+
+        Raises:
+            EntityReadError: If an error occurs while reading the entity.
+        """
+        repository_logger.info(f"Fetching {self.model.__name__} with email: {email}.")
+
         try:
             result = await session.execute(
                 select(self.model).where(self.model.email == email)
             )
             user = result.scalar_one_or_none()
-
-            if user:
-                logger.info(f"Found User with email: {email}")
-            else:
-                logger.warning(f"No User found with email: {email}")
-
-            return user
-
         except Exception as e:
-            logger.error(f"Error reading User by email '{email}': {e}")
-            raise EntityReadError(self.model.__name__, email, str(e))
+            repository_logger.error(
+                f"Error fetching {self.model.__name__} with email: {email} - {e}"
+            )
+            raise EntityReadError(
+                self.__class__.__name__,
+                self.model.__tablename__,
+                f"email: {email}",
+                str(e),
+            )
+
+        if user:
+            repository_logger.info(
+                f"Successfully fetched {self.model.__name__} with email: {email}."
+            )
+        else:
+            repository_logger.warning(
+                f"No {self.model.__name__} found with email: {email}."
+            )
+        return user

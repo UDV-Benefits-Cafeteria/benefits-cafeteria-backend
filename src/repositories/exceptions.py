@@ -10,35 +10,40 @@ class RepositoryError(Exception):
 class EntityCreateError(RepositoryError):
     """Raised when an entity cannot be created."""
 
-    def __init__(self, entity_name: str, reason: str):
-        super().__init__(f"Failed to create {entity_name}. Reason: {reason}")
+    def __init__(self, repo_name: str, table_name: str, reason: str):
+        super().__init__(
+            f"{repo_name} failed to create entity in {table_name}. Reason: {reason}"
+        )
 
 
 class EntityReadError(RepositoryError):
     """Raised when an entity cannot be read."""
 
-    def __init__(self, entity_name: str, read_param: Union[int, str], reason: str):
-        self.read_param = read_param
+    def __init__(
+        self, repo_name: str, table_name: str, read_param: Union[int, str], reason: str
+    ):
         super().__init__(
-            f"Failed to read {entity_name} with read_param {read_param}. Reason: {reason}"
+            f"{repo_name} failed to read entity from {table_name} with reading parameters: {read_param}. Reason: {reason}"
         )
 
 
 class EntityUpdateError(RepositoryError):
     """Raised when an entity cannot be updated."""
 
-    def __init__(self, entity_name: str, read_param: Union[int, str], reason: str):
-        self.read_param = read_param
+    def __init__(
+        self, repo_name: str, table_name: str, read_param: Union[int, str], reason: str
+    ):
         super().__init__(
-            f"Failed to update {entity_name} with read_param {read_param}. Reason: {reason}"
+            f"{repo_name} failed to update entity in {table_name} with reading parameters: {read_param}. Reason: {reason}"
         )
 
 
 class EntityDeleteError(RepositoryError):
     """Raised when an entity cannot be deleted."""
 
-    def __init__(self, entity_name: str, read_param: Union[int, str], reason: str):
-        self.read_param = read_param
+    def __init__(
+        self, repo_name: str, table_name: str, read_param: Union[int, str], reason: str
+    ):
         super().__init__(
-            f"Failed to delete {entity_name} with read_param {read_param}. Reason: {reason}"
+            f"{repo_name} failed to delete entity in {table_name} with reading parameters: {read_param}. Reason: {reason}"
         )

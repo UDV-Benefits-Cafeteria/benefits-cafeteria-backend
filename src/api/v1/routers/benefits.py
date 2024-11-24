@@ -3,22 +3,15 @@ from typing import Annotated, Any, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
 import src.schemas.user as user_schemas
+import src.services.exceptions as service_exceptions
 from src.api.v1.dependencies import (
     BenefitsServiceDependency,
     get_active_user,
     get_hr_user,
 )
 from src.config import get_settings
-from src.repositories.exceptions import EntityDeleteError
 from src.schemas import benefit as schemas
 from src.schemas.benefit import SortOrderField
-from src.services.exceptions import (
-    EntityCreateError,
-    EntityDeletionError,
-    EntityNotFoundError,
-    EntityReadError,
-    EntityUpdateError,
-)
 from src.utils.filter_parsers import range_filter_parser
 
 router = APIRouter(prefix="/benefits", tags=["Benefits"])
@@ -70,23 +63,23 @@ async def get_benefits(
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
     offset: Annotated[int, Query(ge=0)] = 0,
 ):
-    try:
-        filters: dict[str, Any] = {
-            field: value
-            for field, value in {
-                "is_active": is_active,
-                "adaptation_required": adaptation_required,
-                "coins_cost": range_filter_parser(coins_cost, "coins_cost"),
-                "real_currency_cost": range_filter_parser(
-                    real_currency_cost, "real_currency_cost"
-                ),
-                "min_level_cost": range_filter_parser(min_level_cost, "min_level_cost"),
-                "created_at": range_filter_parser(created_at, "created_at"),
-                "category_id": categories,
-            }.items()
-            if value is not None
-        }
+    filters: dict[str, Any] = {
+        field: value
+        for field, value in {
+            "is_active": is_active,
+            "adaptation_required": adaptation_required,
+            "coins_cost": range_filter_parser(coins_cost, "coins_cost"),
+            "real_currency_cost": range_filter_parser(
+                real_currency_cost, "real_currency_cost"
+            ),
+            "min_level_cost": range_filter_parser(min_level_cost, "min_level_cost"),
+            "created_at": range_filter_parser(created_at, "created_at"),
+            "category_id": categories,
+        }.items()
+        if value is not None
+    }
 
+    try:
         benefits = await service.search_benefits(
             current_user=current_user,
             query=query,
@@ -96,17 +89,18 @@ async def get_benefits(
             limit=limit,
             offset=offset,
         )
-        return benefits
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
-    except EntityReadError as e:
+    except service_exceptions.EntityReadError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to search benefits: {str(e)}",
         )
+
+    return benefits
 
 
 @router.get(
@@ -140,15 +134,17 @@ async def get_benefit(
     """
     try:
         benefit = await service.read_by_id(benefit_id, current_user)
-        return benefit
-    except EntityNotFoundError:
+
+    except service_exceptions.EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
         )
-    except EntityReadError:
+    except service_exceptions.EntityReadError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to read benefit"
         )
+
+    return benefit
 
 
 @router.post(
@@ -180,11 +176,13 @@ async def create_benefit(
     """
     try:
         created_benefit = await service.create(benefit)
-        return created_benefit
-    except EntityCreateError:
+
+    except service_exceptions.EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create benefit"
         )
+
+    return created_benefit
 
 
 @router.patch(
@@ -220,15 +218,17 @@ async def update_benefit(
     """
     try:
         updated_benefit = await service.update_by_id(benefit_id, benefit_update)
-        return updated_benefit
-    except EntityNotFoundError:
+
+    except service_exceptions.EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
         )
-    except EntityUpdateError:
+    except service_exceptions.EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to update benefit"
         )
+
+    return updated_benefit
 
 
 @router.delete(
@@ -257,15 +257,17 @@ async def delete_benefit(benefit_id: int, service: BenefitsServiceDependency):
     """
     try:
         benefit_deleted = await service.delete_by_id(benefit_id)
-        return {"is_success": benefit_deleted}
-    except EntityNotFoundError:
+
+    except service_exceptions.EntityNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
         )
-    except EntityDeletionError:
+    except service_exceptions.EntityDeleteError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to delete benefit"
         )
+
+    return {"is_success": benefit_deleted}
 
 
 @router.post(
@@ -297,17 +299,17 @@ async def upload_images(
     """
     try:
         await service.add_images(images, benefit_id)
-    except EntityCreateError:
+    except service_exceptions.EntityCreateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to upload benefit images",
         )
-    except EntityReadError:
+    except service_exceptions.EntityReadError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read benefit",
         )
-    except EntityUpdateError:
+    except service_exceptions.EntityUpdateError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to index benefit"
         )
@@ -339,7 +341,7 @@ async def remove_images(images: list[int], service: BenefitsServiceDependency):
     """
     try:
         await service.remove_images(images)
-    except EntityDeleteError:
+    except service_exceptions.EntityDeleteError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to delete benefit images",

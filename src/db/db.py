@@ -1,4 +1,4 @@
-from typing import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -9,10 +9,10 @@ settings = get_settings()
 # Create a SQLAlchemy engine for asynchronous operations.
 if settings.DEBUG:
     engine = create_async_engine(
-        settings.DATABASE_URL, echo=settings.DEBUG, poolclass=NullPool, future=True
+        settings.DATABASE_URL, echo=False, poolclass=NullPool, future=True
     )
 else:
-    engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG)
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
 # Create an async session factory using the configured engine.
 async_session_factory = async_sessionmaker(
@@ -20,9 +20,8 @@ async_session_factory = async_sessionmaker(
 )
 
 
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+@asynccontextmanager
+async def get_transaction_session() -> AsyncSession:
     async with async_session_factory() as session:
-        try:
+        async with session.begin():
             yield session
-        finally:
-            await session.close()

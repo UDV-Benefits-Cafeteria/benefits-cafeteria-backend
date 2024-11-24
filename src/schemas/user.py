@@ -146,12 +146,6 @@ class UserVerified(BaseModel):
 
 
 class UserCreate(UserBase):
-    """
-    Model for creating a new user.
-
-    Inherits from UserBase, with default values for verification and activation.
-    """
-
     is_verified: bool = Field(default=False, exclude=True)
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)

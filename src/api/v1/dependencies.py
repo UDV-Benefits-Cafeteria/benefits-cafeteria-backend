@@ -4,8 +4,8 @@ from fastapi import Depends, HTTPException, Request
 from fastapi_limiter.depends import RateLimiter
 from starlette import status
 
+import src.schemas.user as user_schemas
 from src.config import get_settings
-from src.schemas.user import UserRead, UserRole
 from src.services.auth import AuthService
 from src.services.benefit_requests import BenefitRequestsService
 from src.services.benefits import BenefitsService
@@ -33,7 +33,7 @@ async def get_current_user(
     request: Request,
     users_service: UsersServiceDependency,
     sessions_service: SessionsServiceDependency,
-) -> UserRead:
+) -> user_schemas.UserRead:
     session_id = request.cookies.get(settings.SESSION_COOKIE_NAME)
     if not session_id:
         raise HTTPException(
@@ -59,8 +59,8 @@ async def get_current_user(
 
 
 async def get_active_user(
-    current_user: Annotated[UserRead, Depends(get_current_user)],
-) -> UserRead:
+    current_user: Annotated[user_schemas.UserRead, Depends(get_current_user)],
+) -> user_schemas.UserRead:
     if not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -70,9 +70,12 @@ async def get_active_user(
 
 
 async def get_hr_user(
-    current_user: Annotated[UserRead, Depends(get_active_user)],
-) -> UserRead:
-    if current_user.role not in [UserRole.HR.value, UserRole.ADMIN.value]:
+    current_user: Annotated[user_schemas.UserRead, Depends(get_active_user)],
+) -> user_schemas.UserRead:
+    if current_user.role not in [
+        user_schemas.UserRole.HR.value,
+        user_schemas.UserRole.ADMIN.value,
+    ]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: at least HR role required",
@@ -81,9 +84,9 @@ async def get_hr_user(
 
 
 async def get_admin_user(
-    current_user: Annotated[UserRead, Depends(get_active_user)],
-) -> UserRead:
-    if current_user.role != UserRole.ADMIN.value:
+    current_user: Annotated[user_schemas.UserRead, Depends(get_active_user)],
+) -> user_schemas.UserRead:
+    if current_user.role != user_schemas.UserRole.ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: Admin role required",

@@ -4,7 +4,7 @@ from typing import cast
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import logger
+from src.logger import repository_logger
 from src.models import Session
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityDeleteError
@@ -22,15 +22,29 @@ class SessionsRepository(SQLAlchemyRepository[Session]):
 
         :return: Number of deleted sessions.
         """
+        repository_logger.info(
+            f"Starting deletion of expired {self.model.__name__}s before {current_time.isoformat()}."
+        )
+
         try:
             result = await session.execute(
                 delete(self.model).where(self.model.expires_at < current_time)
             )
 
             await session.commit()
-
-            rowcount: int = cast(int, result.rowcount)
-            return rowcount
         except Exception as e:
-            logger.error(f"Error deleting expired sessions: {e}")
-            raise EntityDeleteError(self.model.__name__, "expired sessions", str(e))
+            repository_logger.error(
+                f"Error deleting expired {self.model.__name__}s: {e}"
+            )
+            raise EntityDeleteError(
+                self.__class__.__name__,
+                self.model.__tablename__,
+                "expired: True",
+                str(e),
+            )
+
+        rows_affected: int = cast(int, result.rowcount)
+        repository_logger.info(
+            f"Deleted {rows_affected} expired {self.model.__name__}s."
+        )
+        return rows_affected

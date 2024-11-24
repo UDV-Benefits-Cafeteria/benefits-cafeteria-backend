@@ -1,13 +1,8 @@
-import logging
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic import EmailStr, PostgresDsn, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-# Set up logging
-logging.basicConfig(level=logging.ERROR)
-logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -23,7 +18,7 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "postgres"
 
-    ELASTIC_PASSWORD: str = "elasticpass"
+    ELASTIC_PASSWORD: str = "elasticpass"  # noqa: Typo
     ELASTIC_HOST: str = "elasticsearch"
     ELASTIC_PORT: int = 9200
 
@@ -32,13 +27,13 @@ class Settings(BaseSettings):
     )
 
     SESSION_COOKIE_NAME: str = "session_id"
-    SESSION_EXPIRE_TIME: int = 86400 * 7  # 7 дней
-    SESSION_REFRESH_THRESHOLD: int = 86400 * 1  # 1 день
+    SESSION_EXPIRE_TIME: int = 86400 * 7  # 7 дней  # noqa: Typo
+    SESSION_REFRESH_THRESHOLD: int = 86400 * 1  # 1 день  # noqa: Typo
 
-    CSRF_COOKIE_NAME: str = "csrftoken"
-    CSRF_EXPIRE_TIME: int = 86400 * 7  # 7 дней
+    CSRF_COOKIE_NAME: str = "csrftoken"  # noqa: Typo
+    CSRF_EXPIRE_TIME: int = 86400 * 7  # 7 дней  # noqa: Typo
 
-    SENTRY_DSN: str = "emptyurl"
+    SENTRY_DSN: str = "emptyurl"  # noqa: Typo
     SENTRY_TRACES_SAMPLE_RATE: float = 1.0
     SENTRY_SAMPLE_PROFILER_RATE: float = 1.0
     SENTRY_ENVIRONMENT: str = "development"
@@ -63,11 +58,11 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: str = "access"
     AWS_SECRET_ACCESS_KEY: str = "secret"
     AWS_S3_BUCKET_NAME: str = "test"
-    AWS_S3_ENDPOINT_URL: str = "s3.amazonaws.com"
+    AWS_S3_ENDPOINT_URL: str = "s3.amazonaws.com"  # noqa: Typo
     AWS_DEFAULT_ACL: str = "public-read"
     AWS_S3_USE_SSL: bool = True
 
-    REDIS_PASSWORD: str = "someverysecuredpass"
+    REDIS_PASSWORD: str = "someverysecuredpass"  # noqa: Typo
     REDIS_USER: str = "user"
     REDIS_USER_PASSWORD: str = "pass"
     REDIS_HOST: str = "redis"
@@ -79,11 +74,11 @@ class Settings(BaseSettings):
 
     @property
     def ELASTIC_URL(self) -> str:
-        return f"http://{self.ELASTIC_HOST}:{self.ELASTIC_PORT}"
+        return f"http://{self.ELASTIC_HOST}:{self.ELASTIC_PORT}"  # noqa: E231
 
     @property
     def REDIS_BASE_URL(self) -> RedisDsn:
-        return f"redis://{self.REDIS_USER}:{self.REDIS_USER_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}"
+        return f"redis://{self.REDIS_USER}:{self.REDIS_USER_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}"  # noqa: E231
 
     @property
     def REDIS_LIMITER_URL(self) -> RedisDsn:

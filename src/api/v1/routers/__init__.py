@@ -1,7 +1,7 @@
 from .auth import router as auth  # noqa: F401
-from .benefit import router as benefit  # noqa: F401
-from .category import router as category  # noqa: F401
-from .legal_entity import router as legal_entity  # noqa: F401
-from .position import router as position  # noqa: F401
-from .request import router as request  # noqa: F401
+from .benefit_requests import router as benefit_requests  # noqa: F401
+from .benefits import router as benefits  # noqa: F401
+from .categories import router as categories  # noqa: F401
+from .legal_entities import router as legal_entities  # noqa: F401
+from .positions import router as positions  # noqa: F401
 from .users import router as users  # noqa: F401

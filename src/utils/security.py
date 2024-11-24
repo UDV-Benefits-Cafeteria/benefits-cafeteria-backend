@@ -4,7 +4,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import EmailStr
 
-from src.config import get_settings, logger
+from src.config import get_settings
 
 settings = get_settings()
 
@@ -30,6 +30,5 @@ def decode_reset_password_token(token: str) -> EmailStr | None:
         payload = jwt.decode(token, str(settings.SECRET_KEY), algorithms="HS256")
         email: EmailStr = payload.get("sub")
         return email
-    except JWTError as e:
-        logger.error(f"Error while decoding token: {e}")
+    except JWTError:
         return None
