@@ -30,12 +30,14 @@ jobs:
         env:
           discovery.type: single-node
           ELASTIC_PASSWORD: elasticpass
+          cluster.name: "elastic-udv"
+          network.host: "0.0.0.0"
+          xpack.security.enabled: "true"
+          xpack.license.self_generated.type: "basic"
         ports:
           - 9200:9200
           - 9300:9300
         options: --health-cmd "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'" --health-interval 10s --health-timeout 5s --health-retries 5
-        volumes:
-          - ./elastic_config.yml:/usr/share/elasticsearch/config/elasticsearch.yml
 
     steps:
       - uses: actions/checkout@v3
