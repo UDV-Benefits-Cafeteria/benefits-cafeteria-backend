@@ -49,6 +49,16 @@ testdown:
 	@echo "🧪 Остановка тестов..."
 	docker compose -f $(DOCKER_COMPOSE_FILE_TESTS) down --volumes --remove-orphans
 
+watch:
+	@echo "📜 Просмотр тестов..."
+	docker logs -f app_for_tests
+
+t:
+	@echo "🧪 Тестирование..."
+	$(MAKE) test
+	$(MAKE) watch
+	$(MAKE) testdown
+
 shell:
 	@echo "💻 Подключение к контейнеру приложения..."
 	docker compose -f $(DOCKER_COMPOSE_FILE) exec app /bin/sh
@@ -72,5 +82,7 @@ help:
 	@echo "  make logs      - Просмотр логов"
 	@echo "  make test      - Запуск тестов через pytest"
 	@echo "  make testdown  - Остановка тестов"
+	@echo "  make watch     - Просмотр тестов"
+	@echo "  make t         - Запуск тестов и просмотр результатов"
 	@echo "  make shell     - Подключение к контейнеру app приложения"
 	@echo "  make clean     - Очистка неиспользуемых данных"
