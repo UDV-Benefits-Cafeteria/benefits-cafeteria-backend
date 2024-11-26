@@ -341,11 +341,6 @@ async def upload_users(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Error while parsing users. Some columns might be missing.",
         )
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while parsing the Excel file",
-        )
 
     return schemas.UserValidationResponse(valid_users=valid_users, errors=errors)
 

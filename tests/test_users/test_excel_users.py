@@ -59,6 +59,7 @@ def create_excel_file(
                     "имя": "Петр",
                     "отчество": "Петрович",
                     "роль": "hr",
+                    "юр. лицо": "Legal Entity 1a",
                     "дата найма": (date.today() - timedelta(days=30)).isoformat(),
                     "адаптационный период": "нет",
                     "ю-коины": 200,
@@ -134,10 +135,256 @@ def create_excel_file(
             "created_users_count": 1,
             "bulk_errors_count": 0,
         },
+        {
+            "name": "different_column_variants",
+            "rows": [
+                {
+                    "электронная почта": "user1@example.com",
+                    "фамилия": "Иванов",
+                    "имя": "Иван",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                },
+                {
+                    "электронная почта": "user2@example.com",
+                    "фамилия": "Петров",
+                    "имя": "Петр",
+                    "роль": "hr",
+                    "дата найма": date.today().isoformat(),
+                    "юкоины": 999,
+                },
+            ],
+            "columns_input": [
+                "электронная почта",
+                "фамилия",
+                "имя",
+                "роль",
+                "дата найма",
+                "юкоины",
+            ],
+            "upload_status_code": 200,
+            "valid_users_count": 2,
+            "errors_count": 0,
+            "bulk_create_status_code": 201,
+            "created_users_count": 2,
+            "bulk_errors_count": 0,
+        },
+        {
+            "name": "missing_required_fields",
+            "rows": [
+                {
+                    # Missing 'email'
+                    "фамилия": "Сидоров",
+                    "имя": "Сидор",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                },
+                {
+                    "email": "user@example.com",
+                    # Missing 'lastname'
+                    "имя": "Мария",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                },
+                {
+                    "email": "user2@example.com",
+                    "фамилия": "Иванов",
+                    # Missing 'firstname'
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                },
+                {
+                    "email": "user3@example.com",
+                    "фамилия": "Петров",
+                    "имя": "Петр",
+                    # Missing 'role'
+                    "дата найма": date.today().isoformat(),
+                },
+                {
+                    "email": "user4@example.com",
+                    "фамилия": "Смирнов",
+                    "имя": "Игорь",
+                    "роль": "employee",
+                    # Missing 'дата найма'
+                },
+            ],
+            "columns_input": ["email", "фамилия", "имя", "роль", "дата найма"],
+            "upload_status_code": 200,
+            "valid_users_count": 0,
+            "errors_count": 5,  # One error per row
+            "bulk_create_status_code": None,
+            "created_users_count": 0,
+            "bulk_errors_count": 0,
+        },
+        {
+            "name": "optional_fields",
+            "rows": [
+                {
+                    "email": "user@example.com",
+                    "фамилия": "Сидоров",
+                    "имя": "Сидор",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                    # No optional fields
+                }
+            ],
+            "columns_input": ["email", "фамилия", "имя", "роль", "дата найма"],
+            "upload_status_code": 200,
+            "valid_users_count": 1,
+            "errors_count": 0,
+            "bulk_create_status_code": 201,
+            "created_users_count": 1,
+            "bulk_errors_count": 0,
+        },
+        {
+            "name": "invalid_is_adapted_field",
+            "rows": [
+                {
+                    "email": "user@example.com",
+                    "фамилия": "Сидоров",
+                    "имя": "Сидор",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                    "адаптационный период": "maybe",  # Invalid value
+                }
+            ],
+            "columns_input": [
+                "email",
+                "фамилия",
+                "имя",
+                "роль",
+                "дата найма",
+                "адаптационный период",
+            ],
+            "upload_status_code": 200,
+            "valid_users_count": 0,
+            "errors_count": 1,
+            "bulk_create_status_code": None,
+            "created_users_count": 0,
+            "bulk_errors_count": 0,
+        },
+        {
+            "name": "invalid_role",
+            "rows": [
+                {
+                    "email": "user@example.com",
+                    "фамилия": "Сидоров",
+                    "имя": "Сидор",
+                    "роль": "manager",  # Invalid role
+                    "дата найма": date.today().isoformat(),
+                }
+            ],
+            "columns_input": ["email", "фамилия", "имя", "роль", "дата найма"],
+            "upload_status_code": 200,
+            "valid_users_count": 0,
+            "errors_count": 1,
+            "bulk_create_status_code": None,
+            "created_users_count": 0,
+            "bulk_errors_count": 0,
+        },
+        {
+            "name": "nonexistent_position",
+            "rows": [
+                {
+                    "email": "user@example.com",
+                    "фамилия": "Сидоров",
+                    "имя": "Сидор",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                    "должность": "Неизвестная должность",
+                }
+            ],
+            "columns_input": [
+                "email",
+                "фамилия",
+                "имя",
+                "роль",
+                "дата найма",
+                "должность",
+            ],
+            "upload_status_code": 200,
+            "valid_users_count": 0,
+            "errors_count": 1,
+            "bulk_create_status_code": None,
+            "created_users_count": 0,
+            "bulk_errors_count": 0,
+        },
+        {
+            "name": "nonexistent_legal_entity",
+            "rows": [
+                {
+                    "email": "user@example.com",
+                    "фамилия": "Сидоров",
+                    "имя": "Сидор",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                    "юр. лицо": "Неизвестное юр. лицо",
+                }
+            ],
+            "columns_input": [
+                "email",
+                "фамилия",
+                "имя",
+                "роль",
+                "дата найма",
+                "юр. лицо",
+            ],
+            "upload_status_code": 200,
+            "valid_users_count": 0,
+            "errors_count": 1,
+            "bulk_create_status_code": None,
+            "created_users_count": 0,
+            "bulk_errors_count": 0,
+        },
+        {
+            "name": "duplicate_emails_in_file",
+            "rows": [
+                {
+                    "email": "duplicate@example.com",
+                    "фамилия": "Иванов",
+                    "имя": "Иван",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                },
+                {
+                    "email": "duplicate@example.com",  # Duplicate email in the file
+                    "фамилия": "Петров",
+                    "имя": "Петр",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                },
+            ],
+            "columns_input": ["email", "фамилия", "имя", "роль", "дата найма"],
+            "upload_status_code": 200,
+            "valid_users_count": 2,
+            "errors_count": 0,
+            "bulk_create_status_code": 201,
+            "created_users_count": 1,
+            "bulk_errors_count": 1,  # Expected error in bulk create
+        },
+        {
+            "name": "existing_email_in_db",
+            "rows": [
+                {
+                    "email": "hr1@example.com",  # email exists in DB
+                    "фамилия": "Новиков",
+                    "имя": "Николай",
+                    "роль": "employee",
+                    "дата найма": date.today().isoformat(),
+                }
+            ],
+            "columns_input": ["email", "фамилия", "имя", "роль", "дата найма"],
+            "upload_status_code": 200,
+            "valid_users_count": 0,
+            "errors_count": 1,
+            "bulk_create_status_code": None,
+            "created_users_count": 0,
+            "bulk_errors_count": 0,
+        },
     ],
 )
-async def test_upload_users(hr_client: AsyncClient, test_case):
-    file_name = "test_users.xlsx"
+async def test_upload_users(hr_client: AsyncClient, test_case, legal_entity1a):
+    file_name = f"{test_case['name']}.xlsx"
     file_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
     excel_content = create_excel_file(
@@ -184,11 +431,11 @@ async def test_upload_users(hr_client: AsyncClient, test_case):
                 == test_case["created_users_count"]
             ), f"Test '{test_case['name']}' failed: expected {test_case['created_users_count']} created users, got {len(bulk_create_data['created_users'])}"
 
-            user = await UsersService().read_by_id(
-                bulk_create_data["created_users"][0]["id"]
-            )
+            user_service = UsersService()
 
-            assert user is not None
+            for created_user in bulk_create_data["created_users"]:
+                user = await user_service.read_by_id(created_user["id"])
+                assert user is not None
 
             assert (
                 len(bulk_create_data["errors"]) == test_case["bulk_errors_count"]

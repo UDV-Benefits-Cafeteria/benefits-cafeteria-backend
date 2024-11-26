@@ -147,7 +147,9 @@ async def test_hr_can_update_user_in_legal_entity(hr_client: AsyncClient):
     ],
 )
 @pytest.mark.asyncio
-async def test_employee_update(admin_user: User, field, value, expected_status):
+async def test_employee_update(
+    admin_user: User, field, value, expected_status, legal_entity1a
+):
     user_data = {
         "email": "updatinguser@example.com",
         "firstname": "Updating",
@@ -178,8 +180,6 @@ async def test_employee_update(admin_user: User, field, value, expected_status):
         user = await UsersService().read_by_id(user_id)
 
         assert value == getattr(user, field)
-
-    await UsersService().delete_by_id(user_id)
 
 
 @pytest.mark.asyncio
