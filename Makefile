@@ -4,15 +4,15 @@ DOCKER_COMPOSE_FILE_TESTS=docker-compose-tests.yml
 
 up:
 	@echo "🚀 Запуск приложения..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d --build
+	docker compose -f $(DOCKER_COMPOSE_FILE) up -d --build
 
 down:
 	@echo "🛑 Остановка приложения..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE) down
+	docker compose -f $(DOCKER_COMPOSE_FILE) down
 
 build:
 	@echo "🏗️ Сборка образов..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE) build
+	docker compose -f $(DOCKER_COMPOSE_FILE) build
 
 restart:
 	@echo "🔄 Перезапуск приложения..."
@@ -21,15 +21,15 @@ restart:
 
 upapp:
 	@echo "🚀 Запуск контейнера app..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE) up --no-deps -d app
+	docker compose -f $(DOCKER_COMPOSE_FILE) up --no-deps -d app
 
 downapp:
 	@echo "🛑 Остановка контейнера app..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE) down app
+	docker compose -f $(DOCKER_COMPOSE_FILE) down app
 
 buildapp:
 	@echo "🏗️ Сборка образа app..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE) build app
+	docker compose -f $(DOCKER_COMPOSE_FILE) build app
 
 ra:
 	@echo "🔄 Перезапуск контейнера app..."
@@ -39,23 +39,23 @@ ra:
 
 logs:
 	@echo "📜 Просмотр логов приложения..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE) logs -f
+	docker compose -f $(DOCKER_COMPOSE_FILE) logs -f
 
 test:
 	@echo "🧪 Запуск тестов..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE_TESTS) up -d --build
+	docker compose -f $(DOCKER_COMPOSE_FILE_TESTS) up -d --build
 
 testdown:
 	@echo "🧪 Остановка тестов..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE_TESTS) down --volumes --remove-orphans
+	docker compose -f $(DOCKER_COMPOSE_FILE_TESTS) down --volumes --remove-orphans
 
 shell:
 	@echo "💻 Подключение к контейнеру приложения..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE) exec app /bin/sh
+	docker compose -f $(DOCKER_COMPOSE_FILE) exec app /bin/sh
 
 clean:
 	@echo "🧹 Очистка остановленных контейнеров и неиспользуемых данных..."
-	docker-compose -f $(DOCKER_COMPOSE_FILE) down --volumes --remove-orphans
+	docker compose -f $(DOCKER_COMPOSE_FILE) down --volumes --remove-orphans
 	docker system prune -f
 
 # Помощь
@@ -71,5 +71,6 @@ help:
 	@echo "  make ra        - Перезапуск контейнера app"
 	@echo "  make logs      - Просмотр логов"
 	@echo "  make test      - Запуск тестов через pytest"
+	@echo "  make testdown  - Остановка тестов"
 	@echo "  make shell     - Подключение к контейнеру app приложения"
 	@echo "  make clean     - Очистка неиспользуемых данных"

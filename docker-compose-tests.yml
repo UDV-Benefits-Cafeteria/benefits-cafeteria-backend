@@ -18,8 +18,11 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_HOST: tests_db
       SECRET_KEY: some_secret_key_for_tests
+      ELASTIC_HOST: tests_elasticsearch
     depends_on:
       tests_db:
+        condition: service_healthy
+      tests_elasticsearch:
         condition: service_healthy
     restart: "no"
 
@@ -38,3 +41,20 @@ services:
       timeout: 5s
       retries: 5
     restart: "no"
+
+  tests_elasticsearch:
+    image: elasticsearch:8.15.3
+    volumes:
+      - ./elastic_config.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+    environment:
+      - ES_JAVA_OPTS=-Xmx512m -Xms512m
+      - ELASTIC_PASSWORD=elasticpass
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: curl -s http://tests_elasticsearch:9200 >/dev/null || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 10
