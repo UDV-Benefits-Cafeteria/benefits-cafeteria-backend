@@ -255,8 +255,35 @@ async def get_employee_client(user_id: int):
         return client
 
 
+# ElasticSearch fixtures
+
+
+@pytest.fixture(scope="session")
+async def setup_elastic_index(search_service) -> None:
+    await search_service.create_benefits_index()
+    await search_service.create_users_index()
+
+    yield
+
+    await search_service.close()
+
+
 @pytest.fixture()
-def mock_elasticsearch_benefits(request):
+async def elasticsearch_client(setup_elastic_index, search_service):
+    await search_service.delete_all()
+
+    yield search_service
+
+    await search_service.close()
+
+
+@pytest.fixture(scope="session")
+def search_service() -> SearchService:
+    return SearchService()
+
+
+@pytest.fixture()
+async def mock_elasticsearch_benefits(request):
     if "elastic" not in request.keywords:
         with patch("src.repositories.benefits.es") as benefits_mock_es:
             benefits_mock_es.index = AsyncMock()
@@ -267,7 +294,7 @@ def mock_elasticsearch_benefits(request):
 
 
 @pytest.fixture(autouse=True)
-def mock_dependencies_users(users_service, auth_service, request):
+async def mock_dependencies_users(users_service, auth_service, request):
     if "elastic" not in request.keywords:
 
         async def override_get_users_service():
@@ -296,18 +323,10 @@ def mock_es_client():
 
 
 @pytest.fixture
-def users_service(mock_es_client):
+async def users_service(mock_es_client):
     return UsersService(es_client=mock_es_client)
 
 
 @pytest.fixture
-def auth_service(mock_es_client):
+async def auth_service(mock_es_client):
     return AuthService(es_client=mock_es_client)
-
-
-@pytest.fixture()
-async def elasticsearch_client():
-    search_service = SearchService()
-    await search_service.delete_all()
-    yield search_service
-    await search_service.close()
