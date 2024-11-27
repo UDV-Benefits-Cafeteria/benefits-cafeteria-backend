@@ -3,18 +3,19 @@ from elasticsearch import AsyncElasticsearch
 from src.config import get_settings
 
 settings = get_settings()
-es = AsyncElasticsearch(
-    hosts=(settings.ELASTIC_URL,),
-    basic_auth=("elastic", settings.ELASTIC_PASSWORD),
-)
 
 
 class SearchService:
     benefits_index_name = "benefits"
     users_index_name = "users"
 
-    @classmethod
-    async def create_benefits_index(cls):
+    def __init__(self):
+        self.es = AsyncElasticsearch(
+            hosts=(settings.ELASTIC_URL,),
+            basic_auth=("elastic", settings.ELASTIC_PASSWORD),
+        )
+
+    async def create_benefits_index(self):
         mapping = {
             "settings": {
                 "analysis": {
@@ -61,12 +62,13 @@ class SearchService:
             },
         }
 
-        benefits_index_exists = await es.indices.exists(index=cls.benefits_index_name)
+        benefits_index_exists = await self.es.indices.exists(
+            index=self.benefits_index_name
+        )
         if not benefits_index_exists:
-            await es.indices.create(index=cls.benefits_index_name, body=mapping)
+            await self.es.indices.create(index=self.benefits_index_name, body=mapping)
 
-    @classmethod
-    async def create_users_index(cls):
+    async def create_users_index(self):
         mapping = {
             "settings": {
                 "analysis": {
@@ -107,6 +109,16 @@ class SearchService:
                 }
             },
         }
-        users_index_exists = await es.indices.exists(index=cls.users_index_name)
+        users_index_exists = await self.es.indices.exists(index=self.users_index_name)
         if not users_index_exists:
-            await es.indices.create(index=cls.users_index_name, body=mapping)
+            await self.es.indices.create(index=self.users_index_name, body=mapping)
+
+    async def close(self):
+        await self.es.close()
+
+    async def delete_all(self):
+        response = await self.es.search(index=self.users_index_name)
+        hits = response["hits"]["hits"]
+        results = [hit["_source"] for hit in hits]
+        for user in results:
+            await self.es.delete(index=self.users_index_name, id=user["id"])

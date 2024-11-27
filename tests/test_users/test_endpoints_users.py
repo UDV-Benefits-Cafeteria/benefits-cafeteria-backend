@@ -41,6 +41,54 @@ async def test_create_user_required_fields(
 
 
 @pytest.mark.parametrize(
+    "test_cases",
+    [
+        (  # One user
+            {
+                "email": "elasticuser1@example.com",
+                "firstname": "Elastic",
+                "lastname": "Search",
+                "role": "employee",
+                "hired_at": date.today().isoformat(),
+                "legal_entity_id": 111,
+            },
+        ),
+        (  # Two users
+            {
+                "email": "elasticuser2@example.com",
+                "firstname": "Elastic",
+                "lastname": "Search",
+                "role": "hr",
+                "hired_at": date.today().isoformat(),
+                "legal_entity_id": 111,
+            },
+            {
+                "email": "elasticuser3@example.com",
+                "firstname": "Elastic",
+                "lastname": "Search",
+                "role": "employee",
+                "hired_at": date.today().isoformat(),
+                "legal_entity_id": 111,
+            },
+        ),
+    ],
+)
+@pytest.mark.elastic
+@pytest.mark.asyncio
+async def test_elastic123(
+    hr_client: AsyncClient, legal_entity1a, test_cases, elasticsearch_client
+):
+    for user_data in test_cases:
+        response = await hr_client.post("/users/", json=user_data)
+        assert response.status_code == status.HTTP_201_CREATED
+
+    get_response = await hr_client.get("/users/")
+
+    assert get_response.json() is not None
+    assert len(get_response.json()) == len(test_cases)
+
+
+@pytest.mark.parametrize(
     "hired_at, expected_status",
     [
         (
@@ -71,7 +119,7 @@ async def test_create_user_hired_at(
 
 @pytest.mark.asyncio
 async def test_hr_cannot_update_user_outside_legal_entity(
-    hr_client: AsyncClient, legal_entity2b, admin_user: User
+    hr_client: AsyncClient, legal_entity2b, admin_user: User, users_service
 ):
     # Create a user in a different legal_entity
     user_data = {
@@ -86,7 +134,7 @@ async def test_hr_cannot_update_user_outside_legal_entity(
 
     valid_user_data = schemas.UserCreate.model_validate(user_data)
 
-    created_user = await UsersService().create(valid_user_data, admin_user_data)
+    created_user = await users_service.create(valid_user_data, admin_user_data)
 
     created_user_data = created_user.model_dump()
 
@@ -147,7 +195,9 @@ async def test_hr_can_update_user_in_legal_entity(hr_client: AsyncClient):
     ],
 )
 @pytest.mark.asyncio
-async def test_employee_update(admin_user: User, field, value, expected_status):
+async def test_employee_update(
+    admin_user: User, field, value, expected_status, users_service
+):
     user_data = {
         "email": "updatinguser@example.com",
         "firstname": "Updating",
@@ -159,7 +209,7 @@ async def test_employee_update(admin_user: User, field, value, expected_status):
 
     valid_user_data = schemas.UserCreate.model_validate(user_data)
 
-    created_user = await UsersService().create(valid_user_data, admin_user_data)
+    created_user = await users_service.create(valid_user_data, admin_user_data)
 
     created_user_data = created_user.model_dump()
     user_id = created_user_data["id"]
@@ -178,8 +228,6 @@ async def test_employee_update(admin_user: User, field, value, expected_status):
         user = await UsersService().read_by_id(user_id)
 
         assert value == getattr(user, field)
-
-    await UsersService().delete_by_id(user_id)
 
 
 @pytest.mark.asyncio
@@ -239,7 +287,7 @@ async def test_create_user_with_position(hr_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_user_auth(auth_client: AsyncClient, admin_user: User):
+async def test_user_auth(auth_client: AsyncClient, admin_user: User, users_service):
     user_data = {
         "email": "newuser@example.com",
         "firstname": "New",
@@ -253,7 +301,7 @@ async def test_user_auth(auth_client: AsyncClient, admin_user: User):
 
     valid_user_data = schemas.UserCreate.model_validate(user_data)
 
-    created_user = await UsersService().create(valid_user_data, admin_user_data)
+    created_user = await users_service.create(valid_user_data, admin_user_data)
 
     created_user_data = created_user.model_dump()
     assert created_user_data["id"] is not None
@@ -309,7 +357,9 @@ async def test_user_auth(auth_client: AsyncClient, admin_user: User):
 
 
 @pytest.mark.asyncio
-async def test_user_signin_invalid(auth_client: AsyncClient, admin_user: User):
+async def test_user_signin_invalid(
+    auth_client: AsyncClient, admin_user: User, users_service
+):
     user_data = {
         "email": "newuser2@example.com",
         "firstname": "New",
@@ -323,7 +373,7 @@ async def test_user_signin_invalid(auth_client: AsyncClient, admin_user: User):
 
     valid_user_data = schemas.UserCreate.model_validate(user_data)
 
-    created_user = await UsersService().create(valid_user_data, admin_user_data)
+    created_user = await users_service.create(valid_user_data, admin_user_data)
 
     created_user_data = created_user.model_dump()
     assert created_user_data["id"] is not None
@@ -345,7 +395,7 @@ async def test_user_signin_invalid(auth_client: AsyncClient, admin_user: User):
         "password": "wrongpassword123",
     }
 
-    user = await UsersService().read_by_email(login_data["email"])
+    user = await users_service.read_by_email(login_data["email"])
     assert user is not None
 
     signin_response = await auth_client.post("/auth/signin", json=login_data)

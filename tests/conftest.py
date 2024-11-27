@@ -5,18 +5,31 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 import src.schemas.user as user_schemas
-from src.api.v1.dependencies import get_current_user
+from src.api.v1.dependencies import (
+    get_auth_service,
+    get_current_user,
+    get_users_service,
+)
 from src.config import get_settings
 from src.db.db import AsyncSession, async_session_factory, engine
 from src.main import app
 from src.models import Category, LegalEntity, User
 from src.models.base import Base
+from src.services.auth import AuthService
 from src.services.sessions import SessionsService
+from src.services.users import UsersService
+from src.utils.elastic_index import SearchService
 from src.utils.email_sender.base import fm
 
 pytest_plugins = ["pytest_asyncio"]
 
 settings = get_settings()
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "elastic: Disable autouse fixtures for Elasticsearch mocking"
+    )
 
 
 @pytest.fixture(scope="session")
@@ -242,17 +255,59 @@ async def get_employee_client(user_id: int):
         return client
 
 
-@pytest.fixture(autouse=True)
-def mock_elasticsearch_benefits():
-    with patch("src.repositories.benefits.es") as benefits_mock_es:
-        benefits_mock_es.index = AsyncMock()
-        benefits_mock_es.delete = AsyncMock()
-        yield benefits_mock_es
+@pytest.fixture()
+def mock_elasticsearch_benefits(request):
+    if "elastic" not in request.keywords:
+        with patch("src.repositories.benefits.es") as benefits_mock_es:
+            benefits_mock_es.index = AsyncMock()
+            benefits_mock_es.delete = AsyncMock()
+            yield benefits_mock_es
+    else:
+        yield
 
 
 @pytest.fixture(autouse=True)
-def mock_elasticsearch_users():
-    with patch("src.repositories.users.es") as users_mock_es:
-        users_mock_es.index = AsyncMock()
-        users_mock_es.delete = AsyncMock()
-        yield users_mock_es
+def mock_dependencies_users(users_service, auth_service, request):
+    if "elastic" not in request.keywords:
+
+        async def override_get_users_service():
+            return users_service
+
+        async def override_get_auth_service():
+            return auth_service
+
+        app.dependency_overrides[get_users_service] = override_get_users_service
+        app.dependency_overrides[get_auth_service] = override_get_auth_service
+
+        yield
+
+    else:
+        yield
+
+
+@pytest.fixture
+def mock_es_client():
+    mock_es = AsyncMock()
+    mock_es.index = AsyncMock()
+    mock_es.delete = AsyncMock()
+    mock_es.search = AsyncMock()
+    mock_es.close = AsyncMock()
+    return mock_es
+
+
+@pytest.fixture
+def users_service(mock_es_client):
+    return UsersService(es_client=mock_es_client)
+
+
+@pytest.fixture
+def auth_service(mock_es_client):
+    return AuthService(es_client=mock_es_client)
+
+
+@pytest.fixture()
+async def elasticsearch_client():
+    search_service = SearchService()
+    await search_service.delete_all()
+    yield search_service
+    await search_service.close()

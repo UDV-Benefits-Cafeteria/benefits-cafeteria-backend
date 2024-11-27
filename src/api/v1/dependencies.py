@@ -14,9 +14,27 @@ from src.services.legal_entities import LegalEntitiesService
 from src.services.positions import PositionsService
 from src.services.sessions import SessionsService
 from src.services.users import UsersService
+from src.utils.elastic_index import SearchService
 
-AuthServiceDependency = Annotated[AuthService, Depends()]
-UsersServiceDependency = Annotated[UsersService, Depends()]
+
+async def get_users_service():
+    search_service = SearchService()
+    es_client = search_service.es
+    users_service = UsersService(es_client)
+    yield users_service
+    await search_service.close()
+
+
+async def get_auth_service():
+    search_service = SearchService()
+    es_client = search_service.es
+    auth_service = AuthService(es_client)
+    yield auth_service
+    await search_service.close()
+
+
+AuthServiceDependency = Annotated[AuthService, Depends(get_auth_service)]
+UsersServiceDependency = Annotated[UsersService, Depends(get_users_service)]
 BenefitsServiceDependency = Annotated[BenefitsService, Depends()]
 SessionsServiceDependency = Annotated[SessionsService, Depends()]
 PositionsServiceDependency = Annotated[PositionsService, Depends()]

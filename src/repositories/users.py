@@ -1,5 +1,6 @@
 from typing import Any, Optional
 
+from elasticsearch import AsyncElasticsearch
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,15 +8,19 @@ from src.logger import repository_logger
 from src.models.users import User
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
-from src.utils.elastic_index import SearchService, es
+from src.utils.elastic_index import SearchService
 
 
 class UsersRepository(SQLAlchemyRepository[User]):
     model = User
 
+    def __init__(self, es_client: Optional[AsyncElasticsearch] = None):
+        self.es = es_client
+
     async def create(self, session: AsyncSession, data: dict) -> User:
         user = await super().create(session, data)
-        await self.index_user(user)
+        if self.es is not None:
+            await self.index_user(user)
         return user
 
     async def update_by_id(
@@ -24,7 +29,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
         success = await super().update_by_id(session, entity_id, data)
         if success:
             user = await self.read_by_id(session, entity_id)
-            if user:
+            if user and self.es is not None:
                 await self.index_user(user)
         return success
 
@@ -34,8 +39,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
             await self.delete_user_from_index(entity_id)
         return success
 
-    @staticmethod
-    async def index_user(user: User):
+    async def index_user(self, user: User):
         repository_logger.info(f"Indexing created User with ID={user.id}")
         user_data = {
             "id": user.id,
@@ -57,7 +61,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
             "image_url": user.image_url,
         }
 
-        await es.index(
+        await self.es.index(
             index=SearchService.users_index_name, id=user.id, document=user_data
         )
         repository_logger.info(f"Successfully indexed User with ID={user.id}")
@@ -120,7 +124,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
             es_query["sort"] = [{sort_field: {"order": sort_order}}]
 
         try:
-            response = await es.search(
+            response = await self.es.search(
                 index=SearchService.users_index_name, body=es_query
             )
             hits = response["hits"]["hits"]
@@ -137,10 +141,9 @@ class UsersRepository(SQLAlchemyRepository[User]):
         repository_logger.info(f"Found {len(results)} Users matching query: {query}")
         return results
 
-    @staticmethod
-    async def delete_user_from_index(user_id: int):
+    async def delete_user_from_index(self, user_id: int):
         repository_logger.info(f"Deleting User from index: ID={user_id}")
-        await es.delete(index=SearchService.users_index_name, id=user_id)
+        await self.es.delete(index=SearchService.users_index_name, id=str(user_id))
         repository_logger.info(f"Successfully deleted User from index: ID={user_id}")
 
     async def read_by_email(self, session: AsyncSession, email: str) -> Optional[User]:

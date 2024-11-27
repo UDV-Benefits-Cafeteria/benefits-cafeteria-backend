@@ -7,9 +7,12 @@ from src.logger import repository_logger
 from src.models import Benefit
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
-from src.utils.elastic_index import SearchService, es
+from src.utils.elastic_index import SearchService
 
 settings = get_settings()
+
+# !Needs fix. Disable elastic for benefits
+es = None
 
 
 class BenefitsRepository(SQLAlchemyRepository[Benefit]):
@@ -17,7 +20,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
 
     async def create(self, session: AsyncSession, data: dict) -> Benefit:
         benefit = await super().create(session, data)
-        if benefit is not None:
+        if benefit is not None and es is not None:
             await self.index_benefit(benefit)
         return benefit
 
@@ -30,7 +33,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
         is_updated = await super().update_by_id(session, entity_id, data)
         if is_updated:
             benefit = await self.read_by_id(session, entity_id)
-            if benefit:
+            if benefit and es is not None:
                 await self.index_benefit(benefit)
         return is_updated
 
@@ -38,7 +41,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
         self, session: AsyncSession, entity_id: Union[int, str]
     ) -> bool:
         is_deleted = await super().delete_by_id(session, entity_id)
-        if is_deleted:
+        if is_deleted and es is not None:
             await self.delete_benefit_from_index(entity_id)
         return is_deleted
 
