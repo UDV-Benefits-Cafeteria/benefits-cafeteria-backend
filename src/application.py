@@ -30,13 +30,13 @@ async def initialize_redis_limiter(redis_url: str) -> None:
     await FastAPILimiter.init(redis_connection_limiter)
 
 
-async def initialize_resources() -> None:
+async def initialize_resources(search_service: SearchService) -> None:
     """
     Initializes resources required by the application, such as search indices
     and Redis limiter.
     """
-    await SearchService().create_benefits_index()
-    await SearchService().create_users_index()
+    await search_service.create_benefits_index()
+    await search_service.create_users_index()
     await initialize_redis_limiter(settings.REDIS_LIMITER_URL)
 
 
@@ -98,8 +98,10 @@ def create_application() -> FastAPI:
         Args:
             app (FastAPI): The FastAPI application instance.
         """
-        await initialize_resources()
+        search_service = SearchService()
+        await initialize_resources(search_service)
         yield
+        await search_service.close()
 
     application = FastAPI(
         debug=settings.DEBUG,
