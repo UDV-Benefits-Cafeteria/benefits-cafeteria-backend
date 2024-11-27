@@ -2,7 +2,6 @@ import os
 from typing import Any, Optional
 
 from fastapi import BackgroundTasks, UploadFile
-from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import src.repositories.exceptions as repo_exceptions
@@ -241,7 +240,7 @@ class UsersService(
 
             user_excel = schemas.UserCreateExcel.model_validate(user_excel_raw)
 
-            user_create, error = await self._process_user_row(
+            user_create, service_error = await self._process_user_row(
                 user_excel,
                 row_number,
                 positions_service,
@@ -249,8 +248,8 @@ class UsersService(
                 current_user,
             )
 
-            if error:
-                service_errors.append(error)
+            if service_error:
+                service_errors.append(service_error)
             else:
                 valid_users.append(user_create)
 
@@ -284,7 +283,10 @@ class UsersService(
         current_user: schemas.UserRead,
     ) -> tuple[Optional[schemas.UserCreate], Optional[dict[str, Any]]]:
         """
-        Processes a single user row from the Excel file.
+        Processes a single user row from the Excel file by:
+        - converting position and legal entity names to ids;
+        - finding out if there is a user with given email in database;
+        - validating HR permissions to create a user.
 
         Args:
             user_excel (schemas.UserCreateExcel): The user data extracted from the Excel row.
@@ -330,17 +332,8 @@ class UsersService(
                         "error": f"Юридическое лицо '{legal_entity_name}' не найдено.",
                     }
 
-            try:
-                user_create = schemas.UserCreate.model_validate(data)
-
-            except ValidationError as ve:
-                error_messages = "; ".join(
-                    [f"{err['loc'][0]}: {err['msg']}" for err in ve.errors()]
-                )
-                return None, {
-                    "row": row_number,
-                    "error": f"Ошибка валидации: {error_messages}",
-                }
+            # No need in try/except block because current user data was already verified inside parse_excel method
+            user_create = schemas.UserCreate.model_validate(data)
 
             try:
                 existing_user = await self.read_by_email(user_create.email)

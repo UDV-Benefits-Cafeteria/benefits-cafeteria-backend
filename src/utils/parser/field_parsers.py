@@ -14,7 +14,7 @@ BOOL_MAP = {
 
 
 def parse_role(value: str) -> str:
-    if value is None or pd.isna(value):
+    if pd.isnull(value):
         raise ValueError("Требуется ввести роль")
 
     value = str(value).strip().lower()
@@ -26,7 +26,7 @@ def parse_role(value: str) -> str:
 
 
 def parse_is_adapted(value: str) -> bool:
-    if value is None or pd.isna(value):
+    if pd.isnull(value):
         return False
 
     value = str(value).strip().lower()
@@ -39,7 +39,7 @@ def parse_is_adapted(value: str) -> bool:
 
 
 def parse_hired_at(value: str) -> date:
-    if value is None or pd.isna(value):
+    if pd.isnull(value):
         raise ValueError("Требуется дата найма")
     try:
         return pd.to_datetime(value).date()
@@ -48,7 +48,7 @@ def parse_hired_at(value: str) -> date:
 
 
 def parse_coins(value: str) -> int:
-    if value is None or pd.isna(value):
+    if pd.isnull(value):
         return 0
 
     try:
