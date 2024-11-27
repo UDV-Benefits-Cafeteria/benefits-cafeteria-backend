@@ -41,7 +41,7 @@ async def test_create_user_required_fields(
 
 
 @pytest.mark.parametrize(
-    "test_cases",
+    "test_case",
     [
         (  # One user
             {
@@ -76,16 +76,15 @@ async def test_create_user_required_fields(
 @pytest.mark.elastic
 @pytest.mark.asyncio
 async def test_elastic123(
-    hr_client: AsyncClient, legal_entity1a, test_cases, elasticsearch_client
+    hr_client: AsyncClient, legal_entity1a, test_case, elasticsearch_client
 ):
-    for user_data in test_cases:
+    for user_data in test_case:
         response = await hr_client.post("/users/", json=user_data)
         assert response.status_code == status.HTTP_201_CREATED
 
     get_response = await hr_client.get("/users/")
 
-    assert get_response.json() is not None
-    assert len(get_response.json()) == len(test_cases)
+    assert len(get_response.json()) == len(test_case)
 
 
 @pytest.mark.parametrize(

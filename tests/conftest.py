@@ -259,7 +259,8 @@ async def get_employee_client(user_id: int):
 
 
 @pytest.fixture(scope="session")
-async def setup_elastic_index(search_service) -> None:
+async def setup_elastic_index() -> None:
+    search_service = SearchService()
     await search_service.create_benefits_index()
     await search_service.create_users_index()
 
@@ -269,17 +270,13 @@ async def setup_elastic_index(search_service) -> None:
 
 
 @pytest.fixture()
-async def elasticsearch_client(setup_elastic_index, search_service):
+async def elasticsearch_client(setup_elastic_index):
+    search_service = SearchService()
     await search_service.delete_all()
 
     yield search_service
 
     await search_service.close()
-
-
-@pytest.fixture(scope="session")
-def search_service() -> SearchService:
-    return SearchService()
 
 
 @pytest.fixture()
