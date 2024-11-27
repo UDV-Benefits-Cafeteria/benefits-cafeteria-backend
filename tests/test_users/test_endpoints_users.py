@@ -71,6 +71,32 @@ async def test_create_user_required_fields(
                 "legal_entity_id": 111,
             },
         ),
+        (  # Three users
+            {
+                "email": "elasticuser4@example.com",
+                "firstname": "Elastic",
+                "lastname": "Search",
+                "role": "hr",
+                "hired_at": date.today().isoformat(),
+                "legal_entity_id": 111,
+            },
+            {
+                "email": "elasticuser5@example.com",
+                "firstname": "Elastic",
+                "lastname": "Search",
+                "role": "employee",
+                "hired_at": date.today().isoformat(),
+                "legal_entity_id": 111,
+            },
+            {
+                "email": "elasticuser6@example.com",
+                "firstname": "Elastic",
+                "lastname": "Search",
+                "role": "employee",
+                "hired_at": date.today().isoformat(),
+                "legal_entity_id": 111,
+            },
+        ),
     ],
 )
 @pytest.mark.elastic
@@ -82,7 +108,7 @@ async def test_elastic123(
         response = await hr_client.post("/users/", json=user_data)
         assert response.status_code == status.HTTP_201_CREATED
         user_in_db = await UsersService().read_by_id(response.json()["id"])
-        print(f"User in DB: {user_in_db}")
+        print(f"\n User in DB: {user_in_db}")
         assert user_in_db is not None
 
     users_index_exists = elasticsearch_client.es.indices.exists(
@@ -91,6 +117,7 @@ async def test_elastic123(
     assert users_index_exists
 
     get_response = await hr_client.get("/users/")
+    print(f"\n {get_response.json()}")
 
     assert len(get_response.json()) == len(test_case)
 
