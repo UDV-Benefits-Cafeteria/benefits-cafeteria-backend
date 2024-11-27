@@ -81,6 +81,14 @@ async def test_elastic123(
     for user_data in test_case:
         response = await hr_client.post("/users/", json=user_data)
         assert response.status_code == status.HTTP_201_CREATED
+        user_in_db = await UsersService().read_by_id(response.json()["id"])
+        print(f"User in DB: {user_in_db}")
+        assert user_in_db is not None
+
+    users_index_exists = elasticsearch_client.es.indices.exists(
+        index=elasticsearch_client.users_index_name
+    )
+    assert users_index_exists
 
     get_response = await hr_client.get("/users/")
 

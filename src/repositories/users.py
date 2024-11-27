@@ -80,7 +80,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
             "size": limit,
         }
         repository_logger.info(
-            f"Searching Users: query='{query}', filters={filters}, sort_by={sort_by}, "
+            f"Searching Users on '{SearchService.users_index_name}' index: query='{query}', filters={filters}, sort_by={sort_by}, "
             f"sort_order={sort_order}, limit={limit}, offset={offset}"
         )
 
