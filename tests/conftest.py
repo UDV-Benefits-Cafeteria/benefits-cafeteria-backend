@@ -258,30 +258,6 @@ async def get_employee_client(user_id: int):
 # ElasticSearch fixtures
 
 
-# @pytest.fixture(scope="session")
-# async def setup_elastic_index(search_service) -> None:
-#     await search_service.create_benefits_index()
-#     await search_service.create_users_index()
-
-#     yield
-
-#     await search_service.close()
-
-
-# @pytest.fixture()
-# async def elasticsearch_client(setup_elastic_index, search_service):
-#     await search_service.delete_all()
-
-#     yield search_service
-
-#     await search_service.close()
-
-
-# @pytest.fixture(scope="session")
-# def search_service() -> SearchService:
-#     return SearchService()
-
-
 @pytest.fixture(scope="session")
 async def search_service():
     service = SearchService()
@@ -314,39 +290,12 @@ async def mock_elasticsearch_benefits(request):
 
 
 @pytest.fixture(autouse=True)
-async def mock_dependencies_users(users_service, auth_service, request):
+async def mock_dependencies_users(request):
     if "elastic" not in request.keywords:
-
-        async def override_get_users_service():
-            return users_service
-
-        async def override_get_auth_service():
-            return auth_service
-
-        app.dependency_overrides[get_users_service] = override_get_users_service
-        app.dependency_overrides[get_auth_service] = override_get_auth_service
+        app.dependency_overrides[get_users_service] = lambda: UsersService()
+        app.dependency_overrides[get_auth_service] = lambda: AuthService()
 
         yield
 
     else:
         yield
-
-
-@pytest.fixture
-def mock_es_client():
-    mock_es = AsyncMock()
-    mock_es.index = AsyncMock()
-    mock_es.delete = AsyncMock()
-    mock_es.search = AsyncMock()
-    mock_es.close = AsyncMock()
-    return mock_es
-
-
-@pytest.fixture
-async def users_service(mock_es_client):
-    return UsersService(es_client=mock_es_client)
-
-
-@pytest.fixture
-async def auth_service(mock_es_client):
-    return AuthService(es_client=mock_es_client)

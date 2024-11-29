@@ -35,7 +35,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
 
     async def delete_by_id(self, session: AsyncSession, entity_id: int) -> bool:
         success = await super().delete_by_id(session, entity_id)
-        if success:
+        if success and self.es is not None:
             await self.delete_user_from_index(entity_id)
         return success
 
@@ -83,7 +83,7 @@ class UsersRepository(SQLAlchemyRepository[User]):
             "size": limit,
         }
         repository_logger.info(
-            f"Searching Users on '{SearchService.users_index_name}' index: query='{query}', filters={filters}, sort_by={sort_by}, "
+            f"Searching Users: query='{query}', filters={filters}, sort_by={sort_by}, "
             f"sort_order={sort_order}, limit={limit}, offset={offset}"
         )
 

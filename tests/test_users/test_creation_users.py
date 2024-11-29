@@ -4,10 +4,10 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.services.users import UsersService
 
-async def create_user_test(
-    client: AsyncClient, user_data: dict, expected_status: int, users_service
-):
+
+async def create_user_test(client: AsyncClient, user_data: dict, expected_status: int):
     response = await client.post("/users/", json=user_data)
 
     assert response.status_code == expected_status
@@ -15,7 +15,7 @@ async def create_user_test(
     if response.status_code == status.HTTP_201_CREATED:
         data = response.json()
 
-        user_service_data = await users_service.read_by_id(data["id"])
+        user_service_data = await UsersService().read_by_id(data["id"])
 
         assert user_service_data is not None
 
@@ -120,9 +120,9 @@ user_data_cases_for_admin = [
 @pytest.mark.asyncio
 @pytest.mark.parametrize("user_data, expected_status", user_data_cases_for_hr)
 async def test_create_user_hr_client(
-    hr_client: AsyncClient, user_data: dict, expected_status: int, users_service
+    hr_client: AsyncClient, user_data: dict, expected_status: int
 ):
-    await create_user_test(hr_client, user_data, expected_status, users_service)
+    await create_user_test(hr_client, user_data, expected_status)
 
 
 @pytest.mark.asyncio
@@ -133,9 +133,8 @@ async def test_create_user_admin_client(
     expected_status: int,
     legal_entity1a,
     legal_entity2b,
-    users_service,
 ):
-    await create_user_test(admin_client, user_data, expected_status, users_service)
+    await create_user_test(admin_client, user_data, expected_status)
 
 
 @pytest.mark.parametrize(

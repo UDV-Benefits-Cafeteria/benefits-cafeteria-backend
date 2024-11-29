@@ -23,14 +23,12 @@ async def create_test_benefit(benefit_data: dict) -> dict:
     return created_benefit_data
 
 
-async def create_test_user(
-    user_data: dict, executing_user: User, users_service
-) -> dict:
+async def create_test_user(user_data: dict, executing_user: User) -> dict:
     admin_user_data = user_schemas.UserRead.model_validate(executing_user)
 
     valid_user_data = user_schemas.UserCreate.model_validate(user_data)
 
-    created_user = await users_service.create(valid_user_data, admin_user_data)
+    created_user = await UsersService().create(valid_user_data, admin_user_data)
 
     created_user_data = created_user.model_dump()
     assert created_user_data["id"] is not None
@@ -43,13 +41,12 @@ async def perform_benefit_request_test(
     benefit_data: dict,
     user_data: dict,
     expected_status: int,
-    users_service,
 ) -> dict:
     # Create Benefit
     created_benefit_data = await create_test_benefit(benefit_data)
 
     # Create User
-    created_user_data = await create_test_user(user_data, admin_user, users_service)
+    created_user_data = await create_test_user(user_data, admin_user)
 
     # Authenticate as created user
     employee_client = await get_employee_client(created_user_data["id"])
@@ -179,10 +176,10 @@ async def test_create_benefit_request_invalid_data(
 )
 @pytest.mark.asyncio
 async def test_create_benefit_request_pairwise(
-    benefit_data: dict, user_data: dict, admin_user: User, users_service
+    benefit_data: dict, user_data: dict, admin_user: User
 ):
     test_data = await perform_benefit_request_test(
-        admin_user, benefit_data, user_data, status.HTTP_201_CREATED, users_service
+        admin_user, benefit_data, user_data, status.HTTP_201_CREATED
     )
 
     benefit_request = test_data["benefit_request"]
@@ -285,20 +282,19 @@ async def test_benefit_request_invalid_conditions(
     benefit_data: dict,
     user_data: dict,
     expected_status: int,
-    users_service,
 ):
     await perform_benefit_request_test(
         admin_user=admin_user,
         benefit_data=benefit_data,
         user_data=user_data,
         expected_status=expected_status,
-        users_service=users_service,
     )
 
 
 @pytest.mark.asyncio
 async def test_cancel_benefit_request_restores_coins_and_amount(
-    admin_user: User, legal_entity1a, users_service
+    admin_user: User,
+    legal_entity1a,
 ):
     benefit_data = {
         "name": "Benefit Cancel Test",
@@ -321,7 +317,7 @@ async def test_cancel_benefit_request_restores_coins_and_amount(
 
     created_benefit_data = await create_test_benefit(benefit_data)
 
-    created_user_data = await create_test_user(user_data, admin_user, users_service)
+    created_user_data = await create_test_user(user_data, admin_user)
 
     employee_client = await get_employee_client(created_user_data["id"])
 
@@ -375,9 +371,7 @@ async def test_cancel_benefit_request_restores_coins_and_amount(
 
 
 @pytest.mark.asyncio
-async def test_benefit_request_transaction(
-    admin_user: User, legal_entity1a, users_service
-):
+async def test_benefit_request_transaction(admin_user: User, legal_entity1a):
     benefit_data = {
         "name": "Benefit Transaction Test",
         "coins_cost": 50,
@@ -398,7 +392,7 @@ async def test_benefit_request_transaction(
     }
     created_benefit_data = await create_test_benefit(benefit_data)
 
-    created_user_data = await create_test_user(user_data, admin_user, users_service)
+    created_user_data = await create_test_user(user_data, admin_user)
 
     benefit_id = created_benefit_data["id"]
     user_id = created_user_data["id"]
