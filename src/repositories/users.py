@@ -62,7 +62,10 @@ class UsersRepository(SQLAlchemyRepository[User]):
         }
 
         await self.es.index(
-            index=SearchService.users_index_name, id=user.id, document=user_data, refresh=True
+            index=SearchService.users_index_name,
+            id=user.id,
+            document=user_data,
+            refresh=True,
         )
         repository_logger.info(f"Successfully indexed User with ID={user.id}")
 

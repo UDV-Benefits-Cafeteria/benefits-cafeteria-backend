@@ -281,6 +281,7 @@ async def get_employee_client(user_id: int):
 # def search_service() -> SearchService:
 #     return SearchService()
 
+
 @pytest.fixture(scope="session")
 async def search_service():
     service = SearchService()
@@ -293,8 +294,12 @@ async def setup_indices(search_service):
     await search_service.create_benefits_index()
     await search_service.create_users_index()
     yield
-    await search_service.es.options(ignore_status=[400, 404]).indices.delete(index=search_service.users_index_name)
-    await search_service.es.options(ignore_status=[400, 404]).indices.delete(index=search_service.benefits_index_name)
+    await search_service.es.options(ignore_status=[400, 404]).indices.delete(
+        index=search_service.users_index_name
+    )
+    await search_service.es.options(ignore_status=[400, 404]).indices.delete(
+        index=search_service.benefits_index_name
+    )
 
 
 @pytest.fixture()

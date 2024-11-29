@@ -102,18 +102,24 @@ async def test_create_user_required_fields(
 @pytest.mark.elastic
 @pytest.mark.asyncio
 async def test_elastic123(
-    hr_client: AsyncClient, legal_entity1a, test_case, search_service, setup_indices, hr_user, capsys
+    hr_client: AsyncClient,
+    legal_entity1a,
+    test_case,
+    search_service,
+    setup_indices,
+    hr_user,
+    capsys,
 ):
     for user_data in test_case:
-        response = await hr_client.post('/users/', json=user_data)
+        response = await hr_client.post("/users/", json=user_data)
         with capsys.disabled():
             print(response.json())
         assert response.status_code == status.HTTP_201_CREATED
-        
+
         # user_in_db = await us.read_by_id(response.json()["id"])
         # print(f"\n User in DB: {user_in_db}")
         # assert user_in_db is not None
-        
+
         # user_in_db_el = await us.search_users(
         #     query=None,
         #     filters={},
