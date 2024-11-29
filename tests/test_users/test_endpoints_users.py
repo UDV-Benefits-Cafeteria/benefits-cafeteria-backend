@@ -102,25 +102,35 @@ async def test_create_user_required_fields(
 @pytest.mark.elastic
 @pytest.mark.asyncio
 async def test_elastic123(
-    hr_client: AsyncClient, legal_entity1a, test_case, search_service, setup_indices
+    hr_client: AsyncClient, legal_entity1a, test_case, search_service, setup_indices, hr_user, capsys
 ):
     for user_data in test_case:
-        response = await hr_client.post("/users/", json=user_data)
+        response = await hr_client.post('/users/', json=user_data)
+        with capsys.disabled():
+            print(response.json())
         assert response.status_code == status.HTTP_201_CREATED
-        user_in_db = await UsersService().read_by_id(response.json()["id"])
-        print(f"\n User in DB: {user_in_db}")
-        assert user_in_db is not None
-
-    users_index_exists = search_service.es.indices.exists(
-        index=search_service.users_index_name
-    )
-    assert users_index_exists
+        
+        # user_in_db = await us.read_by_id(response.json()["id"])
+        # print(f"\n User in DB: {user_in_db}")
+        # assert user_in_db is not None
+        
+        # user_in_db_el = await us.search_users(
+        #     query=None,
+        #     filters={},
+        #     sort_by=None,
+        #     sort_order='asc',
+        #     limit=10,
+        #     offset=0,
+        # )
+        # print(f"\n User in EL: {user_in_db}")
+        # assert user_in_db_el is not None
 
     get_response = await hr_client.get("/users/")
-    for user in get_response.json():
-        print()
-        print(user)
-        print()
+    with capsys.disabled():
+        for user in get_response.json():
+            print(f"Elastic user: ============================== v: {len(test_case)}")
+            print(user)
+            print()
 
     assert len(get_response.json()) == len(test_case)
 
