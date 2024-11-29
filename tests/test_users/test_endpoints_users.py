@@ -102,7 +102,7 @@ async def test_create_user_required_fields(
 @pytest.mark.elastic
 @pytest.mark.asyncio
 async def test_elastic123(
-    hr_client: AsyncClient, legal_entity1a, test_case, elasticsearch_client
+    hr_client: AsyncClient, legal_entity1a, test_case, search_service, setup_indices
 ):
     for user_data in test_case:
         response = await hr_client.post("/users/", json=user_data)
@@ -111,13 +111,16 @@ async def test_elastic123(
         print(f"\n User in DB: {user_in_db}")
         assert user_in_db is not None
 
-    users_index_exists = elasticsearch_client.es.indices.exists(
-        index=elasticsearch_client.users_index_name
+    users_index_exists = search_service.es.indices.exists(
+        index=search_service.users_index_name
     )
     assert users_index_exists
 
     get_response = await hr_client.get("/users/")
-    print(f"\n {get_response.json()}")
+    for user in get_response.json():
+        print()
+        print(user)
+        print()
 
     assert len(get_response.json()) == len(test_case)
 

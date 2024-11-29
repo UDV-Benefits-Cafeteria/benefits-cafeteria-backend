@@ -258,28 +258,43 @@ async def get_employee_client(user_id: int):
 # ElasticSearch fixtures
 
 
+# @pytest.fixture(scope="session")
+# async def setup_elastic_index(search_service) -> None:
+#     await search_service.create_benefits_index()
+#     await search_service.create_users_index()
+
+#     yield
+
+#     await search_service.close()
+
+
+# @pytest.fixture()
+# async def elasticsearch_client(setup_elastic_index, search_service):
+#     await search_service.delete_all()
+
+#     yield search_service
+
+#     await search_service.close()
+
+
+# @pytest.fixture(scope="session")
+# def search_service() -> SearchService:
+#     return SearchService()
+
 @pytest.fixture(scope="session")
-async def setup_elastic_index(search_service) -> None:
+async def search_service():
+    service = SearchService()
+    yield service
+    await service.close()
+
+
+@pytest.fixture(scope="function")
+async def setup_indices(search_service):
     await search_service.create_benefits_index()
     await search_service.create_users_index()
-
     yield
-
-    await search_service.close()
-
-
-@pytest.fixture()
-async def elasticsearch_client(setup_elastic_index, search_service):
-    await search_service.delete_all()
-
-    yield search_service
-
-    await search_service.close()
-
-
-@pytest.fixture(scope="session")
-def search_service() -> SearchService:
-    return SearchService()
+    await search_service.es.options(ignore_status=[400, 404]).indices.delete(index=search_service.users_index_name)
+    await search_service.es.options(ignore_status=[400, 404]).indices.delete(index=search_service.benefits_index_name)
 
 
 @pytest.fixture()
