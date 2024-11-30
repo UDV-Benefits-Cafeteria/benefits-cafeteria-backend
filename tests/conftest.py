@@ -79,6 +79,19 @@ async def admin_user(db_session: AsyncSession) -> User:
 
 
 @pytest.fixture(scope="function")
+async def category(db_session: AsyncSession):
+    """Create a category for testing."""
+    category = Category(
+        id=111,
+        name="Test Category",
+    )
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+    return category
+
+
+@pytest.fixture(scope="function")
 async def legal_entity1a(db_session: AsyncSession):
     """Create the first legal entity for testing."""
     entity = LegalEntity(
@@ -216,19 +229,6 @@ async def auth_client():
             yield client
 
 
-@pytest.fixture(scope="function")
-async def category(db_session: AsyncSession):
-    """Create a category for testing."""
-    category = Category(
-        id=111,
-        name="Test Category",
-    )
-    db_session.add(category)
-    await db_session.commit()
-    await db_session.refresh(category)
-    return category
-
-
 async def get_employee_client(user_id: int):
     sessions_service = SessionsService()
     session_id = await sessions_service.create_session(
@@ -272,7 +272,7 @@ async def setup_indices(search_service) -> None:
 
 
 @pytest.fixture(autouse=True)
-async def mock_dependencies_users(request) -> None:
+async def mock_elasticsearch(request) -> None:
     if "elastic" not in request.keywords:
         app.dependency_overrides[SearchService.get_es_client] = lambda: None
 
