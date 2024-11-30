@@ -1,23 +1,16 @@
 from datetime import date
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 import src.schemas.user as user_schemas
-from src.api.v1.dependencies import (
-    get_auth_service,
-    get_current_user,
-    get_users_service,
-)
+from src.api.v1.dependencies import get_current_user
 from src.config import get_settings
 from src.db.db import AsyncSession, async_session_factory, engine
 from src.main import app
 from src.models import Category, LegalEntity, User
 from src.models.base import Base
-from src.services.auth import AuthService
 from src.services.sessions import SessionsService
-from src.services.users import UsersService
 from src.utils.elastic_index import SearchService
 from src.utils.email_sender.base import fm
 
@@ -258,7 +251,7 @@ async def get_employee_client(user_id: int):
 # ElasticSearch fixtures
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def search_service():
     service = SearchService()
     yield service
@@ -278,22 +271,10 @@ async def setup_indices(search_service):
     )
 
 
-@pytest.fixture()
-async def mock_elasticsearch_benefits(request):
-    if "elastic" not in request.keywords:
-        with patch("src.repositories.benefits.es") as benefits_mock_es:
-            benefits_mock_es.index = AsyncMock()
-            benefits_mock_es.delete = AsyncMock()
-            yield benefits_mock_es
-    else:
-        yield
-
-
 @pytest.fixture(autouse=True)
 async def mock_dependencies_users(request):
     if "elastic" not in request.keywords:
-        app.dependency_overrides[get_users_service] = lambda: UsersService()
-        app.dependency_overrides[get_auth_service] = lambda: AuthService()
+        app.dependency_overrides[SearchService.get_es_client] = lambda: None
 
         yield
 

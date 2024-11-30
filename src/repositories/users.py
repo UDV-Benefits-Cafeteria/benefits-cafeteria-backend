@@ -26,18 +26,18 @@ class UsersRepository(SQLAlchemyRepository[User]):
     async def update_by_id(
         self, session: AsyncSession, entity_id: int, data: dict
     ) -> bool:
-        success = await super().update_by_id(session, entity_id, data)
-        if success:
+        is_updated = await super().update_by_id(session, entity_id, data)
+        if is_updated:
             user = await self.read_by_id(session, entity_id)
             if user and self.es is not None:
                 await self.index_user(user)
-        return success
+        return is_updated
 
     async def delete_by_id(self, session: AsyncSession, entity_id: int) -> bool:
-        success = await super().delete_by_id(session, entity_id)
-        if success and self.es is not None:
+        is_deleted = await super().delete_by_id(session, entity_id)
+        if is_deleted and self.es is not None:
             await self.delete_user_from_index(entity_id)
-        return success
+        return is_deleted
 
     async def index_user(self, user: User):
         repository_logger.info(f"Indexing created User with ID={user.id}")

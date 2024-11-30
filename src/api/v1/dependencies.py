@@ -14,33 +14,39 @@ from src.services.legal_entities import LegalEntitiesService
 from src.services.positions import PositionsService
 from src.services.sessions import SessionsService
 from src.services.users import UsersService
-from src.utils.elastic_index import SearchService
+from src.utils.elastic_index import ElasticClientDependency
 
 
-async def get_users_service():
-    search_service = SearchService()
-    es_client = search_service.es
-    users_service = UsersService(es_client)
-    yield users_service
-    await search_service.close()
+async def get_users_service(es_client: ElasticClientDependency):
+    return UsersService(es_client)
 
 
-async def get_auth_service():
-    search_service = SearchService()
-    es_client = search_service.es
-    auth_service = AuthService(es_client)
-    yield auth_service
-    await search_service.close()
+async def get_auth_service(es_client: ElasticClientDependency):
+    return AuthService(es_client)
 
 
+async def get_benefits_service(es_client: ElasticClientDependency):
+    return BenefitsService(es_client)
+
+
+async def get_benefit_requests_service(es_client: ElasticClientDependency):
+    return BenefitRequestsService(es_client)
+
+
+# Services that depend on ElasticSearch
 AuthServiceDependency = Annotated[AuthService, Depends(get_auth_service)]
 UsersServiceDependency = Annotated[UsersService, Depends(get_users_service)]
-BenefitsServiceDependency = Annotated[BenefitsService, Depends()]
+BenefitsServiceDependency = Annotated[BenefitsService, Depends(get_benefits_service)]
+BenefitRequestsServiceDependency = Annotated[
+    BenefitRequestsService, Depends(get_benefit_requests_service)
+]
+
+# Services that do NOT depend on ElasticSearch
 SessionsServiceDependency = Annotated[SessionsService, Depends()]
 PositionsServiceDependency = Annotated[PositionsService, Depends()]
 CategoriesServiceDependency = Annotated[CategoriesService, Depends()]
 LegalEntitiesServiceDependency = Annotated[LegalEntitiesService, Depends()]
-BenefitRequestsServiceDependency = Annotated[BenefitRequestsService, Depends()]
+
 
 BaseLimiter = Depends(RateLimiter(times=60, seconds=60))
 

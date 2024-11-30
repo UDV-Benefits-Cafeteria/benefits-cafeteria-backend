@@ -1,4 +1,7 @@
+from typing import Annotated
+
 from elasticsearch import AsyncElasticsearch
+from fastapi import Depends
 
 from src.config import get_settings
 
@@ -116,9 +119,13 @@ class SearchService:
     async def close(self):
         await self.es.close()
 
-    async def delete_all(self):
-        response = await self.es.search(index=self.users_index_name)
-        hits = response["hits"]["hits"]
-        results = [hit["_source"] for hit in hits]
-        for user in results:
-            await self.es.delete(index=self.users_index_name, id=user["id"])
+    @staticmethod
+    async def get_es_client():
+        search_service = SearchService()
+        yield search_service.es
+        await search_service.close()
+
+
+ElasticClientDependency = Annotated[
+    AsyncElasticsearch, Depends(SearchService.get_es_client)
+]

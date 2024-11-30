@@ -1,6 +1,7 @@
 import uuid
 from typing import Optional, Union
 
+from elasticsearch import AsyncElasticsearch
 from fastapi import UploadFile
 
 import src.repositories.exceptions as repo_exceptions
@@ -17,7 +18,9 @@ from src.services.base import BaseService
 class BenefitsService(
     BaseService[schemas.BenefitCreate, schemas.BenefitRead, schemas.BenefitUpdate]
 ):
-    repo = BenefitsRepository()
+    def __init__(self, es_client: Optional[AsyncElasticsearch] = None):
+        self.repo: BenefitsRepository = BenefitsRepository(es_client)
+
     create_schema = schemas.BenefitCreate
     read_schema = schemas.BenefitRead
     update_schema = schemas.BenefitUpdate
