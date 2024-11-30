@@ -211,3 +211,27 @@ async def test_hr_create_benefit(hr_client: AsyncClient):
     }
     response = await hr_client.post("/benefits/", json=benefit_data)
     assert response.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.parametrize("num_benefits", [1, 2, 4])
+@pytest.mark.elastic
+@pytest.mark.asyncio
+async def test_elastic_benefit_creation(
+    hr_client: AsyncClient,
+    num_benefits,
+    setup_indices,
+):
+    for i in range(num_benefits):
+        benefit_data = {
+            "name": f"Benefit{i}",
+            "coins_cost": i,
+            "min_level_cost": i,
+        }
+        response = await hr_client.post("/benefits/", json=benefit_data)
+        assert response.status_code == status.HTTP_201_CREATED
+
+        benefit_in_db = await BenefitsService().read_by_id(response.json()["id"])
+        assert benefit_in_db is not None
+
+    get_response = await hr_client.get("/benefits/")
+    assert len(get_response.json()) == num_benefits

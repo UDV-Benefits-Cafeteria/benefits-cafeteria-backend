@@ -252,14 +252,14 @@ async def get_employee_client(user_id: int):
 
 
 @pytest.fixture(scope="function")
-async def search_service():
+async def search_service() -> SearchService:
     service = SearchService()
     yield service
     await service.close()
 
 
 @pytest.fixture(scope="function")
-async def setup_indices(search_service):
+async def setup_indices(search_service) -> None:
     await search_service.create_benefits_index()
     await search_service.create_users_index()
     yield
@@ -272,11 +272,13 @@ async def setup_indices(search_service):
 
 
 @pytest.fixture(autouse=True)
-async def mock_dependencies_users(request):
+async def mock_dependencies_users(request) -> None:
     if "elastic" not in request.keywords:
         app.dependency_overrides[SearchService.get_es_client] = lambda: None
 
         yield
+
+        app.dependency_overrides = {}
 
     else:
         yield

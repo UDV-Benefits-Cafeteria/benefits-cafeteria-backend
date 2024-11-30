@@ -28,8 +28,8 @@ class BenefitRequestsService(
 ):
     def __init__(self, es_client: Optional[AsyncElasticsearch] = None):
         self.repo: BenefitRequestsRepository = BenefitRequestsRepository()
-        self.users_repo = UsersRepository(es_client)
-        self.benefits_repo = BenefitsRepository(es_client)
+        self.users_repo: UsersRepository = UsersRepository(es_client)
+        self.benefits_repo: BenefitsRepository = BenefitsRepository(es_client)
 
     create_schema = schemas.BenefitRequestCreate
     read_schema = schemas.BenefitRequestRead
