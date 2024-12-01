@@ -415,15 +415,13 @@ async def test_elastic_user_filter_by_role(
         response = await hr_client.post("/users/", json=user_data)
         assert response.status_code == status.HTTP_201_CREATED
 
-    params = {"role": "employee"}
+    params = {"roles": ["employee", "hr"]}
     response = await hr_client.get("/users/", params=params)
     assert response.status_code == status.HTTP_200_OK
     users = response.json()
-    assert len(users) == 2
-    for user in users:
-        assert user["role"] == "employee"
+    assert len(users) == 3
 
-    params = {"role": "hr"}
+    params = {"roles": ["hr"]}
     response = await hr_client.get("/users/", params=params)
     assert response.status_code == status.HTTP_200_OK
     users = response.json()
