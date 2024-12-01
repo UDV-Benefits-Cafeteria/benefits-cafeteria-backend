@@ -13,7 +13,7 @@ async def test_create_category_valid(admin_client: AsyncClient):
     response = await admin_client.post("/categories/", json=category_data)
     assert response.status_code == status.HTTP_201_CREATED
     category = response.json()
-    assert category["name"] == category_data["name"]
+    assert category["name"] == category_data["name"].lower()
     category_read = await CategoriesService().read_by_id(category["id"])
     assert category_read is not None
 
@@ -33,7 +33,7 @@ async def test_get_category(admin_client: AsyncClient, category):
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["id"] == category.id
-    assert data["name"] == category.name
+    assert data["name"] == category.name.lower()
 
 
 @pytest.mark.asyncio
@@ -75,7 +75,7 @@ async def test_update_category_valid(admin_client: AsyncClient, category):
     response = await admin_client.patch(f"/categories/{category.id}", json=update_data)
     assert response.status_code == status.HTTP_200_OK
     updated_category = response.json()
-    assert updated_category["name"] == update_data["name"]
+    assert updated_category["name"] == update_data["name"].lower()
 
     category_find = await CategoriesService().read_by_id(updated_category["id"])
     assert category_find is not None
@@ -83,7 +83,7 @@ async def test_update_category_valid(admin_client: AsyncClient, category):
     response = await admin_client.get(f"/categories/{category.id}")
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
-    assert response_data["name"] == "Updated Category Name"
+    assert response_data["name"] == update_data["name"].lower()
 
 
 @pytest.mark.asyncio

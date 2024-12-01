@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 import pandas as pd
 from pydantic import BaseModel, ValidationError
@@ -11,7 +11,7 @@ class ExcelParser:
         model_class: type[BaseModel],
         field_mappings: dict[str, list[str]],
         required_fields: Optional[list[str]] = None,
-        field_parsers: Optional[dict[str, Callable[[str], Any]]] = None,
+        field_parsers: Optional[dict[str, Any]] = None,
     ):
         """
         Initialize the ExcelParser.
@@ -19,7 +19,7 @@ class ExcelParser:
         :param model_class: The Pydantic model class for validation.
         :param field_mappings: Mapping from model field names to list of possible Excel column names.
         :param required_fields: List of required model field names.
-        :param field_parsers: Optional dictionary of field-specific parsing functions.
+        :param field_parsers: Optional dictionary of field-specific parsing functions with optional default values.
         """
         self.model_class = model_class
         self.field_mappings = field_mappings
@@ -42,7 +42,7 @@ class ExcelParser:
 
         excel_columns = set(df.columns)
 
-        # Build mappings from excel columns to model fields and vice versa
+        # Build mappings from Excel columns to model fields and vice versa
         excel_to_model_field = {}
         model_field_to_excel_col = {}
         for model_field, possible_excel_cols in self.field_mappings.items():
@@ -52,7 +52,7 @@ class ExcelParser:
                     model_field_to_excel_col[model_field] = col
                     break  # Stop after finding the first matching column
 
-        # Check that required fields have at least one column present in excel file
+        # Check that required fields have at least one column present in Excel file
         # If a column is not required it will still be parsed if it is present in field_mappings; all other columns are ignored
         missing_required_fields = []
         for field in self.required_fields:
@@ -79,8 +79,20 @@ class ExcelParser:
 
                 # Apply field parsers if any
                 if model_field in self.field_parsers:
+                    parser_info = self.field_parsers[model_field]
+
+                    # If tuple was given (function + default value)
+                    if isinstance(parser_info, tuple):
+                        parser, default_value = parser_info
+                    else:
+                        # Only function was given
+                        parser, default_value = parser_info, None
+
                     try:
-                        value = self.field_parsers[model_field](value)
+                        if default_value is not None:
+                            value = parser(value, default_value)
+                        else:
+                            value = parser(value)
 
                     except ValueError as e:
                         row_errors.append(
@@ -132,7 +144,7 @@ def initialize_excel_parser(
     required_fields: list[str],
     field_mappings: dict[str, list[str]],
     model_class: type[BaseModel],
-    field_parsers: Optional[dict[str, Callable[[str], Any]]] = None,
+    field_parsers: Optional[dict[str, Any]] = None,
 ) -> ExcelParser:
     return ExcelParser(
         required_fields=required_fields,

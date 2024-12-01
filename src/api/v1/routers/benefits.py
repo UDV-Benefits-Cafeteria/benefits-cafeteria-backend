@@ -1,6 +1,6 @@
 from typing import Annotated, Any, Optional, Union
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
@@ -346,3 +346,94 @@ async def remove_images(images: list[int], service: BenefitsServiceDependency):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to delete benefit images",
         )
+
+
+@router.post(
+    "/upload",
+    response_model=schemas.BenefitValidationResponse,
+    responses={
+        200: {"description": "Benefits validated successfully"},
+        400: {"description": "Invalid file type or error reading Excel file"},
+    },
+    dependencies=[Depends(get_hr_user)],
+)
+async def upload_benefits(
+    service: BenefitsServiceDependency,
+    file: UploadFile = File(...),
+):
+    """
+    Upload benefits from an Excel file for validation.
+
+    - **file**: The Excel file containing benefit data.
+
+    Returns:
+    - **BenefitValidationResponse**: Information about valid benefits and errors.
+    """
+    if (
+        file.content_type
+        != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Please upload an Excel file.",
+        )
+
+    try:
+        contents = await file.read()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error reading file",
+        )
+
+    try:
+        valid_benefits, errors = await service.parse_benefits_from_excel(contents)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error while parsing benefits. Some required columns might be missing.",
+        )
+
+    return schemas.BenefitValidationResponse(
+        valid_benefits=valid_benefits, errors=errors
+    )
+
+
+@router.post(
+    "/bulk_create",
+    response_model=schemas.BenefitUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        201: {"description": "Benefits created successfully"},
+        400: {"description": "Failed to create benefits"},
+    },
+    dependencies=[Depends(get_hr_user)],
+)
+async def bulk_create_benefits(
+    benefits_data: list[schemas.BenefitCreate],
+    service: BenefitsServiceDependency,
+):
+    """
+    Create multiple benefits from the provided list.
+
+    - **benefits_data**: The list of benefit data to create.
+
+    Returns:
+    - **BenefitUploadResponse**: Information about created benefits and errors.
+    """
+    created_benefits = []
+    errors = []
+
+    for idx, benefit_data in enumerate(benefits_data, start=1):
+        try:
+            benefit_data = schemas.BenefitCreate.model_validate(benefit_data)
+            created_benefit = await service.create(benefit_data)
+            created_benefits.append(created_benefit)
+        except service_exceptions.EntityCreateError as e:
+            errors.append({"row": idx, "error": f"Creation Error: {str(e)}"})
+        except Exception as e:
+            errors.append({"row": idx, "error": f"Unexpected Error: {str(e)}"})
+
+    return schemas.BenefitUploadResponse(
+        created_benefits=created_benefits, errors=errors
+    )

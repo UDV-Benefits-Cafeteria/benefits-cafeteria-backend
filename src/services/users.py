@@ -16,9 +16,9 @@ from src.services.legal_entities import LegalEntitiesService
 from src.services.positions import PositionsService
 from src.utils.parser.excel_parser import initialize_excel_parser
 from src.utils.parser.field_parsers import (
+    parse_bool_field,
     parse_coins,
     parse_hired_at,
-    parse_is_adapted,
     parse_role,
 )
 
@@ -224,7 +224,7 @@ class UsersService(
             required_fields=["email", "lastname", "firstname", "role", "hired_at"],
             field_parsers={
                 "role": parse_role,
-                "is_adapted": parse_is_adapted,
+                "is_adapted": (parse_bool_field, False),
                 "hired_at": parse_hired_at,
                 "coins": parse_coins,
             },
@@ -281,7 +281,7 @@ class UsersService(
         positions_service: PositionsService,
         legal_entities_service: LegalEntitiesService,
         current_user: schemas.UserRead,
-    ) -> tuple[Optional[schemas.UserCreate], Optional[dict[str, Any]]]:
+    ) -> tuple[Optional[schemas.UserCreate], Optional[dict[str, str]]]:
         """
         Processes a single user row from the Excel file by:
         - converting position and legal entity names to ids;

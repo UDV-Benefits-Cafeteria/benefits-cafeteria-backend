@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 from decimal import Decimal
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -100,3 +100,33 @@ class BenefitRead(BenefitBase):
 
 class BenefitReadPublic(BenefitRead):
     real_currency_cost: Annotated[Optional[Decimal], Field(None, exclude=True)]
+
+
+class BenefitValidationResponse(BaseModel):
+    valid_benefits: list[BenefitCreate]
+    errors: list[dict[str, Any]]
+
+
+class BenefitUploadResponse(BaseModel):
+    created_benefits: list[BenefitRead]
+    errors: list[dict[str, Any]]
+
+
+class BenefitCreateExcel(BaseModel):
+    name: Annotated[str, Field(min_length=2, max_length=100)]
+    coins_cost: Annotated[int, Field(ge=0)]
+    min_level_cost: Annotated[int, Field(ge=0)]
+    adaptation_required: Optional[bool] = False
+    is_active: Optional[bool] = True
+    description: Optional[str] = None
+    real_currency_cost: Annotated[
+        Optional[Decimal], Field(ge=0, decimal_places=2, max_digits=10)
+    ] = None
+    amount: Annotated[Optional[int], Field(ge=0)] = None
+    is_fixed_period: Optional[bool] = False
+    usage_limit: Annotated[Optional[int], Field(ge=0)] = None
+    usage_period_days: Annotated[Optional[int], Field(ge=0)] = None
+    period_start_date: Optional[datetime] = None
+    available_from: Optional[datetime] = None
+    available_by: Optional[datetime] = None
+    category_name: Optional[str] = None

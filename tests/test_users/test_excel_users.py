@@ -103,8 +103,8 @@ def create_excel_file(
             "valid_users_count": 0,
             "errors_count": 3,
             "bulk_create_status_code": None,
-            "created_users_count": 0,
-            "bulk_errors_count": 0,
+            "created_users_count": None,
+            "bulk_errors_count": None,
         },
         {
             "name": "upload_partial_success",
@@ -213,8 +213,8 @@ def create_excel_file(
             "valid_users_count": 0,
             "errors_count": 5,  # One error per row
             "bulk_create_status_code": None,
-            "created_users_count": 0,
-            "bulk_errors_count": 0,
+            "created_users_count": None,
+            "bulk_errors_count": None,
         },
         {
             "name": "optional_fields",
@@ -260,8 +260,8 @@ def create_excel_file(
             "valid_users_count": 0,
             "errors_count": 1,
             "bulk_create_status_code": None,
-            "created_users_count": 0,
-            "bulk_errors_count": 0,
+            "created_users_count": None,
+            "bulk_errors_count": None,
         },
         {
             "name": "invalid_role",
@@ -279,8 +279,8 @@ def create_excel_file(
             "valid_users_count": 0,
             "errors_count": 1,
             "bulk_create_status_code": None,
-            "created_users_count": 0,
-            "bulk_errors_count": 0,
+            "created_users_count": None,
+            "bulk_errors_count": None,
         },
         {
             "name": "nonexistent_position",
@@ -306,8 +306,8 @@ def create_excel_file(
             "valid_users_count": 0,
             "errors_count": 1,
             "bulk_create_status_code": None,
-            "created_users_count": 0,
-            "bulk_errors_count": 0,
+            "created_users_count": None,
+            "bulk_errors_count": None,
         },
         {
             "name": "nonexistent_legal_entity",
@@ -333,8 +333,8 @@ def create_excel_file(
             "valid_users_count": 0,
             "errors_count": 1,
             "bulk_create_status_code": None,
-            "created_users_count": 0,
-            "bulk_errors_count": 0,
+            "created_users_count": None,
+            "bulk_errors_count": None,
         },
         {
             "name": "duplicate_emails_in_file",
@@ -378,8 +378,8 @@ def create_excel_file(
             "valid_users_count": 0,
             "errors_count": 1,
             "bulk_create_status_code": None,
-            "created_users_count": 0,
-            "bulk_errors_count": 0,
+            "created_users_count": None,
+            "bulk_errors_count": None,
         },
     ],
 )

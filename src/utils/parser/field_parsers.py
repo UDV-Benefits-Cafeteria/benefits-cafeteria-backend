@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime
+from typing import Optional
 
 import pandas as pd
 
@@ -25,17 +26,26 @@ def parse_role(value: str) -> str:
     raise ValueError(f"Неверное значение: '{value}'")
 
 
-def parse_is_adapted(value: str) -> bool:
+def parse_bool_field(value: str, default: bool) -> bool:
     if pd.isnull(value):
-        return False
+        return default
 
     value = str(value).strip().lower()
 
-    for is_adapted, aliases in BOOL_MAP.items():
+    for field, aliases in BOOL_MAP.items():
         if value in aliases:
-            return is_adapted
+            return field
 
     raise ValueError(f"Неверное значение: '{value}'")
+
+
+def parse_date_field(value: str) -> Optional[datetime]:
+    if pd.isnull(value) or value == "":
+        return None
+    try:
+        return pd.to_datetime(value)
+    except Exception as e:
+        raise ValueError(f"Неверный формат даты: {str(e)}")
 
 
 def parse_hired_at(value: str) -> date:
