@@ -148,7 +148,9 @@ class UsersRepository(SQLAlchemyRepository[User]):
 
     async def delete_user_from_index(self, user_id: int):
         repository_logger.info(f"Deleting User from index: ID={user_id}")
-        await self.es.delete(index=SearchService.users_index_name, id=str(user_id))
+        await self.es.delete(
+            index=SearchService.users_index_name, id=str(user_id), refresh=True
+        )
         repository_logger.info(f"Successfully deleted User from index: ID={user_id}")
 
     async def read_by_email(self, session: AsyncSession, email: str) -> Optional[User]:

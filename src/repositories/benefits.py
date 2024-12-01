@@ -79,7 +79,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
     async def delete_benefit_from_index(self, benefit_id: int):
         repository_logger.info(f"Deleting Benefit from index: ID={benefit_id}")
         await self.es.delete(
-            index=SearchService.benefits_index_name, id=str(benefit_id)
+            index=SearchService.benefits_index_name, id=str(benefit_id), refresh=True
         )
         repository_logger.info(
             f"Successfully deleted Benefit from index: ID={benefit_id}"

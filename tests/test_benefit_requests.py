@@ -397,6 +397,7 @@ async def test_benefit_request_transaction(admin_user: User, legal_entity1a):
     benefit_id = created_benefit_data["id"]
     user_id = created_user_data["id"]
 
+    assert benefit_id is not None
     assert user_id is not None
 
     employee_client = await get_employee_client(user_id)
@@ -417,3 +418,51 @@ async def test_benefit_request_transaction(admin_user: User, legal_entity1a):
 
     user_after_operation = await UsersService().read_by_id(user_id)
     assert user_after_operation.coins == 10
+
+
+@pytest.mark.elastic
+@pytest.mark.asyncio
+async def test_benefit_request_transaction_elastic(
+    admin_client: AsyncClient,
+    admin_user: User,
+    setup_indices,
+):
+    benefit_data = {
+        "name": "Benefit Transaction Test",
+        "coins_cost": 50,
+        "min_level_cost": 1,
+        "amount": 5,
+        "adaptation_required": False,
+    }
+    benefit_response = await admin_client.post("/benefits/", json=benefit_data)
+
+    assert benefit_response.status_code == 201
+
+    get_benefits_response = await admin_client.get("/benefits/")
+    assert get_benefits_response.json()[0]["amount"] == 5
+
+    benefit = benefit_response.json()
+
+    benefit_id = benefit["id"]
+
+    request_data = {
+        "benefit_id": benefit_id,
+    }
+
+    # Admin has 0 coins which is not enough
+    request_create_response = await admin_client.post(
+        "/benefit-requests/", json=request_data
+    )
+
+    assert request_create_response.status_code == status.HTTP_400_BAD_REQUEST
+
+    benefit_after_operation = await BenefitsService().read_by_id(benefit_id)
+    # Check that amount didn't change meaning transaction had a rollback
+    assert benefit_after_operation.amount == 5
+
+    user_after_operation = await UsersService().read_by_id(admin_user.id)
+    assert user_after_operation.coins == 0
+
+    # Check that amount didn't change in elastic also
+    get_benefits_response = await admin_client.get("/benefits/")
+    assert get_benefits_response.json()[0]["amount"] == 5

@@ -383,6 +383,37 @@ async def test_elastic_user_creation(
 
 @pytest.mark.elastic
 @pytest.mark.asyncio
+async def test_elastic_user_update(
+    hr_client: AsyncClient,
+    setup_indices,
+):
+    user_data = {
+        "email": "elasticuser_delete@example.com",
+        "firstname": "Elastic",
+        "lastname": "Search",
+        "role": "employee",
+        "hired_at": date.today().isoformat(),
+    }
+    response = await hr_client.post("/users/", json=user_data)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    user_in_db: schemas.UserRead = await UsersService().read_by_id(
+        response.json()["id"]
+    )
+    assert user_in_db is not None
+
+    update_data = {
+        "firstname": "UpdatedElastic",
+    }
+    update_response = await hr_client.patch(f"/users/{user_in_db.id}", json=update_data)
+    assert update_response.status_code == 200
+
+    get_response = await hr_client.get("/users/")
+    assert get_response.json()[0]["firstname"] == "UpdatedElastic"
+
+
+@pytest.mark.elastic
+@pytest.mark.asyncio
 async def test_elastic_user_filter_by_role(
     hr_client: AsyncClient,
     setup_indices,

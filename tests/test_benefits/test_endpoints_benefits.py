@@ -235,3 +235,35 @@ async def test_elastic_benefit_creation(
 
     get_response = await hr_client.get("/benefits/")
     assert len(get_response.json()) == num_benefits
+
+
+@pytest.mark.elastic
+@pytest.mark.asyncio
+async def test_elastic_benefit_deletion(
+    hr_client: AsyncClient,
+    setup_indices,
+):
+    benefit_data = {
+        "name": "BenefitDelete",
+        "coins_cost": 123,
+        "min_level_cost": 123,
+    }
+    response = await hr_client.post("/benefits/", json=benefit_data)
+    assert response.status_code == status.HTTP_201_CREATED
+
+    benefit_in_db: BenefitRead = await BenefitsService().read_by_id(
+        response.json()["id"]
+    )
+    assert benefit_in_db is not None
+
+    get_response = await hr_client.get("/benefits/")
+    assert get_response.status_code == 200
+
+    delete_response = await hr_client.delete(f"/benefits/{benefit_in_db.id}")
+    assert delete_response.status_code == status.HTTP_200_OK
+    assert delete_response.json()["is_success"] is True
+
+    get_response = await hr_client.get("/benefits/")
+    assert get_response.status_code == 200
+
+    assert get_response.json() == []
