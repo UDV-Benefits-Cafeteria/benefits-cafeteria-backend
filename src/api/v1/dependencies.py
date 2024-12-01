@@ -14,15 +14,39 @@ from src.services.legal_entities import LegalEntitiesService
 from src.services.positions import PositionsService
 from src.services.sessions import SessionsService
 from src.services.users import UsersService
+from src.utils.elastic_index import ElasticClientDependency
 
-AuthServiceDependency = Annotated[AuthService, Depends()]
-UsersServiceDependency = Annotated[UsersService, Depends()]
-BenefitsServiceDependency = Annotated[BenefitsService, Depends()]
+
+async def get_users_service(es_client: ElasticClientDependency):
+    return UsersService(es_client)
+
+
+async def get_auth_service(es_client: ElasticClientDependency):
+    return AuthService(es_client)
+
+
+async def get_benefits_service(es_client: ElasticClientDependency):
+    return BenefitsService(es_client)
+
+
+async def get_benefit_requests_service(es_client: ElasticClientDependency):
+    return BenefitRequestsService(es_client)
+
+
+# Services that depend on ElasticSearch
+AuthServiceDependency = Annotated[AuthService, Depends(get_auth_service)]
+UsersServiceDependency = Annotated[UsersService, Depends(get_users_service)]
+BenefitsServiceDependency = Annotated[BenefitsService, Depends(get_benefits_service)]
+BenefitRequestsServiceDependency = Annotated[
+    BenefitRequestsService, Depends(get_benefit_requests_service)
+]
+
+# Services that do NOT depend on ElasticSearch
 SessionsServiceDependency = Annotated[SessionsService, Depends()]
 PositionsServiceDependency = Annotated[PositionsService, Depends()]
 CategoriesServiceDependency = Annotated[CategoriesService, Depends()]
 LegalEntitiesServiceDependency = Annotated[LegalEntitiesService, Depends()]
-BenefitRequestsServiceDependency = Annotated[BenefitRequestsService, Depends()]
+
 
 BaseLimiter = Depends(RateLimiter(times=60, seconds=60))
 

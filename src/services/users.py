@@ -1,6 +1,7 @@
 import os
 from typing import Any, Optional
 
+from elasticsearch import AsyncElasticsearch
 from fastapi import BackgroundTasks, UploadFile
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +30,9 @@ settings = get_settings()
 class UsersService(
     BaseService[schemas.UserCreate, schemas.UserRead, schemas.UserUpdate]
 ):
-    repo = UsersRepository()
+    def __init__(self, es_client: Optional[AsyncElasticsearch] = None):
+        self.repo: UsersRepository = UsersRepository(es_client)
+
     create_schema = schemas.UserCreate
     read_schema = schemas.UserRead
     update_schema = schemas.UserUpdate
@@ -71,7 +74,7 @@ class UsersService(
                 data["position"] = position_data
 
         users = [self.read_schema.model_validate(data) for data in search_results]
-        service_logger.info(f"Found {len(users)} benefits")
+        service_logger.info(f"Found {len(users)} users")
         return users
 
     async def create(

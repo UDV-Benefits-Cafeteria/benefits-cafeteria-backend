@@ -1,5 +1,6 @@
 from typing import Any, Optional, Union
 
+from elasticsearch import AsyncElasticsearch
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import get_settings
@@ -7,7 +8,7 @@ from src.logger import repository_logger
 from src.models import Benefit
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
-from src.utils.elastic_index import SearchService, es
+from src.utils.elastic_index import SearchService
 
 settings = get_settings()
 
@@ -15,9 +16,12 @@ settings = get_settings()
 class BenefitsRepository(SQLAlchemyRepository[Benefit]):
     model = Benefit
 
+    def __init__(self, es_client: Optional[AsyncElasticsearch] = None):
+        self.es = es_client
+
     async def create(self, session: AsyncSession, data: dict) -> Benefit:
         benefit = await super().create(session, data)
-        if benefit is not None:
+        if self.es is not None:
             await self.index_benefit(benefit)
         return benefit
 
@@ -30,7 +34,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
         is_updated = await super().update_by_id(session, entity_id, data)
         if is_updated:
             benefit = await self.read_by_id(session, entity_id)
-            if benefit:
+            if benefit and self.es is not None:
                 await self.index_benefit(benefit)
         return is_updated
 
@@ -38,12 +42,11 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
         self, session: AsyncSession, entity_id: Union[int, str]
     ) -> bool:
         is_deleted = await super().delete_by_id(session, entity_id)
-        if is_deleted:
+        if is_deleted and self.es is not None:
             await self.delete_benefit_from_index(entity_id)
         return is_deleted
 
-    @staticmethod
-    async def index_benefit(benefit: Benefit):
+    async def index_benefit(self, benefit: Benefit):
         repository_logger.info(f"Indexing created Benefit with ID={benefit.id}")
         benefit_data = {
             "id": benefit.id,
@@ -65,17 +68,19 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
         else:
             benefit_data["primary_image_url"] = None
 
-        await es.index(
+        await self.es.index(
             index=SearchService.benefits_index_name,
             id=benefit.id,
             document=benefit_data,
+            refresh=True,
         )
         repository_logger.info(f"Successfully indexed Benefit with ID={benefit.id}")
 
-    @staticmethod
-    async def delete_benefit_from_index(benefit_id: int):
+    async def delete_benefit_from_index(self, benefit_id: int):
         repository_logger.info(f"Deleting Benefit from index: ID={benefit_id}")
-        await es.delete(index=SearchService.benefits_index_name, id=benefit_id)
+        await self.es.delete(
+            index=SearchService.benefits_index_name, id=str(benefit_id)
+        )
         repository_logger.info(
             f"Successfully deleted Benefit from index: ID={benefit_id}"
         )
@@ -143,7 +148,7 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
             es_query["sort"] = [{sort_by: {"order": sort_order}}]
 
         try:
-            response = await es.search(
+            response = await self.es.search(
                 index=SearchService.benefits_index_name, body=es_query
             )
             hits = response["hits"]["hits"]

@@ -293,7 +293,8 @@ async def test_benefit_request_invalid_conditions(
 
 @pytest.mark.asyncio
 async def test_cancel_benefit_request_restores_coins_and_amount(
-    admin_user: User, legal_entity1a
+    admin_user: User,
+    legal_entity1a,
 ):
     benefit_data = {
         "name": "Benefit Cancel Test",
@@ -402,7 +403,6 @@ async def test_benefit_request_transaction(admin_user: User, legal_entity1a):
 
     request_data = {
         "benefit_id": benefit_id,
-        "user_id": user_id,
     }
 
     request_create_response = await employee_client.post(

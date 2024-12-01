@@ -179,8 +179,6 @@ async def test_employee_update(admin_user: User, field, value, expected_status):
 
         assert value == getattr(user, field)
 
-    await UsersService().delete_by_id(user_id)
-
 
 @pytest.mark.asyncio
 async def test_hr_cannot_create_admin(hr_client: AsyncClient):
@@ -350,3 +348,180 @@ async def test_user_signin_invalid(auth_client: AsyncClient, admin_user: User):
 
     signin_response = await auth_client.post("/auth/signin", json=login_data)
     assert signin_response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+# Testing ELASTIC endpoints
+
+
+@pytest.mark.parametrize("num_users", [1, 2, 4])
+@pytest.mark.elastic
+@pytest.mark.asyncio
+async def test_elastic_user_creation(
+    hr_client: AsyncClient,
+    num_users,
+    legal_entity1a,
+    setup_indices,
+):
+    for i in range(num_users):
+        user_data = {
+            "email": f"elasticuser{i}@example.com",
+            "firstname": "Elastic",
+            "lastname": "Search",
+            "role": "employee",
+            "hired_at": date.today().isoformat(),
+            "legal_entity_id": legal_entity1a.id,
+        }
+        response = await hr_client.post("/users/", json=user_data)
+        assert response.status_code == status.HTTP_201_CREATED
+
+        user_in_db = await UsersService().read_by_id(response.json()["id"])
+        assert user_in_db is not None
+
+    get_response = await hr_client.get("/users/")
+    assert len(get_response.json()) == num_users
+
+
+@pytest.mark.elastic
+@pytest.mark.asyncio
+async def test_elastic_user_filter_by_role(
+    hr_client: AsyncClient,
+    setup_indices,
+):
+    users_data = [
+        {
+            "email": "employee1elastic@example.com",
+            "firstname": "Employee",
+            "lastname": "One",
+            "role": "employee",
+            "hired_at": date.today().isoformat(),
+        },
+        {
+            "email": "hr1elastic@example.com",
+            "firstname": "HR",
+            "lastname": "One",
+            "role": "hr",
+            "hired_at": date.today().isoformat(),
+        },
+        {
+            "email": "employee2elastic@example.com",
+            "firstname": "Employee",
+            "lastname": "Two",
+            "role": "employee",
+            "hired_at": date.today().isoformat(),
+        },
+    ]
+
+    for user_data in users_data:
+        response = await hr_client.post("/users/", json=user_data)
+        assert response.status_code == status.HTTP_201_CREATED
+
+    params = {"roles": ["employee", "hr"]}
+    response = await hr_client.get("/users/", params=params)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    assert len(users) == 3
+
+    params = {"roles": ["hr"]}
+    response = await hr_client.get("/users/", params=params)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    assert len(users) == 1
+    assert users[0]["role"] == "hr"
+
+
+@pytest.mark.elastic
+@pytest.mark.asyncio
+async def test_elastic_user_sort_by_hired_at(
+    hr_client: AsyncClient,
+    setup_indices,
+):
+    users_data = [
+        {
+            "email": "user1@example.com",
+            "firstname": "User",
+            "lastname": "One",
+            "role": "employee",
+            "hired_at": (date.today() - timedelta(days=10)).isoformat(),
+        },
+        {
+            "email": "user2@example.com",
+            "firstname": "User",
+            "lastname": "Two",
+            "role": "employee",
+            "hired_at": date.today().isoformat(),
+        },
+        {
+            "email": "user3@example.com",
+            "firstname": "User",
+            "lastname": "Three",
+            "role": "employee",
+            "hired_at": (date.today() - timedelta(days=5)).isoformat(),
+        },
+    ]
+
+    for user_data in users_data:
+        response = await hr_client.post("/users/", json=user_data)
+        assert response.status_code == status.HTTP_201_CREATED
+
+    params = {"sort_by": "hired_at", "sort_order": "asc"}
+    response = await hr_client.get("/users/", params=params)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    hired_dates = [user["hired_at"] for user in users]
+    assert hired_dates == sorted(hired_dates)
+
+    params = {"sort_by": "hired_at", "sort_order": "desc"}
+    response = await hr_client.get("/users/", params=params)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    hired_dates = [user["hired_at"] for user in users]
+    assert hired_dates == sorted(hired_dates, reverse=True)
+
+
+@pytest.mark.elastic
+@pytest.mark.asyncio
+async def test_elastic_user_search(
+    hr_client: AsyncClient,
+    setup_indices,
+):
+    users_data = [
+        {
+            "email": "alice@example.com",
+            "firstname": "Alice",
+            "lastname": "User",
+            "role": "employee",
+            "hired_at": date.today().isoformat(),
+        },
+        {
+            "email": "bob@example.com",
+            "firstname": "Bob",
+            "lastname": "User",
+            "role": "employee",
+            "hired_at": date.today().isoformat(),
+        },
+        {
+            "email": "charlie@example.com",
+            "firstname": "Charlie",
+            "lastname": "User",
+            "role": "employee",
+            "hired_at": date.today().isoformat(),
+        },
+    ]
+
+    for user_data in users_data:
+        response = await hr_client.post("/users/", json=user_data)
+        assert response.status_code == status.HTTP_201_CREATED
+
+    params = {"query": "Alice User"}
+    response = await hr_client.get("/users/", params=params)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    assert len(users) == 3
+    assert users[0]["firstname"] == "Alice"
+
+    params = {"query": "cha"}
+    response = await hr_client.get("/users/", params=params)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    assert len(users) == 1
+    assert users[0]["firstname"] == "Charlie"
