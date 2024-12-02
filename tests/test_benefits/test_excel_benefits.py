@@ -6,6 +6,8 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+pytestmark = pytest.mark.excel
+
 
 def create_excel_file(
     rows: list[dict[str, Any]],

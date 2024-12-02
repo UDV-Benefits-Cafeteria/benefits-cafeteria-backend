@@ -147,7 +147,7 @@ async def test_unauthenticated_access_legal_entities(auth_client):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-# Test EXCEL for legal entities
+# Testing EXCEL for legal entities
 
 
 def create_excel_file_legal_entities(
@@ -164,6 +164,7 @@ def create_excel_file_legal_entities(
     return excel_file.read()
 
 
+@pytest.mark.excel
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "test_case",
@@ -303,6 +304,7 @@ async def test_upload_legal_entities(hr_client: AsyncClient, test_case, legal_en
             ), f"Test '{test_case['name']}' failed: expected {test_case['bulk_errors_count']} bulk_create errors, got {len(bulk_create_data['errors'])}"
 
 
+@pytest.mark.excel
 @pytest.mark.asyncio
 async def test_upload_legal_entities_wrong_column(hr_client: AsyncClient):
     missing_columns = ["wrong_column"]  # Wrong column provided
@@ -328,6 +330,7 @@ async def test_upload_legal_entities_wrong_column(hr_client: AsyncClient):
     assert "Column for 'name' might be missing" in upload_response.json()["detail"]
 
 
+@pytest.mark.excel
 @pytest.mark.asyncio
 async def test_upload_legal_entities_invalid_file_type(hr_client: AsyncClient):
     file_content = "Not an Excel file."

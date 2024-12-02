@@ -53,3 +53,10 @@ class BenefitRequestRead(BenefitRequestBase):
     performer_id: Optional[int] = Field(None, exclude=True)
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+
+
+class BenefitRequestReadExcel(BenefitRequestBase):
+    id: int
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)

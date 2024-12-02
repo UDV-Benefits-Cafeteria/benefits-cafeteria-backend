@@ -19,6 +19,10 @@ pytest_plugins = ["pytest_asyncio"]
 settings = get_settings()
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "excel: Excel test suite")
+
+
 @pytest.fixture(scope="session")
 async def setup_db_schema() -> None:
     """

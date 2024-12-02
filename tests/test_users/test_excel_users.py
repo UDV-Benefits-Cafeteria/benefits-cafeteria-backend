@@ -9,6 +9,8 @@ from httpx import AsyncClient
 
 from src.services.users import UsersService
 
+pytestmark = pytest.mark.excel
+
 
 def create_excel_file(
     rows: list[dict[str, Any]],
