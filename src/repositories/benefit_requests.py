@@ -4,6 +4,7 @@ from sqlalchemy import asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.logger import repository_logger
+from src.models import User
 from src.models.benefits import BenefitRequest
 from src.repositories.base import SQLAlchemyRepository
 from src.repositories.exceptions import EntityReadError
@@ -48,11 +49,7 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
 
             if legal_entity_ids:
                 query = query.join(self.model.user).where(
-                    self.model.user.has(
-                        legal_entity_id=self.model.user.legal_entity_id.in_(
-                            legal_entity_ids
-                        )
-                    )
+                    User.legal_entity_id.in_(legal_entity_ids)
                 )
 
             if status:
@@ -75,6 +72,7 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
                 f"Error fetching BenefitRequests: status={status}, page={page}, limit={limit}, "
                 f"legal_entity_ids={legal_entity_ids}: {e}"
             )
+
             raise EntityReadError(
                 self.__class__.__name__,
                 self.model.__tablename__,
@@ -114,11 +112,7 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
 
             if legal_entity_ids:
                 query = query.join(self.model.user).where(
-                    self.model.user.has(
-                        legal_entity_id=self.model.user.legal_entity_id.in_(
-                            legal_entity_ids
-                        )
-                    )
+                    User.legal_entity_id.in_(legal_entity_ids)
                 )
 
             if status:
