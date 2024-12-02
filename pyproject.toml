@@ -51,8 +51,18 @@ target-version = ['py312']
 profile = "black"
 
 [tool.pytest.ini_options]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra"
+]
 pythonpath = [
     ".", "tests"
+]
+markers = [
+    "elastic: disable autouse fixtures for Elasticsearch mocking",
+    "excel: Excel test suite",
+    "request_with_status(status, user_id): mark for a test with a specified benefit request status and user_id"
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"

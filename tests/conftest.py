@@ -19,21 +19,6 @@ pytest_plugins = ["pytest_asyncio"]
 settings = get_settings()
 
 
-def pytest_configure(config):
-    config.addinivalue_line(
-        "markers",
-        "elastic: disable autouse fixtures for Elasticsearch mocking",
-    )
-    config.addinivalue_line(
-        "markers",
-        "excel: Excel test suite",
-    )
-    config.addinivalue_line(
-        "markers",
-        "request_with_status(status, user_id): mark for a test with a specified benefit request status and user_id",
-    )
-
-
 @pytest.fixture(scope="session")
 async def setup_db_schema() -> None:
     """
