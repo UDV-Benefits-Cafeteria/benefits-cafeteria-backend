@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.params import Query
 
 from src.api.v1.dependencies import (
@@ -140,6 +140,97 @@ async def update_legal_entity(
         )
 
     return updated_legal_entity
+
+
+@router.post(
+    "/upload",
+    response_model=schemas.LegalEntityValidationResponse,
+    responses={
+        200: {"description": "Legal entities validated successfully"},
+        400: {"description": "Invalid file type or error reading Excel file"},
+    },
+    dependencies=[Depends(get_hr_user)],
+)
+async def upload_legal_entities(
+    service: LegalEntitiesServiceDependency,
+    file: UploadFile = File(...),
+):
+    """
+    Upload legal entities from an Excel file for validation.
+
+    - **file**: The Excel file containing legal entity data.
+
+    Returns:
+    - **LegalEntityValidationResponse**: Information about valid legal entities and errors.
+    """
+    if (
+        file.content_type
+        != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Please upload an Excel file.",
+        )
+
+    try:
+        contents = await file.read()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error reading file",
+        )
+
+    try:
+        valid_entities, errors = await service.parse_legal_entities_from_excel(contents)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error while parsing legal entities. Column for 'name' might be missing",
+        )
+
+    return schemas.LegalEntityValidationResponse(
+        valid_entities=valid_entities, errors=errors
+    )
+
+
+@router.post(
+    "/bulk_create",
+    response_model=schemas.LegalEntityUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        201: {"description": "Legal entities created successfully"},
+        400: {"description": "Failed to create legal entities"},
+    },
+    dependencies=[Depends(get_hr_user)],
+)
+async def bulk_create_legal_entities(
+    entities_data: list[schemas.LegalEntityCreate],
+    service: LegalEntitiesServiceDependency,
+):
+    """
+    Create multiple legal entities from the provided list.
+
+    - **entities_data**: The list of legal entity data to create.
+
+    Returns:
+    - **LegalEntityUploadResponse**: Information about created legal entities and errors.
+    """
+    created_entities = []
+    errors = []
+
+    for idx, entity_data in enumerate(entities_data, start=1):
+        try:
+            entity_data = schemas.LegalEntityCreate.model_validate(entity_data)
+            created_entity = await service.create(entity_data)
+            created_entities.append(created_entity)
+        except EntityCreateError as e:
+            errors.append({"row": idx, "error": f"Creation Error: {str(e)}"})
+        except Exception as e:
+            errors.append({"row": idx, "error": f"Unexpected Error: {str(e)}"})
+
+    return schemas.LegalEntityUploadResponse(
+        created_entities=created_entities, errors=errors
+    )
 
 
 @router.delete(

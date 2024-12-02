@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime
+from typing import Optional
 
 import pandas as pd
 
@@ -14,7 +15,7 @@ BOOL_MAP = {
 
 
 def parse_role(value: str) -> str:
-    if value is None:
+    if pd.isnull(value):
         raise ValueError("Требуется ввести роль")
 
     value = str(value).strip().lower()
@@ -22,24 +23,33 @@ def parse_role(value: str) -> str:
         if value in aliases:
             return role
 
-    raise ValueError(f"Неверное значение роли: '{value}'")
+    raise ValueError(f"Неверное значение: '{value}'")
 
 
-def parse_is_adapted(value: str) -> bool:
-    if value is None:
-        return False
+def parse_bool_field(value: str, default: bool) -> bool:
+    if pd.isnull(value):
+        return default
 
     value = str(value).strip().lower()
 
-    for role, aliases in BOOL_MAP.items():
+    for field, aliases in BOOL_MAP.items():
         if value in aliases:
-            return role
+            return field
 
-    raise ValueError(f"Неверное значение для поля is_adapted: '{value}'")
+    raise ValueError(f"Неверное значение: '{value}'")
+
+
+def parse_date_field(value: str) -> Optional[datetime]:
+    if pd.isnull(value) or value == "":
+        return None
+    try:
+        return pd.to_datetime(value)
+    except Exception as e:
+        raise ValueError(f"Неверный формат даты: {str(e)}")
 
 
 def parse_hired_at(value: str) -> date:
-    if value is None:
+    if pd.isnull(value):
         raise ValueError("Требуется дата найма")
     try:
         return pd.to_datetime(value).date()
@@ -48,7 +58,7 @@ def parse_hired_at(value: str) -> date:
 
 
 def parse_coins(value: str) -> int:
-    if value is None or pd.isna(value):
+    if pd.isnull(value):
         return 0
 
     try:

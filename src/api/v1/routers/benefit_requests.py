@@ -2,6 +2,7 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.params import Query
+from fastapi.responses import StreamingResponse
 
 import src.schemas.request as schemas
 import src.schemas.user as user_schemas
@@ -88,6 +89,26 @@ async def create_benefit_request(
     )
 
     return created_benefit_request
+
+
+@router.get("/export")
+async def export_benefit_requests(
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
+    service: BenefitRequestsServiceDependency,
+    legal_entity_ids: Annotated[Optional[list[int]], Query()] = None,
+    status: Annotated[Optional[schemas.BenefitStatus], Query()] = None,
+):
+    excel_file = await service.export_benefit_requests(
+        current_user=current_user,
+        legal_entities=legal_entity_ids,
+        status=status,
+    )
+
+    return StreamingResponse(
+        excel_file,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=benefit_requests.xlsx"},
+    )
 
 
 @router.get(
@@ -244,11 +265,12 @@ async def get_benefit_request(
 async def get_benefit_requests(
     service: BenefitRequestsServiceDependency,
     current_user: Annotated[user_schemas.UserRead, Depends(get_hr_user)],
-    status: Optional[schemas.BenefitStatus] = Query(None),
+    legal_entities: Annotated[Optional[list[int]], Query()] = None,
+    status: Annotated[Optional[schemas.BenefitStatus], Query()] = None,
     sort_by: Annotated[Optional[BenefitRequestSortFields], Query()] = None,
     sort_order: Annotated[SortOrderField, Query()] = SortOrderField.ASCENDING,
-    page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1),
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1)] = 10,
 ):
     """
     Get a list of all benefit requests with optional filtering and sorting.
@@ -270,6 +292,7 @@ async def get_benefit_requests(
         benefit_requests = await service.read_all(
             current_user=current_user,
             status=status,
+            legal_entities=legal_entities,
             sort_by=sort_by,
             sort_order=sort_order,
             page=page,

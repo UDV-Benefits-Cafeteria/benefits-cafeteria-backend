@@ -16,11 +16,11 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
         self,
         session: AsyncSession,
         status: Optional[str] = None,
+        legal_entity_ids: Optional[list[int]] = None,
         sort_by: Optional[str] = None,
         sort_order: str = "asc",
         page: int = 1,
         limit: int = 10,
-        legal_entity_id: Optional[int] = None,
     ) -> Sequence[BenefitRequest]:
         """
         Retrieve all BenefitRequest entities, with optional filtering by status,
@@ -29,30 +29,30 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
         Args:
             session: An external AsyncSession.
             status: Optional status to filter BenefitRequests.
+            legal_entity_ids: Optional list of legal entity IDs for filtering.
             sort_by: Field name to sort the results by.
             sort_order: Sort order ('asc' or 'desc').
             page: Page number for pagination.
             limit: Number of items per page.
-            legal_entity_id: Optional legal entity ID for filtering.
 
         Returns:
             A list of BenefitRequest entities.
-
-        Raises:
-            EntityReadError: If there's an error reading entities.
         """
         repository_logger.info(
             f"Fetching BenefitRequests: status={status}, sort_by={sort_by}, sort_order={sort_order}, "
-            f"page={page}, limit={limit}, legal_entity_id={legal_entity_id}."
+            f"page={page}, limit={limit}, legal_entity_ids={legal_entity_ids}."
         )
 
         try:
             query = select(self.model)
 
-            # HR cannot see user requests outside its legal entity, so we join tables on legal_entity_id field
-            if legal_entity_id is not None:
+            if legal_entity_ids:
                 query = query.join(self.model.user).where(
-                    self.model.user.has(legal_entity_id=legal_entity_id)
+                    self.model.user.has(
+                        legal_entity_id=self.model.user.legal_entity_id.in_(
+                            legal_entity_ids
+                        )
+                    )
                 )
 
             if status:
@@ -73,18 +73,74 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
         except Exception as e:
             repository_logger.error(
                 f"Error fetching BenefitRequests: status={status}, page={page}, limit={limit}, "
-                f"legal_entity_id={legal_entity_id}: {e}"
+                f"legal_entity_ids={legal_entity_ids}: {e}"
             )
             raise EntityReadError(
                 self.__class__.__name__,
                 self.model.__tablename__,
-                f"status: {status}, page: {page}, limit: {limit}, legal_entity_id: {legal_entity_id}",
+                f"status: {status}, page: {page}, limit: {limit}, legal_entity_ids: {legal_entity_ids}",
                 str(e),
             )
 
         repository_logger.info(
             f"Successfully fetched BenefitRequests: status={status}, page={page}, limit={limit}, "
-            f"legal_entity_id={legal_entity_id}."
+            f"legal_entity_ids={legal_entity_ids}."
+        )
+        return entities
+
+    async def read_all_excel(
+        self,
+        session: AsyncSession,
+        status: Optional[str] = None,
+        legal_entity_ids: Optional[list[int]] = None,
+    ) -> Sequence[BenefitRequest]:
+        """
+        Retrieve all BenefitRequest entities, with optional filtering by status and legal entity.
+
+        Args:
+            session: An external AsyncSession.
+            status: Optional status to filter BenefitRequests.
+            legal_entity_ids: Optional list of legal entity IDs for filtering.
+
+        Returns:
+            A list of BenefitRequest entities.
+        """
+        repository_logger.info(
+            f"Fetching BenefitRequests: status={status}, legal_entity_ids={legal_entity_ids}."
+        )
+
+        try:
+            query = select(self.model)
+
+            if legal_entity_ids:
+                query = query.join(self.model.user).where(
+                    self.model.user.has(
+                        legal_entity_id=self.model.user.legal_entity_id.in_(
+                            legal_entity_ids
+                        )
+                    )
+                )
+
+            if status:
+                query = query.where(self.model.status == status)
+
+            result = await session.execute(query)
+            entities = result.scalars().all()
+        except Exception as e:
+            repository_logger.error(
+                f"Error fetching BenefitRequests: status={status}"
+                f"legal_entity_ids={legal_entity_ids}: {e}"
+            )
+            raise EntityReadError(
+                self.__class__.__name__,
+                self.model.__tablename__,
+                f"status: {status}, legal_entity_ids: {legal_entity_ids}",
+                str(e),
+            )
+
+        repository_logger.info(
+            f"Successfully fetched BenefitRequests: status={status}"
+            f"legal_entity_ids={legal_entity_ids}."
         )
         return entities
 

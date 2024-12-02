@@ -1,5 +1,5 @@
 from io import BytesIO
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 import pandas as pd
 from pydantic import BaseModel, ValidationError
@@ -8,25 +8,25 @@ from pydantic import BaseModel, ValidationError
 class ExcelParser:
     def __init__(
         self,
-        required_columns: list[str],
-        column_mappings: dict[str, str],
         model_class: type[BaseModel],
-        field_parsers: Optional[dict[str, Callable[[str], Any]]] = None,
+        field_mappings: dict[str, list[str]],
+        required_fields: Optional[list[str]] = None,
+        field_parsers: Optional[dict[str, Any]] = None,
     ):
         """
         Initialize the ExcelParser.
 
-        :param required_columns: List of required column names in the Excel file.
-        :param column_mappings: Mapping from Excel column names to model field names.
-        :param model_class: Pydantic model class for validation.
-        :param field_parsers: Optional dictionary of field-specific parsing functions.
+        :param model_class: The Pydantic model class for validation.
+        :param field_mappings: Mapping from model field names to list of possible Excel column names.
+        :param required_fields: List of required model field names.
+        :param field_parsers: Optional dictionary of field-specific parsing functions with optional default values.
         """
-        self.required_columns = required_columns
-        self.column_mappings = column_mappings
         self.model_class = model_class
+        self.field_mappings = field_mappings
+        self.required_fields = required_fields or []
         self.field_parsers = field_parsers or {}
 
-    def parse_excel(
+    def parse_excel(  # noqa: C901
         self, file_contents: bytes
     ) -> tuple[list[BaseModel], list[dict[str, Any]]]:
         """
@@ -40,52 +40,91 @@ class ExcelParser:
         except Exception as e:
             raise ValueError("Error reading Excel file") from e
 
-        missing_columns = set(self.required_columns) - set(df.columns)
-        if missing_columns:
-            raise ValueError(f"Missing columns: {', '.join(missing_columns)}")
+        excel_columns = set(df.columns)
+
+        # Build mappings from Excel columns to model fields and vice versa
+        excel_to_model_field = {}
+        model_field_to_excel_col = {}
+        for model_field, possible_excel_cols in self.field_mappings.items():
+            for col in possible_excel_cols:
+                if col in excel_columns:
+                    excel_to_model_field[col] = model_field
+                    model_field_to_excel_col[model_field] = col
+                    break  # Stop after finding the first matching column
+
+        # Check that required fields have at least one column present in Excel file
+        # If a column is not required it will still be parsed if it is present in field_mappings; all other columns are ignored
+        missing_required_fields = []
+        for field in self.required_fields:
+            if field not in model_field_to_excel_col:
+                missing_required_fields.append(field)
+
+        if missing_required_fields:
+            missing_cols = ", ".join(missing_required_fields)
+            raise ValueError(f"Missing required fields: {missing_cols}")
 
         valid_models = []
         errors = []
+        # Fields that caused an error inside a field parser
+        # Added not to duplicate errors for one field
         error_fields = []
 
-        for idx, (_, row) in enumerate(
-            df.iterrows(), start=2
-        ):  # Start at 2 to match Excel row numbers
+        for idx, (_, row) in enumerate(df.iterrows(), start=2):
             data = {}
-            for excel_col, model_field in self.column_mappings.items():
-                value = row.get(excel_col, None)
-                # Check 'NaN' value (no value passed)
-                if pd.isna(value):
-                    value = None
+            row_errors = []
+            for model_field in self.field_mappings:
+                # Get value from excel based on model_field_to_excel_col mapping
+                excel_col = model_field_to_excel_col.get(model_field)
+                value = row.get(excel_col) if excel_col else None
 
+                # Apply field parsers if any
                 if model_field in self.field_parsers:
+                    parser_info = self.field_parsers[model_field]
+
+                    # If tuple was given (function + default value)
+                    if isinstance(parser_info, tuple):
+                        parser, default_value = parser_info
+                    else:
+                        # Only function was given
+                        parser, default_value = parser_info, None
+
                     try:
-                        # If there is a parser specified for the field then we call parser with the given value
-                        value = self.field_parsers[model_field](value)
+                        if default_value is not None:
+                            value = parser(value, default_value)
+                        else:
+                            value = parser(value)
+
                     except ValueError as e:
-                        errors.append(
+                        row_errors.append(
                             {
                                 "row": idx,
-                                "error": f"Ошибка в значении поля '{model_field}': {str(e)}",
+                                "error": f"Ошибка в поле '{excel_col}': {str(e)}",
                             }
                         )
                         error_fields.append(model_field)
                         value = None
+
                     except Exception as e:
-                        errors.append(
+                        row_errors.append(
                             {
                                 "row": idx,
-                                "error": f"Непредвиденная ошибка в поле '{model_field}': {str(e)}",
+                                "error": f"Неожиданная ошибка в поле '{excel_col}': {str(e)}",
                             }
                         )
                         error_fields.append(model_field)
                         value = None
+
+                # Check for null or 'NaN' values
+                if pd.isnull(value) or (isinstance(value, str) and not value.strip()):
+                    value = None
 
                 data[model_field] = value
 
+            # Catch pydantic data validation errors
             try:
-                model_instance = self.model_class(**data)
+                model_instance = self.model_class.model_validate(data)
                 valid_models.append(model_instance)
+
             except ValidationError as ve:
                 for err in ve.errors():
                     field = err["loc"][0]
@@ -97,19 +136,19 @@ class ExcelParser:
                                 "error": f"Ошибка валидации данных: {error_messages}",
                             }
                         )
-
+            errors.extend(row_errors)
         return valid_models, errors
 
 
 def initialize_excel_parser(
-    required_columns: list[str],
-    column_mappings: dict[str, str],
+    required_fields: list[str],
+    field_mappings: dict[str, list[str]],
     model_class: type[BaseModel],
-    field_parsers: Optional[dict[str, Callable[[str], Any]]] = None,
+    field_parsers: Optional[dict[str, Any]] = None,
 ) -> ExcelParser:
     return ExcelParser(
-        required_columns=required_columns,
-        column_mappings=column_mappings,
+        required_fields=required_fields,
+        field_mappings=field_mappings,
         model_class=model_class,
         field_parsers=field_parsers,
     )

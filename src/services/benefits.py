@@ -1,11 +1,12 @@
 import uuid
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from elasticsearch import AsyncElasticsearch
 from fastapi import UploadFile
 
 import src.repositories.exceptions as repo_exceptions
 import src.schemas.benefit as schemas
+import src.schemas.category as category_schemas
 import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
 from src.db.db import get_transaction_session
@@ -13,6 +14,9 @@ from src.logger import service_logger
 from src.repositories.benefit_images import BenefitImagesRepository
 from src.repositories.benefits import BenefitsRepository
 from src.services.base import BaseService
+from src.services.categories import CategoriesService
+from src.utils.parser.excel_parser import initialize_excel_parser
+from src.utils.parser.field_parsers import parse_bool_field, parse_date_field
 
 
 class BenefitsService(
@@ -178,3 +182,128 @@ class BenefitsService(
                 raise service_exceptions.EntityDeleteError(
                     self.__class__.__name__, str(e)
                 )
+
+    async def parse_benefits_from_excel(
+        self,
+        file_contents: bytes,
+    ) -> tuple[list[schemas.BenefitCreate], list[dict[str, Any]]]:
+        """
+        Parses benefits from an Excel file.
+
+        Args:
+            file_contents (bytes): The raw bytes of the uploaded Excel file.
+
+        Returns:
+            tuple[list[BenefitCreate], list[dict[str, Any]]]:
+                A tuple containing a list of valid BenefitCreate instances and a list of error dictionaries.
+        """
+        parser = initialize_excel_parser(
+            model_class=schemas.BenefitCreateExcel,
+            field_mappings={
+                "name": ["название", "имя", "бенефит", "name"],
+                "coins_cost": ["стоимость в коинах", "коины", "coins_cost"],
+                "min_level_cost": ["минимальный уровень", "min_level_cost"],
+                "adaptation_required": ["требуется адаптация", "adaptation_required"],
+                "is_active": ["активен", "is_active"],
+                "description": ["описание", "description"],
+                "real_currency_cost": [
+                    "стоимость в валюте",
+                    "стоимость в рублях",
+                    "real_currency_cost",
+                ],
+                "amount": ["количество", "amount"],
+                "is_fixed_period": ["фиксированный период", "is_fixed_period"],
+                "usage_limit": ["лимит использования", "usage_limit"],
+                "usage_period_days": [
+                    "период использования (дней)",
+                    "usage_period_days",
+                ],
+                "period_start_date": ["дата начала периода", "period_start_date"],
+                "available_from": ["доступен с", "available_from"],
+                "available_by": ["доступен до", "available_by"],
+                "category_name": ["категория", "category_name"],
+            },
+            required_fields=["name", "coins_cost", "min_level_cost"],
+            field_parsers={
+                "adaptation_required": (parse_bool_field, False),
+                "is_active": (parse_bool_field, True),
+                "is_fixed_period": (parse_bool_field, False),
+                "period_start_date": parse_date_field,
+                "available_from": parse_date_field,
+                "available_by": parse_date_field,
+            },
+        )
+
+        valid_benefits_excel, parse_errors = parser.parse_excel(file_contents)
+
+        valid_benefits = []
+        service_errors = []
+
+        for idx, benefit_excel_raw in enumerate(valid_benefits_excel):
+            row_number = idx + 2
+
+            benefit_excel = schemas.BenefitCreateExcel.model_validate(benefit_excel_raw)
+
+            benefit_create, service_error = await self._process_benefit_row(
+                benefit_excel,
+                row_number,
+            )
+
+            if service_error:
+                service_errors.append(service_error)
+            else:
+                valid_benefits.append(benefit_create)
+
+        return valid_benefits, parse_errors + service_errors
+
+    async def _process_benefit_row(
+        self,
+        benefit_excel: schemas.BenefitCreateExcel,
+        row_number: int,
+    ) -> tuple[Optional[schemas.BenefitCreate], Optional[dict[str, str]]]:
+        """
+        Processes a single benefit row from the Excel file.
+
+        Args:
+            benefit_excel (schemas.BenefitCreateExcel): The benefit data extracted from the Excel row.
+            row_number (int): The Excel row number for error reporting.
+
+        Returns:
+            tuple[Optional[schemas.BenefitCreate], Optional[dict[str, Any]]]:
+                A tuple containing the created `BenefitCreate` instance if successful,
+                or an error dictionary if processing fails.
+        """
+        try:
+            data = benefit_excel.model_dump()
+
+            category_name = data.pop("category_name", None)
+
+            if category_name:
+                try:
+                    category = await self._get_or_create_category(category_name)
+                    data["category_id"] = category.id
+                except Exception as e:
+                    return None, {
+                        "row": row_number,
+                        "error": f"Error processing category '{category_name}': {str(e)}",
+                    }
+
+            benefit_create = schemas.BenefitCreate.model_validate(data)
+            return benefit_create, None
+
+        except Exception as e:
+            return None, {
+                "row": row_number,
+                "error": f"Unexpected error: {str(e)}",
+            }
+
+    async def _get_or_create_category(self, category_name: Optional[str] = None):
+        categories_service = CategoriesService()
+        try:
+            category = await categories_service.read_by_name(category_name)
+        except service_exceptions.EntityNotFoundError:
+            category_create = category_schemas.CategoryCreate(name=category_name)
+
+            category = await categories_service.create(category_create)
+
+        return category

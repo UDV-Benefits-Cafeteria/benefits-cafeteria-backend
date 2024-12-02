@@ -1,5 +1,8 @@
-from typing import Optional
+import datetime
+from io import BytesIO
+from typing import BinaryIO, Optional
 
+import pandas as pd
 from elasticsearch import AsyncElasticsearch
 from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +41,7 @@ class BenefitRequestsService(
     async def read_all(
         self,
         current_user: user_schemas.UserRead = None,
+        legal_entities: Optional[list[int]] = None,
         status: Optional[schemas.BenefitStatus] = None,
         sort_by: Optional[schemas.BenefitRequestSortFields] = None,
         sort_order: str = "asc",
@@ -50,18 +54,18 @@ class BenefitRequestsService(
 
         async with async_session_factory() as session:
             try:
-                if current_user.role == user_schemas.UserRole.ADMIN:
-                    legal_entity_id = None
-                elif current_user.role == user_schemas.UserRole.HR:
-                    legal_entity_id = current_user.legal_entity_id
-                    if legal_entity_id is None:
-                        raise service_exceptions.EntityReadError(
-                            self.__class__.__name__,
-                            "HR user has no legal_entity_id",
-                        )
+                legal_entity_ids = await self._validate_legal_entities(
+                    current_user=current_user, legal_entities=legal_entities
+                )
 
                 requests = await self.repo.read_all(
-                    session, status, sort_by, sort_order, page, limit, legal_entity_id
+                    session=session,
+                    status=status,
+                    legal_entity_ids=legal_entity_ids,
+                    sort_by=sort_by,
+                    sort_order=sort_order,
+                    page=page,
+                    limit=limit,
                 )
             except repo_exceptions.EntityReadError as e:
                 service_logger.error(f"Error reading all entities: {str(e)}")
@@ -69,13 +73,120 @@ class BenefitRequestsService(
                     self.__class__.__name__, str(e)
                 )
 
-            validated_requests = []
-
-            for req in requests:
-                validated_requests.append(self.read_schema.model_validate(req))
+            validated_requests = [
+                self.read_schema.model_validate(req) for req in requests
+            ]
 
         service_logger.info(f"Successfully fetched {len(validated_requests)} entities.")
         return validated_requests
+
+    async def export_benefit_requests(
+        self,
+        current_user: user_schemas.UserRead,
+        legal_entities: Optional[list[int]] = None,
+        status: Optional[schemas.BenefitStatus] = None,
+    ) -> BinaryIO:
+        benefit_requests = await self.read_all_excel(
+            current_user=current_user,
+            legal_entities=legal_entities,
+            status=status,
+        )
+
+        benefit_requests = self.prepare_benefit_request_for_export(benefit_requests)
+
+        df = pd.DataFrame([request.model_dump() for request in benefit_requests])
+
+        columns_order = [
+            "id",
+            "status",
+            "comment",
+            "benefit_id",
+            "user_id",
+            "performer_id",
+            "created_at",
+            "updated_at",
+            "content",
+        ]
+
+        df = df[columns_order]
+
+        excel_file: BinaryIO = BytesIO()
+
+        with pd.ExcelWriter(excel_file, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False)
+
+        excel_file.seek(0)
+
+        return excel_file
+
+    @staticmethod
+    def prepare_benefit_request_for_export(benefit_requests):
+        for request in benefit_requests:
+            # Preventing error: 'Excel does not support datetimes with timezones. Please ensure that datetimes are timezone unaware before writing to Excel.'
+            if isinstance(request.created_at, datetime.datetime):
+                request.created_at = request.created_at.replace(tzinfo=None)
+                # Make created_at time correspond with the database value (in UTC)
+                request.created_at += datetime.timedelta(hours=5)
+
+            if isinstance(request.updated_at, datetime.datetime):
+                request.updated_at = request.updated_at.replace(tzinfo=None)
+                request.updated_at += datetime.timedelta(hours=5)
+
+        return benefit_requests
+
+    # Difference from read_all method is that this method does not take sort_by, order_dy, page, limit parameters AND it return schemas.BenefitRequestReadExcel
+    async def read_all_excel(
+        self,
+        current_user: user_schemas.UserRead = None,
+        legal_entities: Optional[list[int]] = None,
+        status: Optional[schemas.BenefitStatus] = None,
+    ) -> list[schemas.BenefitRequestReadExcel]:
+        service_logger.info(f"Reading all {self.read_schema.__name__} entities")
+
+        async with async_session_factory() as session:
+            try:
+                legal_entity_ids = await self._validate_legal_entities(
+                    current_user=current_user, legal_entities=legal_entities
+                )
+
+                requests = await self.repo.read_all_excel(
+                    session=session, status=status, legal_entity_ids=legal_entity_ids
+                )
+            except repo_exceptions.EntityReadError as e:
+                service_logger.error(f"Error reading all entities: {str(e)}")
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__, str(e)
+                )
+
+            validated_requests = [
+                schemas.BenefitRequestReadExcel.model_validate(req) for req in requests
+            ]
+
+        service_logger.info(f"Successfully fetched {len(validated_requests)} entities.")
+        return validated_requests
+
+    async def _validate_legal_entities(
+        self,
+        current_user: user_schemas.UserRead,
+        legal_entities: Optional[list[int]] = None,
+    ) -> Optional[list[int]]:
+        if current_user.role == user_schemas.UserRole.ADMIN:
+            # Can be None
+            legal_entity_ids = legal_entities
+        else:
+            if legal_entities != [current_user.legal_entity_id]:
+                raise service_exceptions.EntityCreateError(
+                    self.__class__.__name__,
+                    "You cannot read users outside your legal entity",
+                )
+            legal_entity_ids = [current_user.legal_entity_id]
+
+            if legal_entity_ids is None:
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__,
+                    "HR user has no legal_entity_id",
+                )
+        return legal_entity_ids
 
     async def read_by_user_id(self, user_id: int) -> Optional[list[read_schema]]:
         service_logger.info(

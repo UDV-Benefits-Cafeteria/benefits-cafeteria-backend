@@ -21,7 +21,7 @@ async def test_create_position_valid(hr_client: AsyncClient):
     assert response.status_code == status.HTTP_201_CREATED
     position = response.json()
     assert "id" in position
-    assert position["name"] == "Software Engineer"
+    assert position["name"] == valid_position_data["name"].lower()
 
     position_in_db = await PositionsService().read_by_id(position["id"])
 
@@ -65,11 +65,11 @@ async def test_update_position_valid(hr_client: AsyncClient):
     )
     assert update_response.status_code == status.HTTP_200_OK
     updated_position = update_response.json()
-    assert updated_position["name"] == "Updated Position"
+    assert updated_position["name"] == update_data["name"].lower()
 
     position_in_db = await PositionsService().read_by_id(position_id)
 
-    assert position_in_db.name == "Updated Position"
+    assert position_in_db.name == update_data["name"].lower()
 
 
 @pytest.mark.asyncio
