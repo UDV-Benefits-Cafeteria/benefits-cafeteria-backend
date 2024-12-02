@@ -174,12 +174,12 @@ class BenefitRequestsService(
             # Can be None
             legal_entity_ids = legal_entities
         else:
-            if legal_entities != [current_user.legal_entity_id]:
-                raise service_exceptions.EntityCreateError(
-                    self.__class__.__name__,
-                    "You cannot read users outside your legal entity",
-                )
-            legal_entity_ids = [current_user.legal_entity_id]
+            legal_entity_ids = None
+            if (
+                legal_entities != [current_user.legal_entity_id]
+                and current_user.legal_entity_id is not None
+            ):
+                legal_entity_ids = [current_user.legal_entity_id]
 
             if legal_entity_ids is None:
                 raise service_exceptions.EntityReadError(
