@@ -6,6 +6,7 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.services.exceptions import EntityNotFoundError
 from src.services.legal_entities import LegalEntitiesService
 
 
@@ -28,8 +29,8 @@ async def test_create_legal_entity_valid(hr_client: AsyncClient):
     assert "id" in legal_entity
     assert legal_entity["name"] == "Test Entity"
 
-    entity_in_db = await LegalEntitiesService().read_by_id(legal_entity["id"])
-    assert entity_in_db is not None
+    legal_entity_in_db = await LegalEntitiesService().read_by_id(legal_entity["id"])
+    assert legal_entity_in_db is not None
 
 
 @pytest.mark.asyncio
@@ -77,25 +78,19 @@ async def test_update_legal_entity_valid(hr_client: AsyncClient):
     response_data = response.json()
     assert response_data["name"] == "Updated Entity"
 
-    entity_in_db = await LegalEntitiesService().read_by_id(entity_id)
+    legal_entity_in_db = await LegalEntitiesService().read_by_id(entity_id)
 
-    assert entity_in_db.name == "Updated Entity"
+    assert legal_entity_in_db.name == "Updated Entity"
 
 
 @pytest.mark.asyncio
-async def test_update_legal_entity_invalid(hr_client: AsyncClient):
-    legal_entity_data = {
-        "name": "Entity to Update",
-    }
-    create_response = await hr_client.post("/legal-entities/", json=legal_entity_data)
-    assert create_response.status_code == status.HTTP_201_CREATED
-    legal_entity = create_response.json()
-    entity_id = legal_entity["id"]
-
+async def test_update_legal_entity_invalid(hr_client: AsyncClient, legal_entity1a):
     update_data = {
         "name": "",
     }
-    response = await hr_client.patch(f"/legal-entities/{entity_id}", json=update_data)
+    response = await hr_client.patch(
+        f"/legal-entities/{legal_entity1a.id}", json=update_data
+    )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -141,8 +136,26 @@ async def test_employee_cannot_create_legal_entity(employee_client: AsyncClient)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
+async def test_get_legal_entity_case_sensitive(admin_client: AsyncClient):
+    legal_entity_data = {
+        "name": "UPPERCASE LEGAL ENTITY",
+    }
+    response = await admin_client.post("/legal-entities/", json=legal_entity_data)
+    legal_entity = response.json()
+    assert legal_entity["name"] != legal_entity_data["name"].lower()
+
+    # Test service method
+    with pytest.raises(EntityNotFoundError):
+        await LegalEntitiesService().read_by_name(legal_entity_data["name"].lower())
+
+    legal_entity_by_name = await LegalEntitiesService().read_by_name(
+        legal_entity_data["name"]
+    )
+    assert legal_entity_by_name is not None
+
+
 @pytest.mark.asyncio
-async def test_unauthenticated_access_legal_entities(auth_client):
+async def test_unauthenticated_access_legal_entities(auth_client: AsyncClient):
     response = await auth_client.get("/legal-entities/")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -150,6 +163,7 @@ async def test_unauthenticated_access_legal_entities(auth_client):
 # Testing EXCEL for legal entities
 
 
+# Helper function for creating Excel file
 def create_excel_file_legal_entities(
     rows: list[dict[str, Any]],
     sheet_name: str = "LegalEntities",
@@ -194,8 +208,8 @@ def create_excel_file_legal_entities(
             "valid_entities_count": 0,
             "errors_count": 0,
             "bulk_create_status_code": None,
-            "created_entities_count": 0,
-            "bulk_errors_count": 0,
+            "created_entities_count": None,
+            "bulk_errors_count": None,
         },
         {
             "name": "upload_partial_success",
@@ -222,7 +236,7 @@ def create_excel_file_legal_entities(
             "columns_input": None,
             "upload_status_code": 200,
             "valid_entities_count": 3,
-            "errors_count": 1,
+            "errors_count": 1,  # One duplicate
             "bulk_create_status_code": 201,
             "created_entities_count": 3,
             "bulk_errors_count": 0,
@@ -267,7 +281,7 @@ async def test_upload_legal_entities(hr_client: AsyncClient, test_case, legal_en
         upload_response.status_code == test_case["upload_status_code"]
     ), f"Test '{test_case['name']}' failed on upload step"
 
-    if test_case["upload_status_code"] == 200:
+    if test_case["upload_status_code"] == status.HTTP_200_OK:
         upload_data = upload_response.json()
 
         assert (

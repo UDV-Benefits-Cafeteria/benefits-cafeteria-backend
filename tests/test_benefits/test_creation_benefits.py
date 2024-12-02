@@ -1,8 +1,12 @@
+from decimal import Decimal
+
 import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.models import User
 from src.schemas.benefit import BenefitReadPublic
+from src.schemas.user import UserRead
 from src.services.benefits import BenefitsService
 
 
@@ -26,6 +30,7 @@ from src.services.benefits import BenefitsService
             "amount": 0,
             "adaptation_required": False,
             "category_id": None,
+            "real_currency_cost": 505.5,
         },
         # Test 3
         {
@@ -53,6 +58,7 @@ from src.services.benefits import BenefitsService
             "amount": 10,
             "adaptation_required": False,
             "category_id": 111,
+            "real_currency_cost": 2000,
         },
         # Test 6
         {
@@ -94,7 +100,10 @@ from src.services.benefits import BenefitsService
 )
 @pytest.mark.asyncio
 async def test_create_benefit_valid(
-    admin_client: AsyncClient, benefit_data: dict, category, employee_user
+    admin_client: AsyncClient,
+    benefit_data: dict,
+    employee_user: User,
+    category,
 ):
     response = await admin_client.post("/benefits/", json=benefit_data)
     assert response.status_code == status.HTTP_201_CREATED
@@ -102,21 +111,25 @@ async def test_create_benefit_valid(
     data = response.json()
 
     benefit_id_db: BenefitReadPublic = await BenefitsService().read_by_id(
-        data["id"], employee_user
+        data["id"], UserRead.model_validate(employee_user)
     )
     assert benefit_id_db is not None
 
+    assert benefit_id_db.model_dump().get("real_currency_cost") is None
+
     for key in benefit_data:
-        if key != "category_id":
-            assert data[key] == benefit_data[key]
-            assert data[key] == getattr(benefit_id_db, key)
-        else:
+        if key == "category_id":
             if benefit_data["category_id"] is not None:
                 assert data["category"]["id"] == benefit_data["category_id"]
                 assert data["category"]["id"] == getattr(benefit_id_db, "category").id
             else:
                 assert data["category"] is None
                 assert getattr(benefit_id_db, "category") is None
+        elif key == "real_currency_cost":
+            assert Decimal(data[key]) == benefit_data[key]
+        else:
+            assert data[key] == benefit_data[key]
+            assert data[key] == getattr(benefit_id_db, key)
 
 
 @pytest.mark.parametrize(

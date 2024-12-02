@@ -135,3 +135,18 @@ async def test_employee_cannot_create_position(employee_client: AsyncClient):
 async def test_unauthenticated_access(auth_client: AsyncClient):
     response = await auth_client.get("/positions/")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+async def test_get_position_lowercase(admin_client: AsyncClient):
+    position_data = {
+        "name": "UPPERCASE Position",
+    }
+    response = await admin_client.post("/positions/", json=position_data)
+    position = response.json()
+    assert position["name"] == position_data["name"].lower()
+
+    # Test service method
+    position_by_name = await PositionsService().read_by_name(
+        position_data["name"].upper()
+    )
+    assert position_by_name is not None

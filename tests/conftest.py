@@ -101,7 +101,7 @@ async def category(db_session: AsyncSession):
 
 
 @pytest.fixture(scope="function")
-async def legal_entity1a(db_session: AsyncSession):
+async def legal_entity1a(db_session: AsyncSession) -> LegalEntity:
     """Create the first legal entity for testing."""
     entity = LegalEntity(
         id=111,
@@ -114,7 +114,7 @@ async def legal_entity1a(db_session: AsyncSession):
 
 
 @pytest.fixture(scope="function")
-async def legal_entity2b(db_session: AsyncSession):
+async def legal_entity2b(db_session: AsyncSession) -> LegalEntity:
     """Create the second legal entity for testing."""
     entity = LegalEntity(
         id=222,
@@ -128,7 +128,7 @@ async def legal_entity2b(db_session: AsyncSession):
 
 @pytest.fixture(scope="function")
 async def hr_user(db_session: AsyncSession, legal_entity1a) -> User:
-    """Create the first HR user with legal_entity_id=111."""
+    """Create an HR user with legal_entity_id=111."""
 
     hr1 = User(
         id=222,
@@ -151,6 +151,7 @@ async def hr_user(db_session: AsyncSession, legal_entity1a) -> User:
 
 @pytest.fixture(scope="function")
 async def legal_entity2b_user(db_session: AsyncSession, legal_entity2b) -> User:
+    """Create a regular employee user with legal_entity_id=222."""
     user = User(
         id=333,
         email="user2b@example.com",
@@ -222,7 +223,11 @@ async def benefit_requests(
 
 @pytest.fixture(scope="function")
 async def benefit_request(
-    db_session: AsyncSession, request, clean_db, legal_entity2b_user, employee_user
+    db_session: AsyncSession,
+    employee_user: User,
+    legal_entity2b_user: User,
+    request,
+    clean_db,
 ) -> BenefitRequest:
     """Provide a benefit request with 'status' and 'user_id' passed from 'request_with_status' marker."""
     marker = request.node.get_closest_marker("request_with_status")
@@ -310,6 +315,7 @@ async def employee_client(employee_user: User):
 
 @pytest.fixture(scope="function")
 async def auth_client():
+    """Provide an AsyncClient without any authentication."""
     fm.config.SUPPRESS_SEND = 1
     with fm.record_messages():
         async with AsyncClient(

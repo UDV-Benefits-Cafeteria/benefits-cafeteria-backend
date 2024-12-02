@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -12,7 +12,7 @@ class LegalEntityCreate(LegalEntityBase):
 
 
 class LegalEntityUpdate(LegalEntityBase):
-    name: Annotated[Optional[str], Field(min_length=2, max_length=255)] = None
+    pass
 
 
 class LegalEntityRead(LegalEntityBase):

@@ -8,7 +8,7 @@ from httpx import AsyncClient
 import src.schemas.benefit as benefit_schemas
 import src.schemas.request as schemas
 import src.schemas.user as user_schemas
-from src.models import BenefitRequest, User
+from src.models import BenefitRequest, LegalEntity, User
 from src.services.benefits import BenefitsService
 from src.services.users import UsersService
 from src.utils.parser.excel_parser import ExcelParser
@@ -467,7 +467,9 @@ async def test_cancel_benefit_request_restores_coins_and_amount(
 
 
 @pytest.mark.asyncio
-async def test_benefit_request_transaction(admin_user: User, legal_entity1a):
+async def test_benefit_request_transaction(
+    admin_user: User, legal_entity1a: LegalEntity
+):
     benefit_data = {
         "name": "Benefit Transaction Test",
         "coins_cost": 50,
@@ -583,9 +585,9 @@ async def test_admin_get_benefit_requests_with_status_filter(
 @pytest.mark.asyncio
 async def test_admin_get_benefit_requests_with_legal_entity_filter(
     admin_client: AsyncClient,
+    legal_entity1a: LegalEntity,
+    legal_entity2b: LegalEntity,
     benefit_requests,
-    legal_entity1a,
-    legal_entity2b,
 ):
     # Filtering on legal_entity1a
     response = await admin_client.get(
@@ -687,9 +689,9 @@ async def test_hr_get_benefit_requests_with_status_filter(
 @pytest.mark.asyncio
 async def test_hr_get_benefit_requests_with_legal_entity_filter(
     hr_client: AsyncClient,
+    legal_entity1a: LegalEntity,
+    legal_entity2b: LegalEntity,
     benefit_requests,
-    legal_entity1a,
-    legal_entity2b,
 ):
     # Filtering on legal_entity1a
     response = await hr_client.get(
@@ -814,7 +816,7 @@ async def test_export_benefit_requests_with_status_filter(
 @pytest.mark.excel
 @pytest.mark.asyncio
 async def test_export_benefit_requests_with_legal_entity_filter(
-    admin_client: AsyncClient, legal_entity1a, benefit_requests
+    admin_client: AsyncClient, legal_entity1a: LegalEntity, benefit_requests
 ):
     parsed_data, errors = await arrange_request_export_test(
         client=admin_client, params={"legal_entity_ids": [legal_entity1a.id]}

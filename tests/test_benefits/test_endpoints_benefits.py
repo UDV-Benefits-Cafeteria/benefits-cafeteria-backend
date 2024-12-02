@@ -257,13 +257,13 @@ async def test_elastic_benefit_deletion(
     assert benefit_in_db is not None
 
     get_response = await hr_client.get("/benefits/")
-    assert get_response.status_code == 200
+    assert get_response.status_code == status.HTTP_200_OK
 
     delete_response = await hr_client.delete(f"/benefits/{benefit_in_db.id}")
     assert delete_response.status_code == status.HTTP_200_OK
     assert delete_response.json()["is_success"] is True
 
     get_response = await hr_client.get("/benefits/")
-    assert get_response.status_code == 200
+    assert get_response.status_code == status.HTTP_200_OK
 
     assert get_response.json() == []

@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -17,7 +17,7 @@ class PositionCreate(PositionBase):
 
 
 class PositionUpdate(PositionBase):
-    name: Annotated[Optional[str], Field(min_length=2, max_length=150)] = None
+    pass
 
 
 class PositionRead(PositionBase):

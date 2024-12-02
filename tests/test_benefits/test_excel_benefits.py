@@ -143,7 +143,7 @@ async def test_upload_benefits(hr_client: AsyncClient, test_case, legal_entity1a
 
     assert upload_response.status_code == test_case["upload_status_code"]
 
-    if test_case["upload_status_code"] == 200:
+    if test_case["upload_status_code"] == status.HTTP_200_OK:
         upload_data = upload_response.json()
 
         assert (
