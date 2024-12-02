@@ -408,7 +408,7 @@ async def test_cancel_benefit_request_restores_coins_and_amount(
         "coins": 20,
         "hired_at": "2022-01-01",
         "is_adapted": True,
-        "legal_entity_id": 111,
+        "legal_entity_id": legal_entity1a.id,
     }
 
     created_benefit_data = await create_test_benefit(benefit_data)
@@ -484,7 +484,7 @@ async def test_benefit_request_transaction(admin_user: User, legal_entity1a):
         "coins": 10,  # Not Enough
         "hired_at": "2022-01-01",
         "is_adapted": True,
-        "legal_entity_id": 111,
+        "legal_entity_id": legal_entity1a.id,
     }
     created_benefit_data = await create_test_benefit(benefit_data)
 

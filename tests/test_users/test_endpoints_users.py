@@ -189,7 +189,6 @@ async def test_hr_cannot_create_admin(hr_client: AsyncClient):
         "firstname": "Admin",
         "lastname": "User",
         "role": "admin",
-        "legal_entity_id": 111,
         "hired_at": date.today().isoformat(),
     }
     response = await hr_client.post("/users/", json=user_data)
@@ -408,7 +407,7 @@ async def test_elastic_user_update(
         "firstname": "UpdatedElastic",
     }
     update_response = await hr_client.patch(f"/users/{user_in_db.id}", json=update_data)
-    assert update_response.status_code == 200
+    assert update_response.status_code == status.HTTP_200_OK
 
     get_response = await hr_client.get("/users/")
     assert get_response.json()[0]["firstname"] == "UpdatedElastic"

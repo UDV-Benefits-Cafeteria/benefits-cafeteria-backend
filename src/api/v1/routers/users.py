@@ -86,10 +86,7 @@ async def get_users(
     }
 
     if current_user.role == schemas.UserRole.HR:
-        if legal_entities is None or (
-            len(legal_entities) == 1
-            and legal_entities[0] == current_user.legal_entity_id
-        ):
+        if legal_entities is None or legal_entities == [current_user.legal_entity_id]:
             filters["legal_entity_id"] = [current_user.legal_entity_id]
         else:
             raise HTTPException(
