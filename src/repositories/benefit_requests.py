@@ -95,8 +95,7 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
         legal_entity_ids: Optional[list[int]] = None,
     ) -> Sequence[BenefitRequest]:
         """
-        Retrieve all BenefitRequest entities, with optional filtering by status,
-        sorting, and pagination.
+        Retrieve all BenefitRequest entities, with optional filtering by status and legal entity.
 
         Args:
             session: An external AsyncSession.

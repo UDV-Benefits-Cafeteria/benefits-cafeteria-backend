@@ -88,8 +88,6 @@ class BenefitRequestsService(
         )
 
         benefit_requests = self.prepare_benefit_request_for_export(benefit_requests)
-        print("pudge")
-        print([request.model_dump() for request in benefit_requests])
 
         df = pd.DataFrame([request.model_dump() for request in benefit_requests])
 
