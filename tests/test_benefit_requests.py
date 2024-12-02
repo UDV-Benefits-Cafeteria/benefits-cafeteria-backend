@@ -1,14 +1,17 @@
 from datetime import date
+from typing import Optional
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
 
 import src.schemas.benefit as benefit_schemas
+import src.schemas.request as schemas
 import src.schemas.user as user_schemas
-from src.models import User
+from src.models import BenefitRequest, User
 from src.services.benefits import BenefitsService
 from src.services.users import UsersService
+from src.utils.parser.excel_parser import ExcelParser
 from tests.conftest import get_employee_client
 
 
@@ -291,6 +294,99 @@ async def test_benefit_request_invalid_conditions(
     )
 
 
+@pytest.mark.request_with_status("pending", 444)
+@pytest.mark.asyncio
+async def test_update_benefit_request_pending_to_declined(
+    hr_client: AsyncClient, benefit_request: BenefitRequest
+):
+    update_data = {"status": "declined"}
+
+    response = await hr_client.patch(
+        f"/benefit-requests/{benefit_request.id}", json=update_data
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    updated_request = response.json()
+    assert updated_request["status"] == "declined"
+
+
+# User with id = 333 has legal entity = 222 and hr_user has legal entity = 111, so the operation should fail
+@pytest.mark.request_with_status("pending", 333)
+@pytest.mark.asyncio
+async def test_update_benefit_request_pending_to_declined_fail(
+    hr_client: AsyncClient, benefit_request: BenefitRequest
+):
+    update_data = {"status": "declined"}
+
+    response = await hr_client.patch(
+        f"/benefit-requests/{benefit_request.id}", json=update_data
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.request_with_status("pending", 444)
+@pytest.mark.asyncio
+async def test_update_benefit_request_pending_and_add_performer_id(
+    hr_client: AsyncClient, benefit_request: BenefitRequest, hr_user: User
+):
+    assert benefit_request.performer_id is None
+
+    update_data = {"status": "approved"}
+
+    response = await hr_client.patch(
+        f"/benefit-requests/{benefit_request.id}", json=update_data
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    updated_request = response.json()
+    assert updated_request["status"] == "approved"
+
+    assert updated_request["performer_id"] == hr_user.id
+
+
+@pytest.mark.request_with_status("approved", 444)
+@pytest.mark.asyncio
+async def test_update_benefit_request_approved_should_fail(
+    hr_client: AsyncClient, benefit_request: BenefitRequest
+):
+    update_data = {"status": "declined"}
+
+    response = await hr_client.patch(
+        f"/benefit-requests/{benefit_request.id}", json=update_data
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.request_with_status("pending", 444)
+@pytest.mark.asyncio
+async def test_update_benefit_request_pending_to_declined_user(
+    employee_user: User, benefit_request: BenefitRequest
+):
+    client = await get_employee_client(employee_user.id)
+
+    update_data = {"status": "declined"}
+
+    response = await client.patch(
+        f"/benefit-requests/{benefit_request.id}", json=update_data
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.request_with_status("processing", 444)
+@pytest.mark.asyncio
+async def test_update_benefit_request_processing_to_approved_user(
+    employee_user: User, benefit_request: BenefitRequest
+):
+    client = await get_employee_client(employee_user.id)
+
+    update_data = {"status": "approved"}
+
+    response = await client.patch(
+        f"/benefit-requests/{benefit_request.id}", json=update_data
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
 @pytest.mark.asyncio
 async def test_cancel_benefit_request_restores_coins_and_amount(
     admin_user: User,
@@ -436,7 +532,7 @@ async def test_benefit_request_transaction_elastic(
     }
     benefit_response = await admin_client.post("/benefits/", json=benefit_data)
 
-    assert benefit_response.status_code == 201
+    assert benefit_response.status_code == status.HTTP_201_CREATED
 
     get_benefits_response = await admin_client.get("/benefits/")
     assert get_benefits_response.json()[0]["amount"] == 5
@@ -466,3 +562,271 @@ async def test_benefit_request_transaction_elastic(
     # Check that amount didn't change in elastic also
     get_benefits_response = await admin_client.get("/benefits/")
     assert get_benefits_response.json()[0]["amount"] == 5
+
+
+@pytest.mark.asyncio
+async def test_admin_get_benefit_requests_with_status_filter(
+    admin_client: AsyncClient,
+    benefit_requests,
+):
+    # Filtering on "pending"
+    response = await admin_client.get(
+        "/benefit-requests/", params={"status": "pending"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_filtered = response.json()
+
+    assert len(benefit_requests_filtered) == 2
+    assert all(request["status"] == "pending" for request in benefit_requests_filtered)
+
+
+@pytest.mark.asyncio
+async def test_admin_get_benefit_requests_with_legal_entity_filter(
+    admin_client: AsyncClient,
+    benefit_requests,
+    legal_entity1a,
+    legal_entity2b,
+):
+    # Filtering on legal_entity1a
+    response = await admin_client.get(
+        "/benefit-requests/", params={"legal_entities": [legal_entity1a.id]}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_filtered = response.json()
+    assert all(
+        request["user"]["legal_entity"]["id"] == legal_entity1a.id
+        for request in benefit_requests_filtered
+    )
+    assert len(benefit_requests_filtered) == 2
+
+    # Filtering on legal_entity2b
+    response = await admin_client.get(
+        "/benefit-requests/", params={"legal_entities": [legal_entity2b.id]}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_filtered = response.json()
+    assert all(
+        request["user"]["legal_entity"]["id"] == legal_entity2b.id
+        for request in benefit_requests_filtered
+    )
+    assert len(benefit_requests_filtered) == 2
+
+    # Filtering on both
+    response = await admin_client.get(
+        "/benefit-requests/",
+        params={"legal_entities": [legal_entity2b.id, legal_entity1a.id]},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_filtered = response.json()
+    assert all(
+        request["user"]["legal_entity"]["id"] == legal_entity2b.id
+        or request["user"]["legal_entity"]["id"] == legal_entity1a.id
+        for request in benefit_requests_filtered
+    )
+    assert len(benefit_requests_filtered) == 4
+
+
+@pytest.mark.asyncio
+async def test_admin_get_benefit_requests_pagination(
+    admin_client: AsyncClient,
+    benefit_requests,
+):
+    response = await admin_client.get(
+        "/benefit-requests/", params={"page": 1, "limit": 2}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_paginated = response.json()
+    assert len(benefit_requests_paginated) == 2
+
+
+@pytest.mark.asyncio
+async def test_admin_get_benefit_requests_sorting(
+    admin_client: AsyncClient,
+    benefit_requests,
+):
+    # Descending sort on created_at
+    response = await admin_client.get(
+        "/benefit-requests/", params={"sort_by": "created_at", "sort_order": "desc"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_sorted = response.json()
+    # Check that the first element is BIGGER then the last one
+    assert (
+        benefit_requests_sorted[0]["created_at"]
+        > benefit_requests_sorted[-1]["created_at"]
+    )
+
+    # Ascending sort on created_at
+    response_asc = await admin_client.get(
+        "/benefit-requests/", params={"sort_by": "created_at", "sort_order": "asc"}
+    )
+    assert response_asc.status_code == status.HTTP_200_OK
+    benefit_requests_sorted_asc = response_asc.json()
+    # Check that the first element is LOWER than the last one
+    assert (
+        benefit_requests_sorted_asc[0]["created_at"]
+        < benefit_requests_sorted_asc[-1]["created_at"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_hr_get_benefit_requests_with_status_filter(
+    hr_client: AsyncClient,
+    benefit_requests,
+):
+    # Filtering on 'pending' for hr
+    response = await hr_client.get("/benefit-requests/", params={"status": "pending"})
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_filtered = response.json()
+    assert (
+        len(benefit_requests_filtered) == 1
+    )  # Only one "pending" request from user inside hr_user's legal entity
+    assert all(request["status"] == "pending" for request in benefit_requests_filtered)
+
+
+@pytest.mark.asyncio
+async def test_hr_get_benefit_requests_with_legal_entity_filter(
+    hr_client: AsyncClient,
+    benefit_requests,
+    legal_entity1a,
+    legal_entity2b,
+):
+    # Filtering on legal_entity1a
+    response = await hr_client.get(
+        "/benefit-requests/", params={"legal_entities": [legal_entity1a.id]}
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_filtered = response.json()
+    assert all(
+        request["user"]["legal_entity"]["id"] == legal_entity1a.id
+        for request in benefit_requests_filtered
+    )
+    assert len(benefit_requests_filtered) == 2
+
+    # Filtering on legal_entity2b
+    # Hr user has legal_entity1a so all the requests he gets should be inside it
+    response = await hr_client.get(
+        "/benefit-requests/", params={"legal_entities": [legal_entity2b.id]}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_filtered = response.json()
+    assert all(
+        request["user"]["legal_entity"]["id"] == legal_entity1a.id
+        for request in benefit_requests_filtered
+    )
+    assert len(benefit_requests_filtered) == 2
+
+
+@pytest.mark.asyncio
+async def test_hr_get_benefit_requests_sorting(
+    hr_client: AsyncClient,
+    benefit_requests,
+):
+    response = await hr_client.get(
+        "/benefit-requests/", params={"sort_by": "created_at", "sort_order": "desc"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    benefit_requests_sorted = response.json()
+
+    assert (
+        benefit_requests_sorted[0]["created_at"]
+        > benefit_requests_sorted[-1]["created_at"]
+    )
+
+    response_asc = await hr_client.get(
+        "/benefit-requests/", params={"sort_by": "created_at", "sort_order": "asc"}
+    )
+    assert response_asc.status_code == status.HTTP_200_OK
+    benefit_requests_sorted_asc = response_asc.json()
+
+    assert (
+        benefit_requests_sorted_asc[0]["created_at"]
+        < benefit_requests_sorted_asc[-1]["created_at"]
+    )
+
+
+# Excel EXPORT tests
+
+
+field_mappings = {
+    "id": ["id"],
+    "status": ["status"],
+    "user_id": ["user_id"],
+    "benefit_id": ["benefit_id"],
+    "performer_id": ["performer_id"],
+    "comment": ["comment"],
+    "content": ["content"],
+    "created_at": ["created_at"],
+    "updated_at": ["updated_at"],
+}
+
+
+async def arrange_request_export_test(client: AsyncClient, params: Optional[dict]):
+    response = await client.get("/benefit-requests/export", params=params)
+    assert response.status_code == status.HTTP_200_OK
+    assert "Content-Disposition" in response.headers
+    assert (
+        "attachment; filename=benefit_requests.xlsx"
+        in response.headers["Content-Disposition"]
+    )
+    assert (
+        response.headers["Content-Type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    excel_parser = ExcelParser(
+        model_class=schemas.BenefitRequestReadExcel, field_mappings=field_mappings
+    )
+    return excel_parser.parse_excel(response.content)
+
+
+@pytest.mark.excel
+@pytest.mark.asyncio
+async def test_export_benefit_requests_no_filters(
+    admin_client: AsyncClient, benefit_requests
+):
+    parsed_data, errors = await arrange_request_export_test(
+        client=admin_client, params=None
+    )
+
+    assert len(parsed_data) == 4
+    assert all(
+        isinstance(request, schemas.BenefitRequestReadExcel) for request in parsed_data
+    )
+    assert len(errors) == 0
+
+
+@pytest.mark.excel
+@pytest.mark.asyncio
+async def test_export_benefit_requests_with_status_filter(
+    admin_client: AsyncClient, benefit_requests
+):
+    parsed_data, errors = await arrange_request_export_test(
+        client=admin_client, params={"status": "pending"}
+    )
+
+    assert len(parsed_data) == 2
+    assert all(request.status == "pending" for request in parsed_data)
+    assert len(errors) == 0
+
+
+@pytest.mark.excel
+@pytest.mark.asyncio
+async def test_export_benefit_requests_with_legal_entity_filter(
+    admin_client: AsyncClient, legal_entity1a, benefit_requests
+):
+    parsed_data, errors = await arrange_request_export_test(
+        client=admin_client, params={"legal_entity_ids": [legal_entity1a.id]}
+    )
+
+    assert len(parsed_data) == 2
+
+    for request in parsed_data:
+        request_dict = request.model_dump()
+        user: user_schemas.UserRead = await UsersService().read_by_id(
+            request_dict["user_id"]
+        )
+        assert user.legal_entity_id == legal_entity1a.id
+
+    assert len(errors) == 0

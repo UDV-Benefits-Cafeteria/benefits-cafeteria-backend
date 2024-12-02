@@ -8,7 +8,7 @@ from src.api.v1.dependencies import get_current_user
 from src.config import get_settings
 from src.db.db import AsyncSession, async_session_factory, engine
 from src.main import app
-from src.models import Category, LegalEntity, User
+from src.models import Benefit, BenefitRequest, Category, LegalEntity, User
 from src.models.base import Base
 from src.services.sessions import SessionsService
 from src.utils.elastic_index import SearchService
@@ -27,6 +27,10 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers",
         "excel: Excel test suite",
+    )
+    config.addinivalue_line(
+        "markers",
+        "request_with_status(status, user_id): mark for a test with a specified benefit request status and user_id",
     )
 
 
@@ -146,6 +150,28 @@ async def hr_user(db_session: AsyncSession, legal_entity1a) -> User:
 
 
 @pytest.fixture(scope="function")
+async def legal_entity2b_user(db_session: AsyncSession, legal_entity2b) -> User:
+    user = User(
+        id=333,
+        email="user2b@example.com",
+        firstname="Employee",
+        lastname="User",
+        role=user_schemas.UserRole.EMPLOYEE,
+        is_active=True,
+        is_verified=True,
+        is_adapted=True,
+        hired_at=date.today(),
+        coins=500,
+        legal_entity_id=222,
+    )
+
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest.fixture(scope="function")
 async def employee_user(db_session: AsyncSession, legal_entity1a) -> User:
     """Create a regular employee user with legal_entity_id=111."""
     user = User(
@@ -165,6 +191,64 @@ async def employee_user(db_session: AsyncSession, legal_entity1a) -> User:
     await db_session.commit()
     await db_session.refresh(user)
     return user
+
+
+@pytest.fixture(scope="function")
+async def benefit_requests(
+    db_session: AsyncSession,
+    hr_user: User,
+    legal_entity2b_user: User,
+    legal_entity1a,
+    legal_entity2b,
+) -> list[BenefitRequest]:
+    """Provide 4 requests with different 'status', 'user_id' and 'created_at' fields"""
+    benefit_data = [
+        {"status": "pending", "user_id": 222, "created_at": date(2024, 1, 1)},
+        {"status": "approved", "user_id": 222, "created_at": date(2024, 2, 1)},
+        {"status": "declined", "user_id": 333, "created_at": date(2024, 3, 1)},
+        {"status": "pending", "user_id": 333, "created_at": date(2024, 4, 1)},
+    ]
+
+    created_requests = []
+    for data in benefit_data:
+        benefit_request = BenefitRequest(**data)
+        db_session.add(benefit_request)
+        await db_session.commit()
+        await db_session.refresh(benefit_request)
+        created_requests.append(benefit_request)
+
+    return created_requests
+
+
+@pytest.fixture(scope="function")
+async def benefit_request(
+    db_session: AsyncSession, request, clean_db, legal_entity2b_user, employee_user
+) -> BenefitRequest:
+    """Provide a benefit request with 'status' and 'user_id' passed from 'request_with_status' marker."""
+    marker = request.node.get_closest_marker("request_with_status")
+    if marker is None:
+        raise ValueError("Marker 'request_with_status' is required")
+
+    status = marker.args[0]
+    user_id = marker.args[1]
+
+    if user_id not in [333, 444]:
+        raise ValueError(f"Invalid user_id: {user_id}. Valid values are 333 or 444.")
+
+    benefit: Benefit = Benefit(name="Benefit123", coins_cost=0, min_level_cost=0)
+    db_session.add(benefit)
+    await db_session.commit()
+    await db_session.refresh(benefit)
+
+    benefit_request: BenefitRequest = BenefitRequest(
+        benefit_id=benefit.id, status=status, user_id=user_id, created_at=date.today()
+    )
+
+    db_session.add(benefit_request)
+    await db_session.commit()
+    await db_session.refresh(benefit_request)
+
+    return benefit_request
 
 
 @pytest.fixture

@@ -178,7 +178,7 @@ class BenefitRequestsService(
             if (
                 legal_entities != [current_user.legal_entity_id]
                 and current_user.legal_entity_id is not None
-            ):
+            ) or legal_entities == [current_user.legal_entity_id]:
                 legal_entity_ids = [current_user.legal_entity_id]
 
             if legal_entity_ids is None:
@@ -351,44 +351,46 @@ class BenefitRequestsService(
 
                 # These users have permission to edit the request:
                 # Admin,
-                # HR whose id == performer_id,
+                # HR who is considered 'performer' for the request,
                 # User if we change status from 'pending' to 'declined'.
-                if current_user.role not in [user_schemas.UserRole.ADMIN]:
-                    if current_user.id not in [
-                        existing_request.performer_id,
-                        existing_request.user_id,
-                    ]:
-                        raise service_exceptions.EntityUpdateError(
-                            self.read_schema.__name__,
-                            "You do not have permission to edit this request",
-                        )
-
-                if new_status.value == schemas.BenefitStatus.DECLINED:
-                    # Handle the case where employee user declines its own request
+                if current_user.role != user_schemas.UserRole.ADMIN:
                     if (
-                        current_user.id == existing_request.user_id
-                        or current_user.role
-                        in [
-                            user_schemas.UserRole.HR,
-                            user_schemas.UserRole.ADMIN,
+                        current_user.id
+                        not in [
+                            existing_request.performer_id,
+                            existing_request.user_id,
+                            update_schema.performer_id,
                         ]
+                        or current_user.legal_entity_id != user.legal_entity_id
                     ):
-                        if benefit.amount is not None:
-                            new_amount = benefit.amount + 1
-
-                            await self.benefits_repo.update_by_id(
-                                session, benefit.id, {"amount": new_amount}
-                            )
-
-                        new_coins = user.coins + benefit.coins_cost
-                        await self.users_repo.update_by_id(
-                            session, user.id, {"coins": new_coins}
-                        )
-                    else:
                         raise service_exceptions.EntityUpdateError(
                             self.read_schema.__name__,
-                            "You cannot decline this benefit request",
+                            "You do not have the permission to edit this request",
                         )
+
+                # Handle the case where employee user declines anything but pending request
+                if current_user.role == user_schemas.UserRole.EMPLOYEE:
+                    if (
+                        new_status.value != schemas.BenefitStatus.DECLINED
+                        and old_status != schemas.BenefitStatus.PENDING
+                    ):
+                        raise service_exceptions.EntityUpdateError(
+                            self.read_schema.__name__,
+                            "You do not have the permission to edit this request",
+                        )
+
+                # Perform update operation
+                if benefit.amount is not None:
+                    new_amount = benefit.amount + 1
+
+                    await self.benefits_repo.update_by_id(
+                        session, benefit.id, {"amount": new_amount}
+                    )
+
+                new_coins = user.coins + benefit.coins_cost
+                await self.users_repo.update_by_id(
+                    session, user.id, {"coins": new_coins}
+                )
 
                 is_updated: bool = await self.repo.update_by_id(
                     session,

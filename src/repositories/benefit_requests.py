@@ -133,7 +133,7 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
             )
 
         repository_logger.info(
-            f"Successfully fetched BenefitRequests: status={status}"
+            f"Successfully fetched BenefitRequests: status={status} "
             f"legal_entity_ids={legal_entity_ids}."
         )
         return entities
