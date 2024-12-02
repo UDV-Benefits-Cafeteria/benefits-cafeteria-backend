@@ -54,14 +54,14 @@ async def get_users(
     is_active: Annotated[Optional[bool], Query()] = None,
     is_adapted: Annotated[Optional[bool], Query()] = None,
     is_verified: Annotated[Optional[bool], Query()] = None,
-    role: Annotated[Optional[schemas.UserRole], Query()] = None,
+    roles: Annotated[Optional[list[schemas.UserRole]], Query()] = None,
     hired_at: Annotated[
         Optional[str],
         Query(
             description='Filter for hired_at date range, e.g., "gte:2022-01-01,lte:2022-12-31"'
         ),
     ] = None,
-    legal_entity_id: Annotated[Optional[int], Query()] = None,
+    legal_entities: Annotated[Optional[list[int]], Query()] = None,
     sort_by: Annotated[
         Optional[schemas.UserSortFields],
         Query(
@@ -78,16 +78,19 @@ async def get_users(
             "is_active": is_active,
             "is_adapted": is_adapted,
             "is_verified": is_verified,
-            "role": role.value if role else None,
+            "role": [role.value for role in roles] if roles is not None else None,
             "hired_at": range_filter_parser(hired_at, "hired_at"),
-            "legal_entity_id": legal_entity_id,
+            "legal_entity_id": legal_entities,
         }.items()
         if value is not None
     }
 
     if current_user.role == schemas.UserRole.HR:
-        if legal_entity_id is None or legal_entity_id == current_user.legal_entity_id:
-            filters["legal_entity_id"] = current_user.legal_entity_id
+        if legal_entities is None or (
+            len(legal_entities) == 1
+            and legal_entities[0] == current_user.legal_entity_id
+        ):
+            filters["legal_entity_id"] = [current_user.legal_entity_id]
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

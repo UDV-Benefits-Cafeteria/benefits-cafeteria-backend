@@ -1,5 +1,6 @@
 from typing import Optional
 
+from elasticsearch import AsyncElasticsearch
 from pydantic import EmailStr
 
 import src.repositories.exceptions as repo_exceptions
@@ -15,7 +16,8 @@ settings = get_settings()
 
 
 class AuthService:
-    users_repo = UsersRepository()
+    def __init__(self, es_client: Optional[AsyncElasticsearch] = None):
+        self.users_repo: UsersRepository = UsersRepository(es_client)
 
     async def read_auth_data_by_id(
         self, user_id: int

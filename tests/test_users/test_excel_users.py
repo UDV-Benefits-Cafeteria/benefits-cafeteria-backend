@@ -447,6 +447,7 @@ async def test_upload_users(hr_client: AsyncClient, test_case, legal_entity1a):
 @pytest.mark.asyncio
 async def test_upload_users_missing_columns(hr_client: AsyncClient):
     missing_columns = [
+        # Missing email
         "имя",
         "фамилия",
         "роль",
@@ -459,6 +460,7 @@ async def test_upload_users_missing_columns(hr_client: AsyncClient):
     ]
     user_rows = [
         {
+            # Missing email
             "фамилия": "Кузнецов",
             "имя": "Кузьма",
             "роль": "employee",

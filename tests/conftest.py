@@ -1,5 +1,4 @@
 from datetime import date
-from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -12,6 +11,7 @@ from src.main import app
 from src.models import Category, LegalEntity, User
 from src.models.base import Base
 from src.services.sessions import SessionsService
+from src.utils.elastic_index import SearchService
 from src.utils.email_sender.base import fm
 
 pytest_plugins = ["pytest_asyncio"]
@@ -20,8 +20,10 @@ settings = get_settings()
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "excel: Excel test suite")
 
+    config.addinivalue_line(
+        "markers", "elastic: Disable autouse fixtures for Elasticsearch mocking", "excel: Excel test suite"
+    )
 
 @pytest.fixture(scope="session")
 async def setup_db_schema() -> None:
@@ -74,6 +76,19 @@ async def admin_user(db_session: AsyncSession) -> User:
     await db_session.commit()
     await db_session.refresh(admin)
     return admin
+
+
+@pytest.fixture(scope="function")
+async def category(db_session: AsyncSession):
+    """Create a category for testing."""
+    category = Category(
+        id=111,
+        name="Test Category",
+    )
+    db_session.add(category)
+    await db_session.commit()
+    await db_session.refresh(category)
+    return category
 
 
 @pytest.fixture(scope="function")
@@ -214,19 +229,6 @@ async def auth_client():
             yield client
 
 
-@pytest.fixture(scope="function")
-async def category(db_session: AsyncSession):
-    """Create a category for testing."""
-    category = Category(
-        id=111,
-        name="Test Category",
-    )
-    db_session.add(category)
-    await db_session.commit()
-    await db_session.refresh(category)
-    return category
-
-
 async def get_employee_client(user_id: int):
     sessions_service = SessionsService()
     session_id = await sessions_service.create_session(
@@ -246,17 +248,37 @@ async def get_employee_client(user_id: int):
         return client
 
 
-@pytest.fixture(autouse=True)
-def mock_elasticsearch_benefits():
-    with patch("src.repositories.benefits.es") as benefits_mock_es:
-        benefits_mock_es.index = AsyncMock()
-        benefits_mock_es.delete = AsyncMock()
-        yield benefits_mock_es
+# ElasticSearch fixtures
+
+
+@pytest.fixture(scope="function")
+async def search_service() -> SearchService:
+    service = SearchService()
+    yield service
+    await service.close()
+
+
+@pytest.fixture(scope="function")
+async def setup_indices(search_service) -> None:
+    await search_service.create_benefits_index()
+    await search_service.create_users_index()
+    yield
+    await search_service.es.options(ignore_status=[400, 404]).indices.delete(
+        index=search_service.users_index_name
+    )
+    await search_service.es.options(ignore_status=[400, 404]).indices.delete(
+        index=search_service.benefits_index_name
+    )
 
 
 @pytest.fixture(autouse=True)
-def mock_elasticsearch_users():
-    with patch("src.repositories.users.es") as users_mock_es:
-        users_mock_es.index = AsyncMock()
-        users_mock_es.delete = AsyncMock()
-        yield users_mock_es
+async def mock_elasticsearch(request) -> None:
+    if "elastic" not in request.keywords:
+        app.dependency_overrides[SearchService.get_es_client] = lambda: None
+
+        yield
+
+        app.dependency_overrides = {}
+
+    else:
+        yield

@@ -6,7 +6,7 @@ from sqlalchemy.pool import NullPool
 from src.config import get_settings
 
 settings = get_settings()
-# Create a SQLAlchemy engine for asynchronous operations.
+
 if settings.DEBUG:
     engine = create_async_engine(
         settings.DATABASE_URL, echo=False, poolclass=NullPool, future=True
@@ -14,7 +14,6 @@ if settings.DEBUG:
 else:
     engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
-# Create an async session factory using the configured engine.
 async_session_factory = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )

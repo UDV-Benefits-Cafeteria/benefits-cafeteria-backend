@@ -2,7 +2,9 @@ import datetime
 from io import BytesIO
 from typing import BinaryIO, Optional
 
+
 import pandas as pd
+from elasticsearch import AsyncElasticsearch
 from fastapi import BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,7 +30,11 @@ class BenefitRequestsService(
         schemas.BenefitRequestUpdate,
     ]
 ):
-    repo = BenefitRequestsRepository()
+    def __init__(self, es_client: Optional[AsyncElasticsearch] = None):
+        self.repo: BenefitRequestsRepository = BenefitRequestsRepository()
+        self.users_repo: UsersRepository = UsersRepository(es_client)
+        self.benefits_repo: BenefitsRepository = BenefitsRepository(es_client)
+
     create_schema = schemas.BenefitRequestCreate
     read_schema = schemas.BenefitRequestRead
     update_schema = schemas.BenefitRequestUpdate
@@ -215,12 +221,9 @@ class BenefitRequestsService(
         request_data = create_schema.model_dump(exclude_unset=True)
         request_data["user_id"] = current_user.id
 
-        benefits_repo = BenefitsRepository()
-        users_repo = UsersRepository()
-
         async with get_transaction_session() as session:
             try:
-                benefit = await benefits_repo.read_by_id(
+                benefit = await self.benefits_repo.read_by_id(
                     session, create_schema.benefit_id
                 )
                 if benefit is None:
@@ -232,7 +235,9 @@ class BenefitRequestsService(
                         f"benefit_id: {create_schema.benefit_id}",
                     )
 
-                user = await users_repo.read_by_id(session, request_data["user_id"])
+                user = await self.users_repo.read_by_id(
+                    session, request_data["user_id"]
+                )
                 if user is None:
                     service_logger.warning(
                         f"User with ID {request_data['user_id']} not found"
@@ -269,13 +274,15 @@ class BenefitRequestsService(
                             self.__class__.__name__, "Insufficient benefit amount"
                         )
                     # Decrement benefit amount
-                    await benefits_repo.update_by_id(
+                    await self.benefits_repo.update_by_id(
                         session, benefit.id, {"amount": new_amount}
                     )
 
                 # Decrement user's coins
                 new_coins = user.coins - benefit.coins_cost
-                await users_repo.update_by_id(session, user.id, {"coins": new_coins})
+                await self.users_repo.update_by_id(
+                    session, user.id, {"coins": new_coins}
+                )
 
                 # Set status
                 if current_user.role == user_schemas.UserRole.EMPLOYEE:
@@ -309,9 +316,6 @@ class BenefitRequestsService(
             f"Updating {self.update_schema.__name__} with ID: {entity_id}"
         )
 
-        benefits_repo = BenefitsRepository()
-        users_repo = UsersRepository()
-
         async with get_transaction_session() as session:
             try:
                 existing_request = await self.repo.read_by_id(session, entity_id)
@@ -320,10 +324,12 @@ class BenefitRequestsService(
                         self.__class__.__name__, f"entity_id: {entity_id}"
                     )
 
-                benefit = await benefits_repo.read_by_id(
+                benefit = await self.benefits_repo.read_by_id(
                     session, existing_request.benefit_id
                 )
-                user = await users_repo.read_by_id(session, existing_request.user_id)
+                user = await self.users_repo.read_by_id(
+                    session, existing_request.user_id
+                )
 
                 old_status = existing_request.status
                 new_status = update_schema.status or old_status
@@ -371,12 +377,12 @@ class BenefitRequestsService(
                         if benefit.amount is not None:
                             new_amount = benefit.amount + 1
 
-                            await benefits_repo.update_by_id(
+                            await self.benefits_repo.update_by_id(
                                 session, benefit.id, {"amount": new_amount}
                             )
 
                         new_coins = user.coins + benefit.coins_cost
-                        await users_repo.update_by_id(
+                        await self.users_repo.update_by_id(
                             session, user.id, {"coins": new_coins}
                         )
                     else:
@@ -418,9 +424,6 @@ class BenefitRequestsService(
             f"Deleting {self.read_schema.__name__} with ID: {entity_id}"
         )
 
-        benefits_repo = BenefitsRepository()
-        users_repo = UsersRepository()
-
         async with get_transaction_session() as session:
             try:
                 existing_request = await self.repo.read_by_id(session, entity_id)
@@ -429,10 +432,12 @@ class BenefitRequestsService(
                         self.__class__.__name__, f"entity_id {entity_id}"
                     )
 
-                benefit = await benefits_repo.read_by_id(
+                benefit = await self.benefits_repo.read_by_id(
                     session, existing_request.benefit_id
                 )
-                user = await users_repo.read_by_id(session, existing_request.user_id)
+                user = await self.users_repo.read_by_id(
+                    session, existing_request.user_id
+                )
 
                 if benefit.amount is not None:
                     new_amount = benefit.amount + 1
@@ -442,12 +447,14 @@ class BenefitRequestsService(
                             self.__class__.__name__, "Insufficient benefit amount"
                         )
 
-                    await benefits_repo.update_by_id(
+                    await self.benefits_repo.update_by_id(
                         session, benefit.id, {"amount": new_amount}
                     )
 
                 new_coins = user.coins + benefit.coins_cost
-                await users_repo.update_by_id(session, user.id, {"coins": new_coins})
+                await self.users_repo.update_by_id(
+                    session, user.id, {"coins": new_coins}
+                )
 
                 is_deleted = await self.repo.delete_by_id(session, entity_id=entity_id)
             except Exception as e:
