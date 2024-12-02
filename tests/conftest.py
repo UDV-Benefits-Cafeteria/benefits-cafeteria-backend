@@ -20,10 +20,15 @@ settings = get_settings()
 
 
 def pytest_configure(config):
-
     config.addinivalue_line(
-        "markers", "elastic: Disable autouse fixtures for Elasticsearch mocking", "excel: Excel test suite"
+        "markers",
+        "elastic: disable autouse fixtures for Elasticsearch mocking",
     )
+    config.addinivalue_line(
+        "markers",
+        "excel: Excel test suite",
+    )
+
 
 @pytest.fixture(scope="session")
 async def setup_db_schema() -> None:

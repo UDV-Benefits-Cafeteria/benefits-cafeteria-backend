@@ -2,7 +2,6 @@ import datetime
 from io import BytesIO
 from typing import BinaryIO, Optional
 
-
 import pandas as pd
 from elasticsearch import AsyncElasticsearch
 from fastapi import BackgroundTasks
