@@ -21,7 +21,7 @@ router = APIRouter(prefix="/legal-entities", tags=["Legal Entities"])
 @router.get(
     "/{entity_id}",
     dependencies=[Depends(get_active_user)],
-    response_model=schemas.LegalEntityRead,
+    response_model=schemas.LegalEntityReadWithCounts,
     responses={
         200: {"description": "Legal entity retrieved successfully"},
         404: {"description": "Legal entity not found"},
@@ -40,10 +40,10 @@ async def get_legal_entity(entity_id: int, service: LegalEntitiesServiceDependen
         - 400: If reading the legal entity fails.
 
     Returns:
-    - **LegalEntityRead**: The legal entity data.
+    - **LegalEntityReadWithCounts**: The legal entity data including employee and staff counts.
     """
     try:
-        legal_entity = await service.read_by_id(entity_id)
+        legal_entity = await service.read_by_id_with_counts(entity_id)
 
     except EntityNotFoundError:
         raise HTTPException(
@@ -274,7 +274,7 @@ async def delete_legal_entity(entity_id: int, service: LegalEntitiesServiceDepen
 @router.get(
     "/",
     dependencies=[Depends(get_active_user)],
-    response_model=list[schemas.LegalEntityRead],
+    response_model=list[schemas.LegalEntityReadWithCounts],
     responses={
         200: {"description": "List of legal entities retrieved successfully"},
         400: {"description": "Failed to retrieve legal entities"},
@@ -296,10 +296,10 @@ async def get_legal_entities(
         - 400: If retrieving legal entities fails.
 
     Returns:
-    - **list[LegalEntityRead]**: A list of legal entity data.
+    - **list[LegalEntityReadWithCounts]**: A list of legal entity data including counts.
     """
     try:
-        legal_entities = await service.read_all(page, limit)
+        legal_entities = await service.read_all_with_counts(page, limit)
 
     except EntityReadError:
         raise HTTPException(

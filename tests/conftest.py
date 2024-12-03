@@ -52,27 +52,6 @@ async def db_session() -> AsyncSession:
 
 
 @pytest.fixture(scope="function")
-async def admin_user(db_session: AsyncSession) -> User:
-    """Create a default admin user for testing."""
-    admin = User(
-        id=111,
-        email="admin@example.com",
-        firstname="Admin",
-        lastname="User",
-        role=user_schemas.UserRole.ADMIN,
-        is_active=True,
-        is_verified=True,
-        is_adapted=True,
-        hired_at=date.today(),
-        coins=0,
-    )
-    db_session.add(admin)
-    await db_session.commit()
-    await db_session.refresh(admin)
-    return admin
-
-
-@pytest.fixture(scope="function")
 async def category(db_session: AsyncSession):
     """Create a category for testing."""
     category = Category(
@@ -109,6 +88,27 @@ async def legal_entity2b(db_session: AsyncSession) -> LegalEntity:
     await db_session.commit()
     await db_session.refresh(entity)
     return entity
+
+
+@pytest.fixture(scope="function")
+async def admin_user(db_session: AsyncSession) -> User:
+    """Create a default admin user for testing."""
+    admin = User(
+        id=111,
+        email="admin@example.com",
+        firstname="Admin",
+        lastname="User",
+        role=user_schemas.UserRole.ADMIN,
+        is_active=True,
+        is_verified=True,
+        is_adapted=True,
+        hired_at=date.today(),
+        coins=0,
+    )
+    db_session.add(admin)
+    await db_session.commit()
+    await db_session.refresh(admin)
+    return admin
 
 
 @pytest.fixture(scope="function")

@@ -79,6 +79,12 @@ async def test_legal_entity_users_count(
     # There is hr user but admin user shouldn't be there
     assert legal_entity["staff_count"] == 1
 
+    response = await hr_client.get("/legal-entities/")
+    assert response.json() == [
+        {"name": "Legal Entity 1a", "id": 111, "employee_count": 3, "staff_count": 1},
+        {"name": "Legal Entity 2b", "id": 222, "employee_count": 1, "staff_count": 0},
+    ]
+
 
 @pytest.mark.asyncio
 async def test_create_legal_entity_invalid(hr_client: AsyncClient):
