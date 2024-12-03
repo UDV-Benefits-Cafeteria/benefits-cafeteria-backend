@@ -1,6 +1,9 @@
+import datetime
 import os
-from typing import Any, Optional
+from io import BytesIO
+from typing import Any, BinaryIO, Optional
 
+import pandas as pd
 from elasticsearch import AsyncElasticsearch
 from fastapi import BackgroundTasks, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -174,6 +177,128 @@ class UsersService(
 
         return self.read_schema.model_validate(entity)
 
+    async def export_users(
+        self,
+        current_user: schemas.UserRead,
+        legal_entities: Optional[list[int]] = None,
+        roles: Optional[list[schemas.UserRole]] = None,
+    ) -> BinaryIO:
+        users: list[schemas.UserReadExcel] = await self.read_all_excel(
+            current_user=current_user,
+            legal_entities=legal_entities,
+            roles=roles,
+        )
+
+        if not users:
+            raise service_exceptions.EntityReadError(
+                self.__class__.__name__, "No users found for export"
+            )
+
+        users = self._prepare_users_for_export(users)
+
+        df = pd.DataFrame([user.model_dump() for user in users])
+
+        columns_order = [
+            "id",
+            "email",
+            "lastname",
+            "firstname",
+            "middlename",
+            "role",
+            "coins",
+            "position_name",
+            "legal_entity_name",
+            "hired_at",
+            "level",
+            "created_at",
+            "updated_at",
+            "is_active",
+            "is_verified",
+            "is_adapted",
+        ]
+
+        df = df[columns_order]
+
+        excel_file: BinaryIO = BytesIO()
+
+        with pd.ExcelWriter(excel_file, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False)
+
+        excel_file.seek(0)
+
+        return excel_file
+
+    @staticmethod
+    def _prepare_users_for_export(users):
+        for user in users:
+            if isinstance(user.created_at, datetime.datetime):
+                user.created_at = user.created_at.replace(tzinfo=None)
+                user.created_at += datetime.timedelta(hours=5)
+
+            if isinstance(user.updated_at, datetime.datetime):
+                user.updated_at = user.updated_at.replace(tzinfo=None)
+                user.updated_at += datetime.timedelta(hours=5)
+
+        return users
+
+    async def read_all_excel(
+        self,
+        current_user: schemas.UserRead,
+        legal_entities: Optional[list[int]] = None,
+        roles: Optional[list[schemas.UserRole]] = None,
+    ) -> list[schemas.UserReadExcel]:
+        service_logger.info(f"Reading all {self.read_schema.__name__} entities")
+
+        async with async_session_factory() as session:
+            try:
+                legal_entity_ids: Optional[
+                    list[int]
+                ] = await self._validate_legal_entities(
+                    current_user=current_user, legal_entities=legal_entities
+                )
+                if roles is not None:
+                    roles: Optional[list[str]] = [str(role.value) for role in roles]
+
+                users = await self.repo.read_all_excel(
+                    session=session, roles=roles, legal_entity_ids=legal_entity_ids
+                )
+
+            except repo_exceptions.EntityReadError as e:
+                service_logger.error(f"Error reading all entities: {str(e)}")
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__, str(e)
+                )
+
+            validated_requests = [
+                schemas.UserReadExcel.model_validate(user) for user in users
+            ]
+
+        service_logger.info(f"Successfully fetched {len(validated_requests)} entities.")
+        return validated_requests
+
+    async def _validate_legal_entities(
+        self,
+        current_user: schemas.UserRead,
+        legal_entities: Optional[list[int]] = None,
+    ) -> Optional[list[int]]:
+        if current_user.role == schemas.UserRole.ADMIN:
+            # Can be None
+            legal_entity_ids = legal_entities
+        else:
+            legal_entity_ids = None
+            if (
+                legal_entities != [current_user.legal_entity_id]
+                and current_user.legal_entity_id is not None
+            ) or legal_entities == [current_user.legal_entity_id]:
+                legal_entity_ids = [current_user.legal_entity_id]
+
+            if legal_entity_ids is None:
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__,
+                    "HR user has no legal_entity_id",
+                )
+        return legal_entity_ids
+
     async def read_by_email(self, email: str) -> Optional[schemas.UserRead]:
         async with async_session_factory() as session:
             try:
@@ -213,16 +338,20 @@ class UsersService(
         parser = initialize_excel_parser(
             model_class=schemas.UserCreateExcel,
             field_mappings={
-                "email": ["email", "почта", "электронная почта"],
-                "lastname": ["фамилия"],
-                "firstname": ["имя"],
-                "middlename": ["отчество"],
-                "role": ["роль"],
-                "hired_at": ["дата найма"],
-                "is_adapted": ["адаптационный период"],
+                "email": ["почта", "электронная почта", "email"],
+                "lastname": ["фамилия", "lastname"],
+                "firstname": ["имя", "firstname"],
+                "middlename": ["отчество", "middlename"],
+                "role": ["роль", "role"],
+                "hired_at": ["дата найма", "hired_at"],
+                "is_adapted": ["адаптационный период", "is_adapted"],
                 "coins": ["ю-коины", "юкоины", "coins"],
-                "position_name": ["должность"],
-                "legal_entity_name": ["юр. лицо", "юридическое лицо"],
+                "position_name": ["должность", "position_name"],
+                "legal_entity_name": [
+                    "юр. лицо",
+                    "юридическое лицо",
+                    "legal_entity_name",
+                ],
             },
             required_fields=["email", "lastname", "firstname", "role", "hired_at"],
             field_parsers={

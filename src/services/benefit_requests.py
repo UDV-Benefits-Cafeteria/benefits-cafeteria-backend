@@ -92,7 +92,12 @@ class BenefitRequestsService(
             status=status,
         )
 
-        benefit_requests = self.prepare_benefit_request_for_export(benefit_requests)
+        if not benefit_requests:
+            raise service_exceptions.EntityReadError(
+                self.__class__.__name__, "No benefit requests found for export"
+            )
+
+        benefit_requests = self._prepare_benefit_requests_for_export(benefit_requests)
 
         df = pd.DataFrame([request.model_dump() for request in benefit_requests])
 
@@ -120,7 +125,7 @@ class BenefitRequestsService(
         return excel_file
 
     @staticmethod
-    def prepare_benefit_request_for_export(benefit_requests):
+    def _prepare_benefit_requests_for_export(benefit_requests):
         for request in benefit_requests:
             # Preventing error: 'Excel does not support datetimes with timezones. Please ensure that datetimes are timezone unaware before writing to Excel.'
             if isinstance(request.created_at, datetime.datetime):
@@ -134,10 +139,10 @@ class BenefitRequestsService(
 
         return benefit_requests
 
-    # Difference from read_all method is that this method does not take sort_by, order_dy, page, limit parameters AND it return schemas.BenefitRequestReadExcel
+    # The difference from read_all method is that this method does not take sort_by, order_dy, page, limit parameters AND it returns schemas.BenefitRequestReadExcel
     async def read_all_excel(
         self,
-        current_user: user_schemas.UserRead = None,
+        current_user: user_schemas.UserRead,
         legal_entities: Optional[list[int]] = None,
         status: Optional[schemas.BenefitStatus] = None,
     ) -> list[schemas.BenefitRequestReadExcel]:

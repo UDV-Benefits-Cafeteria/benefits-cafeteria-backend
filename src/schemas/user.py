@@ -1,3 +1,4 @@
+import datetime
 import re
 from datetime import date
 from enum import Enum
@@ -213,6 +214,27 @@ class UserRead(UserBase):
     def level(self) -> int:
         """Calculate the user's level based on their experience."""
         return self.experience // 30
+
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+
+
+class UserReadExcel(UserRead):
+    legal_entity: Optional["LegalEntityRead"] = Field(None, exclude=True)
+    position: Optional["PositionRead"] = Field(None, exclude=True)
+    image_url: Optional[str] = Field(None, exclude=True)
+
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+
+    @computed_field
+    @property
+    def legal_entity_name(self) -> Optional[str]:
+        return self.legal_entity.name if self.legal_entity is not None else None
+
+    @computed_field
+    @property
+    def position_name(self) -> Optional[str]:
+        return self.position.name if self.position is not None else None
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 

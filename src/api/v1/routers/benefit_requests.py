@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, BinaryIO, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.params import Query
@@ -98,11 +98,17 @@ async def export_benefit_requests(
     legal_entity_ids: Annotated[Optional[list[int]], Query()] = None,
     status: Annotated[Optional[schemas.BenefitStatus], Query()] = None,
 ):
-    excel_file = await service.export_benefit_requests(
-        current_user=current_user,
-        legal_entities=legal_entity_ids,
-        status=status,
-    )
+    try:
+        excel_file: BinaryIO = await service.export_benefit_requests(
+            current_user=current_user,
+            legal_entities=legal_entity_ids,
+            status=status,
+        )
+    except EntityReadError:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to export benefit requests. Probably no requests match the specified filters.",
+        )
 
     return StreamingResponse(
         excel_file,

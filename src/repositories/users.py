@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 from elasticsearch import AsyncElasticsearch
 from sqlalchemy import select
@@ -194,3 +194,42 @@ class UsersRepository(SQLAlchemyRepository[User]):
                 f"No {self.model.__name__} found with email: {email}."
             )
         return user
+
+    async def read_all_excel(
+        self,
+        session: AsyncSession,
+        roles: Optional[list[str]] = None,
+        legal_entity_ids: Optional[list[int]] = None,
+    ) -> Sequence[User]:
+        repository_logger.info(
+            f"Fetching Users: roles={roles}, legal_entity_ids={legal_entity_ids}."
+        )
+
+        try:
+            query = select(self.model)
+
+            if legal_entity_ids:
+                query = query.where(self.model.legal_entity_id.in_(legal_entity_ids))
+
+            if roles:
+                query = query.where(self.model.role.in_(roles))
+
+            result = await session.execute(query)
+            entities = result.scalars().all()
+        except Exception as e:
+            repository_logger.error(
+                f"Error fetching Users: roles={roles}"
+                f"legal_entity_ids={legal_entity_ids}: {e}"
+            )
+            raise EntityReadError(
+                self.__class__.__name__,
+                self.model.__tablename__,
+                f"roles: {roles}, legal_entity_ids: {legal_entity_ids}",
+                str(e),
+            )
+
+        repository_logger.info(
+            f"Successfully fetched Users: roles={roles} "
+            f"legal_entity_ids={legal_entity_ids}."
+        )
+        return entities
