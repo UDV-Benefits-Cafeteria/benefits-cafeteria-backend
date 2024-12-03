@@ -28,6 +28,7 @@ fastapi-storages = "^0.3.0"
 elasticsearch = {extras = ["async"], version = "^8.15.1"}
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 fastapi-limiter = "^0.1.6"
+psycopg2 = "^2.9.10"
 
 [tool.poetry.group.dev]
 optional = true

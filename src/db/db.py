@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 from src.config import get_settings
@@ -17,6 +19,13 @@ else:
 async_session_factory = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
+
+
+sync_engine = create_engine(
+    settings.DATABASE_URL.replace("asyncpg", "psycopg2"), echo=False
+)
+
+sync_session_factory = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
 
 @asynccontextmanager

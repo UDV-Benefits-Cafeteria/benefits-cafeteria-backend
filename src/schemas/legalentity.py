@@ -1,6 +1,8 @@
-from typing import Annotated
+from typing import Annotated, Optional, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from src.utils.legal_entity_count import get_legal_entity_counts
 
 
 class LegalEntityBase(BaseModel):
@@ -17,6 +19,17 @@ class LegalEntityUpdate(LegalEntityBase):
 
 class LegalEntityRead(LegalEntityBase):
     id: int
+    employee_count: Optional[int] = None
+    staff_count: Optional[int] = None
+
+    @model_validator(mode="before")
+    def calculate_counts(self) -> Self:
+        employee_number, staff_number = get_legal_entity_counts(self.id)
+
+        self.employee_count = employee_number
+        self.staff_count = staff_number
+
+        return self
 
     model_config = ConfigDict(from_attributes=True)
 
