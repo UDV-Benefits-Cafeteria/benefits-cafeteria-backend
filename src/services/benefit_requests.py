@@ -340,10 +340,7 @@ class BenefitRequestsService(
                     )
 
                 # If old status is 'pending' then the request was just created and needs performer_id to be set
-                if (
-                    old_status.value == schemas.BenefitStatus.PENDING
-                    and update_schema.performer_id is None
-                ):
+                if old_status.value == schemas.BenefitStatus.PENDING:
                     update_schema.performer_id = current_user.id
 
                 # These users have permission to edit the request:
