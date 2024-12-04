@@ -1,6 +1,7 @@
-from typing import Annotated, Any, Optional, Union
+from typing import Annotated, Any, BinaryIO, Optional, Union
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from starlette.responses import StreamingResponse
 
 import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
@@ -101,6 +102,36 @@ async def get_benefits(
         )
 
     return benefits
+
+
+@router.get(
+    "/export",
+    dependencies=[Depends(get_hr_user)],
+)
+async def export_benefits(
+    service: BenefitsServiceDependency,
+):
+    """
+    Export all benefits to an Excel file with customized column names.
+
+    - **current_user**: The HR user initiating the export.
+
+    Returns:
+    - **StreamingResponse**: The Excel file containing all benefits.
+    """
+    try:
+        excel_file: BinaryIO = await service.export_benefits()
+    except service_exceptions.EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to export benefits. No benefits found in the database.",
+        )
+
+    return StreamingResponse(
+        excel_file,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=benefits.xlsx"},
+    )
 
 
 @router.get(

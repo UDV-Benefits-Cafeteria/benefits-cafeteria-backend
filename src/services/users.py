@@ -1,4 +1,3 @@
-import datetime
 import os
 from io import BytesIO
 from typing import Any, BinaryIO, Optional
@@ -19,6 +18,7 @@ from src.services.base import BaseService
 from src.services.legal_entities import LegalEntitiesService
 from src.services.positions import PositionsService
 from src.utils.parser.excel_parser import initialize_excel_parser
+from src.utils.parser.export_timezone_helper import prepare_entities_for_export
 from src.utils.parser.field_parsers import (
     parse_bool_field,
     parse_coins,
@@ -183,39 +183,47 @@ class UsersService(
         legal_entities: Optional[list[int]] = None,
         roles: Optional[list[schemas.UserRole]] = None,
     ) -> BinaryIO:
-        users: list[schemas.UserReadExcel] = await self.read_all_excel(
-            current_user=current_user,
-            legal_entities=legal_entities,
-            roles=roles,
-        )
+        try:
+            users: list[schemas.UserReadExcel] = await self.read_all_excel(
+                current_user=current_user,
+                legal_entities=legal_entities,
+                roles=roles,
+            )
+        except repo_exceptions.EntityReadError as e:
+            service_logger.error(f"Failed to export users: {e}")
+            raise service_exceptions.EntityReadError(self.__class__.__name__, str(e))
 
         if not users:
             raise service_exceptions.EntityReadError(
                 self.__class__.__name__, "No users found for export"
             )
 
-        users = self._prepare_users_for_export(users)
+        users = prepare_entities_for_export(users)
 
         df = pd.DataFrame([user.model_dump() for user in users])
 
-        columns_order = [
-            "id",
-            "email",
-            "lastname",
-            "firstname",
-            "middlename",
-            "role",
-            "coins",
-            "position_name",
-            "legal_entity_name",
-            "hired_at",
-            "level",
-            "created_at",
-            "updated_at",
-            "is_active",
-            "is_verified",
-            "is_adapted",
-        ]
+        column_mapping = {
+            "id": "ID",
+            "email": "email",
+            "lastname": "Фамилия",
+            "firstname": "Имя",
+            "middlename": "Отчество",
+            "role": "Роль",
+            "coins": "Ю-коины",
+            "position_name": "Должность",
+            "legal_entity_name": "Юридическое лицо",
+            "hired_at": "Дата найма",
+            "level": "Стаж (месяцев)",
+            "created_at": "Время создания",
+            "updated_at": "Время последней модификации",
+            "is_active": "Активен",
+            "is_verified": "Верифицирован",
+            "is_adapted": "Пройден адаптационный период",
+        }
+
+        df.rename(columns=column_mapping, inplace=True)
+
+        columns_order = list(column_mapping.values())
 
         df = df[columns_order]
 
@@ -227,19 +235,6 @@ class UsersService(
         excel_file.seek(0)
 
         return excel_file
-
-    @staticmethod
-    def _prepare_users_for_export(users):
-        for user in users:
-            if isinstance(user.created_at, datetime.datetime):
-                user.created_at = user.created_at.replace(tzinfo=None)
-                user.created_at += datetime.timedelta(hours=5)
-
-            if isinstance(user.updated_at, datetime.datetime):
-                user.updated_at = user.updated_at.replace(tzinfo=None)
-                user.updated_at += datetime.timedelta(hours=5)
-
-        return users
 
     async def read_all_excel(
         self,

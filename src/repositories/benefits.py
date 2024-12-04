@@ -1,6 +1,7 @@
-from typing import Any, Optional, Union
+from typing import Any, Optional, Sequence, Union
 
 from elasticsearch import AsyncElasticsearch
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import get_settings
@@ -164,3 +165,22 @@ class BenefitsRepository(SQLAlchemyRepository[Benefit]):
 
         repository_logger.info(f"Found {len(results)} Benefits matching query: {query}")
         return results
+
+    async def read_all_excel(
+        self,
+        session: AsyncSession,
+    ) -> Sequence[Benefit]:
+        repository_logger.info("Fetching Benefits.")
+
+        try:
+            query = select(self.model)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+        except Exception as e:
+            repository_logger.error(f"Error fetching benefits: {str(e)}")
+            raise EntityReadError(
+                self.__class__.__name__, self.model.__tablename__, "", str(e)
+            )
+
+        repository_logger.info("Successfully fetched Benefits")
+        return entities

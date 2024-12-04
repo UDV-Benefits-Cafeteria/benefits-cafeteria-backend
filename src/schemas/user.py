@@ -147,7 +147,7 @@ class UserVerified(BaseModel):
 
 
 class UserCreate(UserBase):
-    is_verified: bool = Field(default=False, exclude=True)
+    is_verified: Annotated[bool, Field(default=False, exclude=True)]
 
     model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
@@ -195,11 +195,11 @@ class UserRead(UserBase):
     """
 
     id: int
-    position: Optional["PositionRead"] = None
-    legal_entity: Optional["LegalEntityRead"] = None
+    position: Optional[PositionRead] = None
+    legal_entity: Optional[LegalEntityRead] = None
     image_url: Optional[str] = None
-    position_id: Optional[int] = Field(None, exclude=True)
-    legal_entity_id: Optional[int] = Field(None, exclude=True)
+    position_id: Annotated[Optional[int], Field(None, exclude=True)]
+    legal_entity_id: Annotated[Optional[int], Field(None, exclude=True)]
 
     @computed_field
     @property
@@ -219,9 +219,9 @@ class UserRead(UserBase):
 
 
 class UserReadExcel(UserRead):
-    legal_entity: Optional["LegalEntityRead"] = Field(None, exclude=True)
-    position: Optional["PositionRead"] = Field(None, exclude=True)
-    image_url: Optional[str] = Field(None, exclude=True)
+    legal_entity: Annotated[Optional[LegalEntityRead], Field(None, exclude=True)]
+    position: Annotated[Optional[PositionRead], Field(None, exclude=True)]
+    image_url: Annotated[Optional[str], Field(None, exclude=True)]
 
     created_at: datetime.datetime
     updated_at: datetime.datetime

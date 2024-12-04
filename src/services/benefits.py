@@ -1,6 +1,8 @@
 import uuid
-from typing import Any, Optional, Union
+from io import BytesIO
+from typing import Any, BinaryIO, Optional, Union
 
+import pandas as pd
 from elasticsearch import AsyncElasticsearch
 from fastapi import UploadFile
 
@@ -9,13 +11,14 @@ import src.schemas.benefit as schemas
 import src.schemas.category as category_schemas
 import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
-from src.db.db import get_transaction_session
+from src.db.db import async_session_factory, get_transaction_session
 from src.logger import service_logger
 from src.repositories.benefit_images import BenefitImagesRepository
 from src.repositories.benefits import BenefitsRepository
 from src.services.base import BaseService
 from src.services.categories import CategoriesService
 from src.utils.parser.excel_parser import initialize_excel_parser
+from src.utils.parser.export_timezone_helper import prepare_entities_for_export
 from src.utils.parser.field_parsers import parse_bool_field, parse_date_field
 
 
@@ -307,3 +310,73 @@ class BenefitsService(
             category = await categories_service.create(category_create)
 
         return category
+
+    async def export_benefits(self) -> BinaryIO:
+        service_logger.info("Exporting benefits to Excel.")
+
+        try:
+            benefits: list[schemas.BenefitReadExcel] = await self.read_all_excel()
+        except repo_exceptions.EntityReadError as e:
+            service_logger.error(f"Failed to export benefits: {e}")
+            raise service_exceptions.EntityReadError(self.__class__.__name__, str(e))
+
+        if not benefits:
+            service_logger.warning("No benefits found for export.")
+            raise service_exceptions.EntityReadError(
+                self.__class__.__name__, "No benefits found for export."
+            )
+
+        benefits = prepare_entities_for_export(benefits)
+
+        df = pd.DataFrame([benefit.model_dump() for benefit in benefits])
+
+        column_mapping = {
+            "id": "ID",
+            "name": "Название",
+            "category_name": "Категория",
+            "description": "Описание",
+            "real_currency_cost": "Стоимость в рублях",
+            "amount": "Количество",
+            "coins_cost": "Стоимость в ю-коинах",
+            "min_level_cost": "Требуемый стаж (месяцев)",
+            "is_active": "Активный",
+            "adaptation_required": "Требуется адаптационные период",
+            "created_at": "Время создания",
+            "updated_at": "Время последней модификации",
+        }
+
+        df.rename(columns=column_mapping, inplace=True)
+
+        columns_order = list(column_mapping.values())
+
+        df = df[columns_order]
+
+        excel_file: BinaryIO = BytesIO()
+
+        with pd.ExcelWriter(excel_file, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False)
+
+        excel_file.seek(0)
+
+        service_logger.info("Benefits exported successfully.")
+        return excel_file
+
+    async def read_all_excel(self) -> list[schemas.BenefitReadExcel]:
+        service_logger.info(f"Reading all {self.read_schema.__name__} entities")
+
+        async with async_session_factory() as session:
+            try:
+                benefits = await self.repo.read_all_excel(session=session)
+
+            except repo_exceptions.EntityReadError as e:
+                service_logger.error(f"Error reading all entities: {str(e)}")
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__, str(e)
+                )
+
+            validated_requests = [
+                schemas.BenefitReadExcel.model_validate(benefit) for benefit in benefits
+            ]
+
+        service_logger.info(f"Successfully fetched {len(validated_requests)} entities.")
+        return validated_requests

@@ -752,15 +752,16 @@ async def test_hr_get_benefit_requests_sorting(
 
 
 field_mappings = {
-    "id": ["id"],
-    "status": ["status"],
-    "user_id": ["user_id"],
-    "benefit_id": ["benefit_id"],
-    "performer_id": ["performer_id"],
-    "comment": ["comment"],
-    "content": ["content"],
-    "created_at": ["created_at"],
-    "updated_at": ["updated_at"],
+    "id": ["ID"],
+    "status": ["Статус"],
+    "comment": ["Комментарий"],
+    "benefit_name": ["Название бенефита"],
+    "user_email": ["email пользователя"],
+    "user_fullname": ["ФИО пользователя"],
+    "performer_email": ["email сотрудника HR"],
+    "performer_fullname": ["ФИО сотрудника HR"],
+    "created_at": ["Время создания"],
+    "updated_at": ["Время последней модификации"],
 }
 
 
@@ -823,12 +824,5 @@ async def test_export_benefit_requests_with_legal_entity_filter(
     )
 
     assert len(parsed_data) == 2
-
-    for request in parsed_data:
-        request_dict = request.model_dump()
-        user: user_schemas.UserRead = await UsersService().read_by_id(
-            request_dict["user_id"]
-        )
-        assert user.legal_entity_id == legal_entity1a.id
 
     assert len(errors) == 0

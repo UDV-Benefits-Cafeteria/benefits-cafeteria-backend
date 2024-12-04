@@ -154,19 +154,6 @@ class UsersRepository(SQLAlchemyRepository[User]):
         repository_logger.info(f"Successfully deleted User from index: ID={user_id}")
 
     async def read_by_email(self, session: AsyncSession, email: str) -> Optional[User]:
-        """
-        Retrieve a User entity by email.
-
-        Args:
-            session: SQLAlchemy AsyncSession.
-            email: The email of the user to retrieve.
-
-        Returns:
-            A User entity if found, otherwise None.
-
-        Raises:
-            EntityReadError: If an error occurs while reading the entity.
-        """
         repository_logger.info(f"Fetching {self.model.__name__} with email: {email}.")
 
         try:

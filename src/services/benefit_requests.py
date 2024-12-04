@@ -1,4 +1,3 @@
-import datetime
 from io import BytesIO
 from typing import BinaryIO, Optional
 
@@ -18,6 +17,7 @@ from src.repositories.benefit_requests import BenefitRequestsRepository
 from src.repositories.benefits import BenefitsRepository
 from src.repositories.users import UsersRepository
 from src.services.base import BaseService
+from src.utils.parser.export_timezone_helper import prepare_entities_for_export
 
 settings = get_settings()
 
@@ -86,7 +86,9 @@ class BenefitRequestsService(
         legal_entities: Optional[list[int]] = None,
         status: Optional[schemas.BenefitStatus] = None,
     ) -> BinaryIO:
-        benefit_requests = await self.read_all_excel(
+        benefit_requests: list[
+            schemas.BenefitRequestReadExcel
+        ] = await self.read_all_excel(
             current_user=current_user,
             legal_entities=legal_entities,
             status=status,
@@ -97,21 +99,26 @@ class BenefitRequestsService(
                 self.__class__.__name__, "No benefit requests found for export"
             )
 
-        benefit_requests = self._prepare_benefit_requests_for_export(benefit_requests)
+        benefit_requests = prepare_entities_for_export(benefit_requests)
 
         df = pd.DataFrame([request.model_dump() for request in benefit_requests])
 
-        columns_order = [
-            "id",
-            "status",
-            "comment",
-            "benefit_id",
-            "user_id",
-            "performer_id",
-            "created_at",
-            "updated_at",
-            "content",
-        ]
+        column_mapping = {
+            "id": "ID",
+            "status": "Статус",
+            "comment": "Комментарий",
+            "benefit_name": "Название бенефита",
+            "user_email": "email пользователя",
+            "user_fullname": "ФИО пользователя",
+            "performer_email": "email сотрудника HR",
+            "performer_fullname": "ФИО сотрудника HR",
+            "created_at": "Время создания",
+            "updated_at": "Время последней модификации",
+        }
+
+        df.rename(columns=column_mapping, inplace=True)
+
+        columns_order = list(column_mapping.values())
 
         df = df[columns_order]
 
@@ -123,21 +130,6 @@ class BenefitRequestsService(
         excel_file.seek(0)
 
         return excel_file
-
-    @staticmethod
-    def _prepare_benefit_requests_for_export(benefit_requests):
-        for request in benefit_requests:
-            # Preventing error: 'Excel does not support datetimes with timezones. Please ensure that datetimes are timezone unaware before writing to Excel.'
-            if isinstance(request.created_at, datetime.datetime):
-                request.created_at = request.created_at.replace(tzinfo=None)
-                # Make created_at time correspond with the database value (in UTC)
-                request.created_at += datetime.timedelta(hours=5)
-
-            if isinstance(request.updated_at, datetime.datetime):
-                request.updated_at = request.updated_at.replace(tzinfo=None)
-                request.updated_at += datetime.timedelta(hours=5)
-
-        return benefit_requests
 
     # The difference from read_all method is that this method does not take sort_by, order_dy, page, limit parameters AND it returns schemas.BenefitRequestReadExcel
     async def read_all_excel(
