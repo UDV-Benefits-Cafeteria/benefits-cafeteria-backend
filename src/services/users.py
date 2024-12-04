@@ -264,12 +264,12 @@ class UsersService(
                     self.__class__.__name__, str(e)
                 )
 
-            validated_requests = [
+            validated_users = [
                 schemas.UserReadExcel.model_validate(user) for user in users
             ]
 
-        service_logger.info(f"Successfully fetched {len(validated_requests)} entities.")
-        return validated_requests
+        service_logger.info(f"Successfully fetched {len(validated_users)} entities.")
+        return validated_users
 
     async def _validate_legal_entities(
         self,

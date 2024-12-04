@@ -48,22 +48,6 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
 
         delete(entity_id: int) -> bool:
             Deletes an entity by its ID and returns a boolean indicating the success of the operation.
-
-    Exceptions:
-        Raises service_exceptions.EntityCreateError:
-            When an error occurs during entity creation.
-
-        Raises service_exceptions.EntityNotFoundError:
-            When an entity with the specified ID is not found during read, update, or delete operations.
-
-        Raises service_exceptions.EntityReadError:
-            When an error occurs while reading entities.
-
-        Raises service_exceptions.EntityUpdateError:
-            When an error occurs during entity updates.
-
-        Raises service_exceptions.EntityDeleteError:
-            When an error occurs during entity deletion.
     """
 
     repo: SQLAlchemyRepository

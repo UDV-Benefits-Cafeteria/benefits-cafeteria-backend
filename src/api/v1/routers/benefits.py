@@ -7,12 +7,14 @@ import src.schemas.user as user_schemas
 import src.services.exceptions as service_exceptions
 from src.api.v1.dependencies import (
     BenefitsServiceDependency,
+    ReviewsServiceDependency,
     get_active_user,
     get_hr_user,
 )
 from src.config import get_settings
 from src.schemas import benefit as schemas
 from src.schemas.benefit import SortOrderField
+from src.schemas.review import ReviewRead
 from src.utils.filter_parsers import range_filter_parser
 
 router = APIRouter(prefix="/benefits", tags=["Benefits"])
@@ -111,14 +113,6 @@ async def get_benefits(
 async def export_benefits(
     service: BenefitsServiceDependency,
 ):
-    """
-    Export all benefits to an Excel file with customized column names.
-
-    - **current_user**: The HR user initiating the export.
-
-    Returns:
-    - **StreamingResponse**: The Excel file containing all benefits.
-    """
     try:
         excel_file: BinaryIO = await service.export_benefits()
     except service_exceptions.EntityReadError:
@@ -468,3 +462,35 @@ async def bulk_create_benefits(
     return schemas.BenefitUploadResponse(
         created_benefits=created_benefits, errors=errors
     )
+
+
+@router.get(
+    "/{benefit_id}/reviews",
+    dependencies=[Depends(get_active_user)],
+    response_model=list[ReviewRead],
+    responses={
+        200: {"description": "Reviews retrieved successfully"},
+        404: {"description": "Benefit not found"},
+        400: {"description": "Failed to retrieve reviews"},
+    },
+)
+async def get_benefit_reviews(
+    benefit_id: int,
+    service: ReviewsServiceDependency,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+):
+    try:
+        reviews = await service.get_reviews_by_benefit_id(
+            benefit_id=benefit_id, page=page, limit=limit
+        )
+    except service_exceptions.EntityNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Benefit not found"
+        )
+    except service_exceptions.EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to retrieve reviews"
+        )
+
+    return reviews

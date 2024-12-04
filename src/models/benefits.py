@@ -10,7 +10,7 @@ from src.models.base import Base
 from src.models.custom_types import FileType
 
 if TYPE_CHECKING:
-    from src.models import Position, Question, User
+    from src.models import Position, Review, User
 
 
 class BenefitImage(Base):
@@ -141,11 +141,8 @@ class Benefit(Base):
         back_populates="benefit",
         lazy="selectin",
     )
-    questions: Mapped[List["Question"]] = relationship(
-        "Question",
-        back_populates="benefit",
-        cascade="all, delete-orphan",
-        lazy="selectin",
+    reviews: Mapped[List["Review"]] = relationship(
+        "Review", back_populates="benefit", cascade="all, delete-orphan"
     )
     positions: Mapped[List["Position"]] = relationship(
         "Position",

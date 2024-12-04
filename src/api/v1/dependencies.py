@@ -12,6 +12,7 @@ from src.services.benefits import BenefitsService
 from src.services.categories import CategoriesService
 from src.services.legal_entities import LegalEntitiesService
 from src.services.positions import PositionsService
+from src.services.reviews import ReviewsService
 from src.services.sessions import SessionsService
 from src.services.users import UsersService
 from src.utils.elastic_index import ElasticClientDependency
@@ -42,6 +43,7 @@ BenefitRequestsServiceDependency = Annotated[
 ]
 
 # Services that do NOT depend on ElasticSearch
+ReviewsServiceDependency = Annotated[ReviewsService, Depends()]
 SessionsServiceDependency = Annotated[SessionsService, Depends()]
 PositionsServiceDependency = Annotated[PositionsService, Depends()]
 CategoriesServiceDependency = Annotated[CategoriesService, Depends()]

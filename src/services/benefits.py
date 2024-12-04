@@ -374,9 +374,9 @@ class BenefitsService(
                     self.__class__.__name__, str(e)
                 )
 
-            validated_requests = [
+            validated_benefits = [
                 schemas.BenefitReadExcel.model_validate(benefit) for benefit in benefits
             ]
 
-        service_logger.info(f"Successfully fetched {len(validated_requests)} entities.")
-        return validated_requests
+        service_logger.info(f"Successfully fetched {len(validated_benefits)} entities.")
+        return validated_benefits

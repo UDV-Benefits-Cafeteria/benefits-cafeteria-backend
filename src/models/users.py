@@ -11,15 +11,7 @@ from src.models.base import Base
 from src.models.custom_types import FileType
 
 if TYPE_CHECKING:
-    from src.models import (
-        Answer,
-        BenefitRequest,
-        CoinPayment,
-        LegalEntity,
-        Position,
-        Question,
-        Session,
-    )
+    from src.models import BenefitRequest, LegalEntity, Position, Review, Session
 
 
 class UserRole(enum.Enum):
@@ -64,11 +56,7 @@ class User(Base):
     Relationships:
         legal_entity (Optional[LegalEntity]): The legal entity associated with the user.
         position (Optional[Position]): The position associated with the user.
-        coin_payments (List[CoinPayment]): The list of coin payments made by the user.
-        processed_payments (List[CoinPayment]): The list of coin payments processed by the user.
         benefit_requests (List[BenefitRequest]): The list of benefit requests made by the user.
-        questions (List[Question]): The list of questions asked by the user.
-        answers (List[Answer]): The list of answers provided by the user.
         sessions (List[Session]): The list of active sessions associated with the user.
     """
 
@@ -116,25 +104,12 @@ class User(Base):
         back_populates="users",
         lazy="selectin",
     )
-    coin_payments: Mapped[List["CoinPayment"]] = relationship(
-        "CoinPayment",
-        back_populates="user",
-        foreign_keys="CoinPayment.user_id",
-    )
-    processed_payments: Mapped[List["CoinPayment"]] = relationship(
-        "CoinPayment",
-        back_populates="payer",
-        foreign_keys="CoinPayment.payer_id",
-    )
     benefit_requests: Mapped[List["BenefitRequest"]] = relationship(
         "BenefitRequest",
         back_populates="user",
         foreign_keys="BenefitRequest.user_id",
     )
-    questions: Mapped[List["Question"]] = relationship(
-        "Question", back_populates="user"
-    )
-    answers: Mapped[List["Answer"]] = relationship("Answer", back_populates="user")
+    reviews: Mapped[List["Review"]] = relationship("Review", back_populates="user")
 
     sessions: Mapped[List["Session"]] = relationship(
         "Session", back_populates="user", cascade="all, delete-orphan"
