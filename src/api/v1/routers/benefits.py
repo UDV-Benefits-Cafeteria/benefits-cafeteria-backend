@@ -341,7 +341,7 @@ async def upload_images(
 
 
 @router.delete(
-    "/{benefit_id}/images",
+    "/images",
     dependencies=[Depends(get_hr_user)],
     status_code=status.HTTP_200_OK,
     responses={
