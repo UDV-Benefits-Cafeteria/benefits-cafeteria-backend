@@ -58,15 +58,27 @@ class BenefitRequestsService(
                     current_user=current_user, legal_entities=legal_entities
                 )
 
-                requests = await self.repo.read_all(
-                    session=session,
-                    status=status,
-                    legal_entity_ids=legal_entity_ids,
-                    sort_by=sort_by,
-                    sort_order=sort_order,
-                    page=page,
-                    limit=limit,
-                )
+                if status == schemas.BenefitStatus.PROCESSING:
+                    requests = await self.repo.read_all(
+                        session=session,
+                        status=status,
+                        legal_entity_ids=legal_entity_ids,
+                        performer_id=current_user.id,
+                        sort_by=sort_by,
+                        sort_order=sort_order,
+                        page=page,
+                        limit=limit,
+                    )
+                else:
+                    requests = await self.repo.read_all(
+                        session=session,
+                        status=status,
+                        legal_entity_ids=legal_entity_ids,
+                        sort_by=sort_by,
+                        sort_order=sort_order,
+                        page=page,
+                        limit=limit,
+                    )
             except repo_exceptions.EntityReadError as e:
                 service_logger.error(f"Error reading all entities: {str(e)}")
                 raise service_exceptions.EntityReadError(

@@ -18,6 +18,7 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
         session: AsyncSession,
         status: Optional[str] = None,
         legal_entity_ids: Optional[list[int]] = None,
+        performer_id: Optional[int] = None,
         sort_by: Optional[str] = None,
         sort_order: str = "asc",
         page: int = 1,
@@ -31,6 +32,7 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
             session: An external AsyncSession.
             status: Optional status to filter BenefitRequests.
             legal_entity_ids: Optional list of legal entity IDs for filtering.
+            performer_id: Optional id of performer of task.
             sort_by: Field name to sort the results by.
             sort_order: Sort order ('asc' or 'desc').
             page: Page number for pagination.
@@ -51,6 +53,9 @@ class BenefitRequestsRepository(SQLAlchemyRepository[BenefitRequest]):
                 query = query.join(self.model.user).where(
                     User.legal_entity_id.in_(legal_entity_ids)
                 )
+
+            if performer_id:
+                query = query.where(self.model.performer_id == performer_id)
 
             if status:
                 query = query.where(self.model.status == status)
