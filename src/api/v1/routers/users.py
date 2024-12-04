@@ -1,4 +1,4 @@
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any, BinaryIO, Optional
 
 from fastapi import (
     APIRouter,
@@ -10,6 +10,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from starlette.responses import StreamingResponse
 
 import src.schemas.user as schemas
 from src.api.v1.dependencies import (
@@ -164,6 +165,32 @@ async def create_user(
     )
 
     return created_user
+
+
+@router.get("/export")
+async def export_users(
+    current_user: Annotated[schemas.UserRead, Depends(get_hr_user)],
+    service: UsersServiceDependency,
+    legal_entity_ids: Annotated[Optional[list[int]], Query()] = None,
+    roles: Annotated[Optional[list[schemas.UserRole]], Query()] = None,
+):
+    try:
+        excel_file: BinaryIO = await service.export_users(
+            current_user=current_user,
+            legal_entities=legal_entity_ids,
+            roles=roles,
+        )
+    except EntityReadError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to export users. Probably no users match the specified filters.",
+        )
+
+    return StreamingResponse(
+        excel_file,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=udv_users.xlsx"},
+    )
 
 
 @router.get(

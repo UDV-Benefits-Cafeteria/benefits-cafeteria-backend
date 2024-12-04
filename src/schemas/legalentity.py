@@ -21,6 +21,11 @@ class LegalEntityRead(LegalEntityBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class LegalEntityReadWithCounts(LegalEntityRead):
+    employee_count: int
+    staff_count: int
+
+
 class LegalEntityUploadError(BaseModel):
     row: int
     error: str

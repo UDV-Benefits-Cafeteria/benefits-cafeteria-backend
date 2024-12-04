@@ -9,6 +9,10 @@ from src.db.db import async_session_factory
 from src.logger import service_logger
 from src.repositories.legal_entities import LegalEntitiesRepository
 from src.services.base import BaseService
+from src.utils.legal_entity_count import (
+    get_legal_entity_counts,
+    get_multiple_legal_entity_counts,
+)
 from src.utils.parser.excel_parser import initialize_excel_parser
 
 
@@ -117,3 +121,75 @@ class LegalEntitiesService(
             extra={"entity_name": name},
         )
         return self.read_schema.model_validate(entity)
+
+    async def read_by_id_with_counts(
+        self, entity_id: int
+    ) -> schemas.LegalEntityReadWithCounts:
+        """
+        Retrieve a single LegalEntity with employee_count and staff_count.
+        """
+        service_logger.info(f"Reading LegalEntityReadWithCounts with ID: {entity_id}")
+
+        async with async_session_factory() as session:
+            try:
+                entity = await self.repo.read_by_id(session, entity_id)
+                if not entity:
+                    service_logger.error(f"LegalEntity with ID {entity_id} not found.")
+                    raise service_exceptions.EntityNotFoundError(
+                        self.__class__.__name__, f"entity_id: {entity_id}"
+                    )
+
+                employee_count, staff_count = await get_legal_entity_counts(
+                    entity_id, session
+                )
+
+                return schemas.LegalEntityReadWithCounts(
+                    id=entity.id,
+                    name=entity.name,
+                    employee_count=employee_count,
+                    staff_count=staff_count,
+                )
+            except repo_exceptions.EntityReadError as e:
+                service_logger.error(
+                    f"Error reading LegalEntity with ID {entity_id}: {str(e)}"
+                )
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__, str(e)
+                )
+
+    async def read_all_with_counts(
+        self, page: int = 1, limit: int = 10
+    ) -> list[schemas.LegalEntityReadWithCounts]:
+        """
+        Retrieve all LegalEntities with employee_count and staff_count.
+        """
+        service_logger.info(
+            f"Reading all LegalEntities with counts (Page: {page}, Limit: {limit})"
+        )
+
+        async with async_session_factory() as session:
+            try:
+                entities = await self.repo.read_all(session, page, limit)
+            except repo_exceptions.EntityReadError as e:
+                service_logger.error(f"Error reading all LegalEntities: {str(e)}")
+                raise service_exceptions.EntityReadError(
+                    self.__class__.__name__, str(e)
+                )
+
+            legal_entity_ids = [entity.id for entity in entities]
+            counts = await get_multiple_legal_entity_counts(legal_entity_ids, session)
+
+            read_with_counts = [
+                schemas.LegalEntityReadWithCounts(
+                    id=entity.id,
+                    name=entity.name,
+                    employee_count=counts.get(entity.id, (0, 0))[0],
+                    staff_count=counts.get(entity.id, (0, 0))[1],
+                )
+                for entity in entities
+            ]
+
+            service_logger.info(
+                f"Successfully fetched {len(read_with_counts)} LegalEntities with counts."
+            )
+            return read_with_counts

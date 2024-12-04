@@ -41,7 +41,7 @@ async def test_create_user_required_fields(
     user_data[field_name] = field_value
 
     response = await hr_client.post("/users/", json=user_data)
-    print(response.json())
+
     assert response.status_code == expected_status
 
 

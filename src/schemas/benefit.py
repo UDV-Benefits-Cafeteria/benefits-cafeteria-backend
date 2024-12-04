@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from src.schemas.category import CategoryRead
 from src.schemas.position import PositionRead
@@ -94,6 +94,22 @@ class BenefitRead(BenefitBase):
     category: Optional[CategoryRead] = None
     positions: Optional[list[PositionRead]] = None
     category_id: Annotated[Optional[int], Field(None, exclude=True)]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BenefitReadExcel(BenefitRead):
+    category: Annotated[Optional[CategoryRead], Field(None, exclude=True)]
+    positions: Annotated[Optional[list[PositionRead]], Field(None, exclude=True)]
+    images: Annotated[Optional[list[BenefitImageRead]], Field(None, exclude=True)]
+
+    created_at: datetime
+    updated_at: datetime
+
+    @computed_field
+    @property
+    def category_name(self) -> Optional[str]:
+        return self.category.name if self.category is not None else None
 
     model_config = ConfigDict(from_attributes=True)
 

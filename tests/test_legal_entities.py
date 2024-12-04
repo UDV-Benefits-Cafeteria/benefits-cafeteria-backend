@@ -1,3 +1,4 @@
+from datetime import date
 from io import BytesIO
 from typing import Any, BinaryIO, Optional
 
@@ -6,6 +7,7 @@ import pytest
 from fastapi import status
 from httpx import AsyncClient
 
+from src.models import LegalEntity, User
 from src.services.exceptions import EntityNotFoundError
 from src.services.legal_entities import LegalEntitiesService
 
@@ -31,6 +33,57 @@ async def test_create_legal_entity_valid(hr_client: AsyncClient):
 
     legal_entity_in_db = await LegalEntitiesService().read_by_id(legal_entity["id"])
     assert legal_entity_in_db is not None
+
+
+@pytest.mark.asyncio
+async def test_legal_entity_users_count(
+    hr_client: AsyncClient,
+    legal_entity1a: LegalEntity,
+    legal_entity2b_user: User,
+    employee_user: User,
+    admin_user: User,
+):
+    user1_data = {
+        "email": "employee1@example.com",
+        "firstname": "John",
+        "lastname": "Doe",
+        "role": "employee",
+        "legal_entity_id": legal_entity1a.id,
+        "hired_at": date.today().isoformat(),
+        "is_active": False,  # isn't active
+    }
+    user2_data = {
+        "email": "employee2@example.com",
+        "firstname": "John",
+        "lastname": "Doe",
+        "role": "employee",
+        "legal_entity_id": legal_entity1a.id,
+        "hired_at": date.today().isoformat(),
+        "is_active": True,  # is active
+    }
+
+    response = await hr_client.post("/users/", json=user1_data)
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    response = await hr_client.post("/users/", json=user2_data)
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    legal_entity_response = await hr_client.get(f"/legal-entities/{legal_entity1a.id}")
+    assert legal_entity_response.status_code == status.HTTP_200_OK
+    legal_entity = legal_entity_response.json()
+
+    # 2 created users + employee_user from fixture
+    assert legal_entity["employee_count"] == 3
+    # There is hr user but admin user shouldn't be there
+    assert legal_entity["staff_count"] == 1
+
+    response = await hr_client.get("/legal-entities/")
+    assert response.json() == [
+        {"name": "Legal Entity 1a", "id": 111, "employee_count": 3, "staff_count": 1},
+        {"name": "Legal Entity 2b", "id": 222, "employee_count": 1, "staff_count": 0},
+    ]
 
 
 @pytest.mark.asyncio
