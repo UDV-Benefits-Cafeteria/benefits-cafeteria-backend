@@ -166,7 +166,7 @@ class BenefitsService(
 
                     if image:
                         await BenefitImagesRepository().delete_by_id(
-                            session, image.benefit_id
+                            session, image.id
                         )
                         service_logger.info(
                             "Image removed",
