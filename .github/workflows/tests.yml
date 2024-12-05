@@ -1,0 +1,80 @@
+name: Tests
+on:
+  workflow_call:
+
+
+  push:
+    branches:
+      - '*'
+      - '*/*'
+      - '**'
+      - '!main'
+      - '!dev'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      elasticsearch:
+        image: elasticsearch:8.15.3
+        env:
+          discovery.type: single-node
+          ELASTIC_PASSWORD: elasticpass
+          cluster.name: "elastic-udv"
+          network.host: "0.0.0.0"
+          xpack.security.enabled: "true"
+          xpack.license.self_generated.type: "basic"
+        ports:
+          - 9200:9200
+          - 9300:9300
+        options: --health-cmd "curl -s http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Create env file
+        run: |
+          touch .env
+          echo DEBUG=True >> .env
+          echo POSTGRES_USER=postgres >> .env
+          echo POSTGRES_PASSWORD=postgres >> .env
+          echo POSTGRES_DB=postgres >> .env
+          echo POSTGRES_HOST=localhost >> .env
+          echo ELASTIC_HOST=localhost >> .env
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Install libs
+        run: poetry install --with dev
+
+      - name: Create Alembic versions directory
+        run: |
+          mkdir -p alembic/versions
+          chmod -R 777 alembic/versions
+
+      - name: Init migrations
+        run: poetry run alembic upgrade head
+
+      - name: Create migrations
+        run: poetry run alembic revision --autogenerate
+
+      - name: Applying migrations
+        run: poetry run alembic upgrade head
+
+      - name: Run tests
+        run: poetry run pytest tests/
