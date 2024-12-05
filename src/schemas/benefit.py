@@ -75,6 +75,7 @@ class BenefitReadShortPublic(BaseModel):
     coins_cost: Annotated[int, Field(ge=0)]
     min_level_cost: Annotated[int, Field(ge=0)]
     amount: Annotated[Optional[int], Field(ge=0)] = None
+    is_active: bool = True
     primary_image_url: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
