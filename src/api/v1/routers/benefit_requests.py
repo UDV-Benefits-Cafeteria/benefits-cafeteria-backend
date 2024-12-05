@@ -149,7 +149,7 @@ async def get_benefit_requests_by_user(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    if current_user.role != user_schemas.UserRole.ADMIN.value:
+    if current_user.role != user_schemas.UserRole.ADMIN:
         if user.legal_entity_id != current_user.legal_entity_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -243,10 +243,10 @@ async def get_benefit_request(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to read benefit request",
         )
-    if current_user.role != user_schemas.UserRole.ADMIN.value:
+    if current_user.role != user_schemas.UserRole.ADMIN:
         user = await UsersService().read_by_id(benefit_request.user_id)
         if user.id != current_user.id:
-            if current_user.role != user_schemas.UserRole.HR.value:
+            if current_user.role != user_schemas.UserRole.HR:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Permission denied. Your role cannot get other users' requests.",

@@ -19,13 +19,9 @@ class BaseService(Generic[TCreate, TRead, TUpdate]):
     operations for managing entities. It utilizes a repository to interact with the underlying data store
     and ensures that data is validated through Pydantic schemas.
 
-    Type Parameters:
-        TCreate (BaseModel): The Pydantic model for creating new entities.
-        TRead (BaseModel): The Pydantic model for reading existing entities.
-        TUpdate (BaseModel): The Pydantic model for updating existing entities.
 
     Attributes:
-        repo (AbstractRepository): An instance of the repository that handles data operations.
+        repo (SQLAlchemyRepository): An instance of the repository that handles data operations.
         create_schema (type[TCreate]): The Pydantic schema used for validating creation data.
         read_schema (type[TRead]): The Pydantic schema used for validating read data.
         update_schema (type[TUpdate]): The Pydantic schema used for validating update data.

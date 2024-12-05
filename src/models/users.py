@@ -43,12 +43,6 @@ class User(Base):
         is_verified (bool): Indicates if the user has verified their account.
         coins (int): The number of coins the user has.
         legal_entity_id (Optional[int]): The ID of the legal entity the user belongs to.
-
-    Relationships:
-        legal_entity (Optional[LegalEntity]): The legal entity associated with the user.
-        position (Optional[Position]): The position associated with the user.
-        benefit_requests (List[BenefitRequest]): The list of benefit requests made by the user.
-        sessions (List[Session]): The list of active sessions associated with the user.
     """
 
     __tablename__ = "users"
