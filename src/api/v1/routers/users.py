@@ -104,11 +104,6 @@ async def get_users(
             offset=offset,
         )
 
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
     except EntityReadError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

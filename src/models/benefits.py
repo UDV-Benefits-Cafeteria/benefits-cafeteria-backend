@@ -10,7 +10,7 @@ from src.models.base import Base
 from src.models.custom_types import FileType
 
 if TYPE_CHECKING:
-    from src.models import Position, Review, User
+    from src.models import Review, User
 
 
 class BenefitImage(Base):
@@ -144,25 +144,9 @@ class Benefit(Base):
     reviews: Mapped[List["Review"]] = relationship(
         "Review", back_populates="benefit", cascade="all, delete-orphan"
     )
-    positions: Mapped[List["Position"]] = relationship(
-        "Position",
-        secondary="benefit_positions",
-        back_populates="benefits",
-        lazy="selectin",
-    )
 
 
 class BenefitStatus(enum.Enum):
-    """
-    Enum representing the status of a benefit request.
-
-    Attributes:
-        PENDING: The request is awaiting approval.
-        PROCESSING: The request is being processed
-        APPROVED: The request has been approved.
-        DECLINED: The request has been declined.
-    """
-
     PENDING = "pending"  # В ожидании
     PROCESSING = "processing"  # В обработке
     APPROVED = "approved"  # Одобрен
@@ -229,30 +213,6 @@ class BenefitRequest(Base):
         "User",
         foreign_keys=[performer_id],
         lazy="selectin",
-    )
-
-
-class BenefitPosition(Base):
-    """
-    Represents the association between benefits and positions.
-
-    This class maps to the 'benefit_positions' table, creating a many-to-many
-    relationship between benefits and positions.
-
-    Attributes:
-        benefit_id (int): The ID of the associated benefit.
-        position_id (int): The ID of the associated position.
-    """
-
-    __tablename__ = "benefit_positions"
-
-    repr_cols = ("benefit_id", "position_id")
-
-    benefit_id: Mapped[int] = mapped_column(
-        ForeignKey("benefits.id", ondelete="CASCADE"), primary_key=True, nullable=False
-    )
-    position_id: Mapped[int] = mapped_column(
-        ForeignKey("positions.id", ondelete="CASCADE"), primary_key=True, nullable=False
     )
 
 

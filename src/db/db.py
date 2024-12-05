@@ -11,7 +11,7 @@ if settings.DEBUG:
     engine = create_async_engine(
         settings.DATABASE_URL, echo=False, poolclass=NullPool, future=True
     )
-else:
+else:  # pragma: no cover
     engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
 async_session_factory = async_sessionmaker(

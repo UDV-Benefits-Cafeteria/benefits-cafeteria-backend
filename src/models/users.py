@@ -15,15 +15,6 @@ if TYPE_CHECKING:
 
 
 class UserRole(enum.Enum):
-    """
-    Enumeration of user roles within the application.
-
-    Attributes:
-        EMPLOYEE: Base user.
-        HR: The HR.
-        ADMIN: The admin.
-    """
-
     EMPLOYEE = "employee"
     HR = "hr"
     ADMIN = "admin"
