@@ -20,7 +20,7 @@ pydantic = {extras = ["email"], version = "^2.9.2"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 pandas = "^2.2.3"
 openpyxl = "^3.1.5"
-python-multipart = "^0.0.12"
+python-multipart = "^0.0.19"
 sentry-sdk = {extras = ["fastapi"], version = "^2.16.0"}
 greenlet = "^3.1.1"
 fastapi-mail = "^1.4.1"
