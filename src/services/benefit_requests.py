@@ -90,12 +90,12 @@ class BenefitRequestsService(
         legal_entities: Optional[list[int]] = None,
         status: Optional[schemas.BenefitStatus] = None,
     ) -> BinaryIO:
-        benefit_requests: list[
-            schemas.BenefitRequestReadExcel
-        ] = await self.read_all_excel(
-            current_user=current_user,
-            legal_entities=legal_entities,
-            status=status,
+        benefit_requests: list[schemas.BenefitRequestReadExcel] = (
+            await self.read_all_excel(
+                current_user=current_user,
+                legal_entities=legal_entities,
+                status=status,
+            )
         )
 
         if not benefit_requests:

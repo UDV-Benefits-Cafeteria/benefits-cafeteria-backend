@@ -246,10 +246,10 @@ class UsersService(
 
         async with async_session_factory() as session:
             try:
-                legal_entity_ids: Optional[
-                    list[int]
-                ] = await self._validate_legal_entities(
-                    current_user=current_user, legal_entities=legal_entities
+                legal_entity_ids: Optional[list[int]] = (
+                    await self._validate_legal_entities(
+                        current_user=current_user, legal_entities=legal_entities
+                    )
                 )
                 if roles is not None:
                     roles: Optional[list[str]] = [str(role.value) for role in roles]

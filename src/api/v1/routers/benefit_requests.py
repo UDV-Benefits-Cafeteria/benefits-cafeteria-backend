@@ -82,9 +82,11 @@ async def create_benefit_request(
         created_benefit_request.benefit.id,
         created_benefit_request.benefit.name,
         created_benefit_request.benefit.coins_cost,
-        created_benefit_request.benefit.images[0].image_url
-        if created_benefit_request.benefit.images
-        else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
+        (
+            created_benefit_request.benefit.images[0].image_url
+            if created_benefit_request.benefit.images
+            else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png"
+        ),
         background_tasks,
     )
 
@@ -381,9 +383,11 @@ async def update_benefit_request(
         updated_benefit_request.benefit.id,
         updated_benefit_request.benefit.name,
         updated_benefit_request.benefit.coins_cost,
-        updated_benefit_request.benefit.images[0].image_url
-        if updated_benefit_request.benefit.images
-        else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png",
+        (
+            updated_benefit_request.benefit.images[0].image_url
+            if updated_benefit_request.benefit.images
+            else "https://digital-portfolio.hb.ru-msk.vkcloud-storage.ru/Image.png"
+        ),
         background_tasks,
     )
 
