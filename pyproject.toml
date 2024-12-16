@@ -9,7 +9,7 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.12"
 fastapi = "^0.114.0"
-uvicorn = "^0.30.6"
+uvicorn = "^0.34.0"
 sqlalchemy = "^2.0.34"
 alembic = "^1.13.2"
 asyncpg = "^0.30.0"
