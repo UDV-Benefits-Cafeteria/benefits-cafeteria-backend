@@ -15,32 +15,10 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
-      - name: Dev deploy cafeteria
-        uses: D3rHase/ssh-command-action@v0.2.2
-        with:
-          host: ${{secrets.DEV_HOST}}
-          user: "udv"
-          private_key: ${{secrets.DEV_PRIVATE_KEY}}
-          command: |
-            echo '--- START WORK ON REMOTE SERVER ---';
-            set -e;
-            
-            echo '--- CD ---';
-            cd /home/src/benefits-cafeteria-backend;
-            
-            echo '--- CHECKOUT ON BRANCH ---';
-            git checkout dev;
-            
-            echo '--- Upgrade repo ---';
-            git pull;
-            
-            echo '--- Turning off service ---';
-            docker compose -f docker-compose-prod.yml down app --remove-orphans;
-            
-            echo '--- Updating service ---';
-            docker compose -f docker-compose-prod.yml build app;
-            
-            echo '--- Turning on service ---';
-            docker compose -f docker-compose-prod.yml up --no-deps -d app;
-
-            echo '--- Success! ---';
+      - uses: raisultan/ycr-push@main
+        env:
+          KEY_JSON: ${{secrets.KEY_JSON}}
+          REGISTRY_ID: crpp7grglk5oa2671pne
+          DOCKERFILE_PATH: ./Dockerfile.prod
+          IMAGE_NAME: udb-back
+          IMAGE_TAG: latest
