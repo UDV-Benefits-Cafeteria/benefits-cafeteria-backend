@@ -15,7 +15,7 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
-      - uses: raisultan/ycr-push@main
+      - uses: StalinidzeCorp/ycr-push@main
         env:
           KEY_JSON: ${{secrets.KEY_JSON}}
           REGISTRY_ID: crpp7grglk5oa2671pne
